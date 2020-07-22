@@ -1,0 +1,92 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <string.h>
+#include <sys/time.h>
+
+// Bounding box splitting method
+#define BISECTION    0
+#define CENTEROFMASS 1
+
+#define TRUE  1
+#define FALSE 0
+
+#define EPS 0.00001
+
+#define ABS(x) (x < 0 ? -(x) : (x))
+#define MIN(x,y) (x < y ? x : y)
+#define MAX(x,y) (x > y ? x : y)
+#define sech(x) (1.0/cosh(x))
+#define SIGN(x) (x < 0 ? (-1) : 1)
+#define MODULUS(p) (sqrt(p.x*p.x + p.y*p.y + p.z*p.z))
+#define CROSSPROD(p1,p2,p3) \
+   p3.x = p1.y*p2.z - p1.z*p2.y; \
+   p3.y = p1.z*p2.x - p1.x*p2.z; \
+   p3.z = p1.x*p2.y - p1.y*p2.x
+#define DOTPRODUCT(v1,v2) ( v1.x*v2.x + v1.y*v2.y + v1.z*v2.z )
+
+typedef struct {
+   double x,y,z;
+} dXYZ;
+typedef struct {
+   float x,y,z;
+} XYZ;
+
+typedef struct {
+   float u,v;     // Double not required for uv coordinates
+} UV;
+
+typedef struct {
+   XYZ themin,themax;   // The bounds chosen for splitting
+   long vertexcount,facecount;
+   XYZ centerofmass;
+   XYZ datamin,datamax; // The final bounds of the actual triangles
+} BBOX;
+
+typedef struct {
+   int xyzid[3];
+   int uvid[3];
+	short materialid;
+} FACE;
+
+typedef struct {
+	char name[256];
+} MATERIALNAME;
+
+typedef struct {
+   double r,g,b;
+} COLOUR;
+
+typedef struct {
+	int verbose;          // How chatty
+	int splitmethod;      // CENTEROFMASS or BISECTION
+	int trisplit;         // Whether to split triangles at boundaries
+	long ntriangles;      // The maximum number of triangles per box, in thousands
+	double growlength;    // Extend the splitting boxes by this amount
+	int facesinram;       // Much faster but may fail for very large models
+} PARAMS;
+
+// Prototypes
+void GiveUsage(char *);
+int ReadObj(FILE *);
+int ProcessFaces(char *);
+int ParseFace(char *,FACE *);
+int GenerateBBoxes(int);
+int VertexInBox(XYZ,BBOX);
+void MinMaxXYZ(XYZ,XYZ *,XYZ *);
+XYZ MidPoint(XYZ,XYZ);
+XYZ CalcNormal(XYZ,XYZ,XYZ);
+void Normalise(XYZ *);
+double VectorLength(XYZ,XYZ);
+void FormFileName(char *,char *,int);
+void CleanString(char *);
+void SaveTileset(char *);
+void CopyFace(FACE *,FACE *);
+void Init(void);
+void SaveSplitting(void);
+void SaveBBoxes(void);
+void LineStatus(long);
+double GetRunTime(void);
+
+#include "objlib.h"
+
