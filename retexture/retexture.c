@@ -5,6 +5,14 @@
 /*
 	Read an OBJ file along with texture materials
 	Rearrange texture images and uv coordinates to make more efficient packing
+	Stages
+		- Read the OBJ file, most important thing is UV coordinates per face
+		- Read the material data and load texture files
+		- Mask out the parts of the texture not used
+		- Create a polygon around the islands of texture pixels actually used
+		- Pack the textures into new texture images, reuse the rest of the material information
+		- Adjust UV coordinates dependent on the island polygon they reside in
+		- Write new OBJ file, same as input except for modified UV values and new material names
 */
 
 // Command line parameters
@@ -26,7 +34,7 @@ long nfaces = 0;
 
 // Materials
 char materialfile[256] = "missing.mtl";
-MATERIALNAME *materials = NULL;
+MATERIAL *materials = NULL;
 int nmaterials = 0;
 
 // Island
@@ -71,10 +79,49 @@ int main(int argc,char **argv)
 
 	// Create a mask of used portions of the texture image
 	MaskTextures();
+	if (params.verbose)
+		SaveMasks();
 
+	// Create a polygon around each island of used texture
 	FindIslands();
+	if (params.verbose)
+		SaveIslands();
+
+	// Remask, destroyed in FindIslands()
+	ReadTextures();
+	MaskTextures();
+
+	// Sort by decreasing area
+	qsort((void *)islands,nislands,sizeof(ISLAND),islandcompare);
+	if (params.verbose) 
+		for (i=0;i<nislands;i++)
+			fprintf(stderr,"   Island %d has area %d and bounds (%d,%d) to (%d,%d)\n",
+				i,islands[i].area,islands[i].themin.h,islands[i].themin.v,islands[i].themax.h,islands[i].themax.v);
+
+	// Pack the textures into a new texture
+	PackIslands();
+
+	// Update UVs after packing
 
    exit(0);
+}
+
+/*
+	Compare function for qsort
+*/
+int islandcompare(const void *p1,const void *p2)
+{
+	ISLAND *island1,*island2;
+
+	island1 = (ISLAND *)p1;
+   island2 = (ISLAND *)p2;
+
+	if (island1->area > island2->area)
+		return(-1);
+	else if (island1->area < island2->area)
+		return(1);
+	else
+		return(0);
 }
 
 void GiveUsage(char *s)
@@ -190,7 +237,7 @@ int ReadObj(FILE *fptr)
      	}
      	if (strstr(aline,"usemtl ") != NULL) {
      	   CleanString(aline);
-			materials = realloc(materials,(nmaterials+1)*sizeof(MATERIALNAME));
+			materials = realloc(materials,(nmaterials+1)*sizeof(MATERIAL));
 			sscanf(aline,"%s %s",ignore,materials[nmaterials].name);
 			if (params.verbose)
 				fprintf(stderr,"Found material \"%s\"\n",materials[nmaterials].name);
@@ -295,7 +342,7 @@ int ReadTextures(void)
 	Parse the MTL file to extract the name of the texture image for each material
 	Lots could go wrong here ... assume just one "map_Kd" reference per material
 */
-int ReadMaterial(char *fname,char *materialname,int materialid)
+int ReadMaterial(char *fname,char *material,int materialid)
 {
 	FILE *fptr;
 	char aline[1024],ignore[256];
@@ -307,7 +354,7 @@ int ReadMaterial(char *fname,char *materialname,int materialid)
 
 	while (fgets(aline,1023,fptr) != NULL) {
 		if (strstr(aline,"newmtl ") != NULL) {
-			if (strstr(aline,materialname) != NULL) {
+			if (strstr(aline,material) != NULL) {
 				while (fgets(aline,1023,fptr) != NULL) {
 					if (strstr(aline,"newmtl ") != NULL) 
 						break;
@@ -315,7 +362,7 @@ int ReadMaterial(char *fname,char *materialname,int materialid)
 						sscanf(aline,"%s %s",ignore,materials[nmaterials].texture);
 						if (params.verbose)
 							fprintf(stderr,"Found texture \"%s\" for material \"%s\"\n",
-								materials[nmaterials].texture,materialname);
+								materials[nmaterials].texture,material);
 						break;
 					}
 				}
@@ -324,7 +371,7 @@ int ReadMaterial(char *fname,char *materialname,int materialid)
 		}
 	}
 	if (strlen(materials[nmaterials].texture) < 2)
-		fprintf(stderr,"No texture image associated with material \"%s\"\n",materialname);
+		fprintf(stderr,"No texture image associated with material \"%s\"\n",material);
 	fclose(fptr);
 
 	return(TRUE);
@@ -421,8 +468,6 @@ void LineStatus(long n)
 void MaskTextures(void)
 {
 	int i,j,n,matid;
-	FILE *fptr;
-	char fname[256];
 	UV t[3];
 	UV uvmin,uvmax;
 	int index;
@@ -478,14 +523,6 @@ void MaskTextures(void)
 				materials[n].image[i] = black;
 		}
    }
-
-	// Save textures
-	for (n=0;n<nmaterials;n++) {
-		sprintf(fname,"mask_%d.tga",n);
-		fptr = fopen(fname,"w");
-		Write_Bitmap(fptr,materials[n].image,materials[n].width,materials[n].height,13);
-		fclose(fptr);
-	}
 }
 
 /*
@@ -494,16 +531,12 @@ void MaskTextures(void)
 */
 void FindIslands(void)
 {
-	int i,j,n,index,nmat,npoly,indexL,indexR;
+	int i,j,n,index,npoly,indexL,indexR;
 	POINT seed,p,currp,dir,dir1,dir2,left,right;
-	BITMAP4 c,blue = {0,0,255,0},cyan = {0,255,255,0},green = {0,255,0,0};
-	BITMAP4 yellow = {255,255,0,0},red = {255,0,0,0};
-	char fname[256];
-	FILE *fptr;
+	POINT large = {32000,32000},small = {-32000,-32000},zero = {0,0};
    POINT *plist = NULL;
    int nplist = 0;
 	int merged = 0;
-	double dx,dy,d;
 
 	// Create islands for each material
 	if (params.verbose)
@@ -545,6 +578,10 @@ void FindIslands(void)
             islands[nislands].poly[1].v = seed.v + dir.v;
 				currp = islands[nislands].poly[1];
 				islands[nislands].npoly = 2;
+				islands[nislands].area = 0;
+				islands[nislands].themin = large;
+            islands[nislands].themax = small;
+				islands[nislands].offset = zero;
 
 				npoly = islands[nislands].npoly;
 				currp = islands[nislands].poly[npoly-1];
@@ -577,48 +614,39 @@ void FindIslands(void)
 					indexL = left.v * materials[n].width + left.h;
 					indexR = right.v * materials[n].width + right.h;
 					npoly = islands[nislands].npoly;
+					islands[nislands].poly = realloc(islands[nislands].poly,(npoly+1)*sizeof(POINT));
 
 					// Case of left cell on outside and right cell on inside, move forward
 					if (materials[n].image[indexL].a > 0 && materials[n].image[indexR].a == 0) {
-						islands[nislands].poly = realloc(islands[nislands].poly,(npoly+1)*sizeof(POINT));
 						islands[nislands].poly[npoly].h = currp.h + dir.h;
 						islands[nislands].poly[npoly].v = currp.v + dir.v;
-						currp = islands[nislands].poly[npoly];
-						islands[nislands].npoly++;
 					}
 
 					// Case of left and right on outside, move to the right, rotate by 90 clockwise
 					else if (materials[n].image[indexL].a > 0 && materials[n].image[indexR].a > 0) {
-						islands[nislands].poly = realloc(islands[nislands].poly,(npoly+1)*sizeof(POINT));
                   islands[nislands].poly[npoly].h = currp.h + dir.v;
                   islands[nislands].poly[npoly].v = currp.v - dir.h;
-						currp = islands[nislands].poly[npoly];
-						islands[nislands].npoly++;
 					}
 
                // Case of left and right on inside, move to the left, rotate by -90 clockwise
                else if (materials[n].image[indexL].a == 0 && materials[n].image[indexR].a == 0) {
-						islands[nislands].poly = realloc(islands[nislands].poly,(npoly+1)*sizeof(POINT));
                   islands[nislands].poly[npoly].h = currp.h - dir.v;
                   islands[nislands].poly[npoly].v = currp.v + dir.h;
-						currp = islands[nislands].poly[npoly];
-						islands[nislands].npoly++;
                }
 
                // Case of left on inside and right on outside, move to the left, rotate by -90 clockwise
 					// Ambiguous case
                else if (materials[n].image[indexL].a == 0 && materials[n].image[indexR].a > 0) {
-						islands[nislands].poly = realloc(islands[nislands].poly,(npoly+1)*sizeof(POINT));
                   islands[nislands].poly[npoly].h = currp.h - dir.v;
                   islands[nislands].poly[npoly].v = currp.v + dir.h;
-						currp = islands[nislands].poly[npoly];
-						islands[nislands].npoly++;
                }
 
 					else {
 						fprintf(stderr,"Should not get here, something bad and/or strange has occured!\n");
 					}
-
+				
+					currp = islands[nislands].poly[npoly];
+               islands[nislands].npoly++;
             	dir.h = currp.h - islands[nislands].poly[npoly-1].h;
             	dir.v = currp.v - islands[nislands].poly[npoly-1].v;
 					
@@ -650,19 +678,31 @@ void FindIslands(void)
                      plist[nplist].v = p.v + 1;
                      nplist += 2;
                   }
-               }
-               materials[n].image[index].a = 255;
+               	materials[n].image[index].a = 255;
+						islands[nislands].area++;
+					}
                nplist--;
             }
 
             if (params.verbose)
-               fprintf(stderr,"   Creating new island %d with %d vertices\n",nislands,islands[nislands].npoly);
+               fprintf(stderr,"   Creating new island %d with %d vertices and area of %d\n",
+						nislands,islands[nislands].npoly,islands[nislands].area);
 				nislands++;
 			}
 		}
 	} // nth material
 
 	free(plist);
+
+	// Update the island bounding boxes
+	for (i=0;i<nislands;i++) {
+		for (j=0;j<islands[i].npoly;j++) {
+      	islands[i].themin.h = MIN(islands[i].themin.h,islands[i].poly[j].h);
+      	islands[i].themax.h = MAX(islands[i].themax.h,islands[i].poly[j].h);
+      	islands[i].themin.v = MIN(islands[i].themin.v,islands[i].poly[j].v);
+      	islands[i].themax.v = MAX(islands[i].themax.v,islands[i].poly[j].v);
+		}
+	}
 
 	if (params.verbose) 
 		fprintf(stderr,"Created %d islands\n",nislands);
@@ -725,31 +765,259 @@ void FindIslands(void)
 	}
 	if (params.verbose)
 		fprintf(stderr,"Merged %d vectors\n",merged);
+}
 
-	// Draw on the boundary
+/*
+	Pack the textures
+	Do so into a 8K x 8K texture
+	Islands are packed from the largest to the smallest
+*/
+void PackIslands(void)
+{
+	int n,nmat,newh,newv,index1,index2;
+	BITMAP4 *newtex = NULL,black = {0,0,0,255}; // Note alpha is 255
+	int width = 8192,height = 8192;
+	POINT p;
+	FILE *fptr = NULL;
+
+	// New texture, cleared to black
+	newtex = Create_Bitmap(width,height);
+	Erase_Bitmap(newtex,width,height,black);
+
 	for (n=0;n<nislands;n++) {
-		npoly = islands[n].npoly;
 		nmat = islands[n].matid;
-		for (i=0;i<islands[n].npoly;i++) {
-			j = (i+1)%npoly;
-			dx = islands[n].poly[i].h - islands[n].poly[j].h;
-         dy = islands[n].poly[i].v - islands[n].poly[j].v;
-			d = sqrt(dx*dx+dy*dy);
-			c = blue; // Single line
-			if (d > 1) // 1 diagonal + 2 straight
-				c = cyan;
-			if (d > 2) // 2 diagonal or 3 straight
-				c = green;
-			if (d > 3) // 3 diagonals or 4 straight
-				c = yellow;
-			if (d > 5)
-				c = red;
-			Draw_Line(materials[nmat].image,materials[nmat].width,materials[nmat].height,
-				islands[n].poly[i].h,islands[n].poly[i].v,
-				islands[n].poly[j].h,islands[n].poly[j].v,c);
+
+		// Find the best position
+		// Update offset
+		// Copy pixels
+		if (!FindBestPosition(islands[n],newtex,width,height,&p)) {
+			fprintf(stderr,"Failed to find a location to place island %d\n",n);
+			continue;
 		}
+		islands[n].offset.h = islands[n].themin.h - p.h;
+      islands[n].offset.v = islands[n].themin.v - p.v;
+
+      if (params.verbose)
+         fprintf(stderr,"Packing island %d, at (%d,%d)\n",n,p.h,p.v);
+
+		// Copy island into destination texture
+		for (p.h=islands[n].themin.h;p.h<islands[n].themax.h;p.h++) {
+			for (p.v=islands[n].themin.v;p.v<islands[n].themax.v;p.v++) {
+
+            // Set clear flag if not inside polygon, slow
+            if (!InsidePolygon(islands[n].poly,islands[n].npoly,p)) {
+               newtex[index2] = black;
+					continue;
+            }
+
+				// Calculate new position
+				newh = p.h - islands[n].offset.h;
+				newv = p.v - islands[n].offset.v;
+				if (newh < 0 || newv < 0 || newh >= width || newv >= height) {
+					fprintf(stderr,"Out of range pixel during packing pixel copy (%d,%d)\n",newh,newv);
+					continue;
+				}
+
+				// Copy pixel
+				index1 = p.v * materials[nmat].width + p.h;
+				index2 = newv * width + newh;
+				newtex[index2] = materials[nmat].image[index1];
+				newtex[index2].a = 0;
+			}
+		}
+
 	}
 
+	// Save the new texture
+	fptr = fopen("newtexture.tga","w");
+	Write_Bitmap(fptr,newtex,width,height,13);
+	fclose(fptr);
+
+	if (params.verbose) 
+		SaveIslands2(newtex,width,height);
+}
+
+/*
+	Find the best poisition in the image for an island
+	To start just test 4 corners
+*/
+int FindBestPosition(ISLAND island,BITMAP4 *image,int width,int height,POINT *pbest)
+{
+	int dh,dv,n;
+	POINT p;
+	
+	dh = island.themax.h - island.themin.h;
+	dv = island.themax.v - island.themin.v;
+
+	for (n=0;n<width;n++) {
+		p.h = n;
+		for (p.v=0;p.v<=n;p.v++) {
+			if (!TestRectAlpha(p,dh,dv,image,width,height))
+				continue;
+			*pbest = p;
+			return(TRUE);
+		}
+		p.v = n;
+		for (p.h=0;p.h<n;p.h++) {
+         if (!TestRectAlpha(p,dh,dv,image,width,height))
+            continue;
+         *pbest = p;
+         return(TRUE);
+      }
+	}
+
+	/* Initial case of bottom to top, left to right mode
+   for (p.v=0;p.v<height;p.v++) { 
+      for (p.h=0;p.h<width;p.h++) {
+            
+         if (!TestRectAlpha(p,dh,dv,image,width,height))
+            continue;
+            
+         *pbest = p;
+         return(TRUE);
+      }
+   }
+	*/
+
+	// After all that, didn't find a free location
+	return(FALSE);
+}
+
+/*
+	Return true if the rectangle is in empty space
+	Rectangle has corners (p.h,p.v) and (p.h+dh,p.v+dv)
+*/
+int TestRectAlpha(POINT p,int dh,int dv,BITMAP4 *image,int width,int height)
+{
+	POINT q;
+
+   // Test corners first
+   q.h = p.h;
+   q.v = p.v;
+   if (AlphaZero(q,image,width,height))
+      return(FALSE);
+   q.h = p.h + dh;
+   q.v = p.v;
+   if (AlphaZero(q,image,width,height))
+      return(FALSE);
+   q.h = p.h + dh;
+   q.v = p.v + dv;
+   if (AlphaZero(q,image,width,height))
+      return(FALSE);
+   q.h = p.h;
+   q.v = p.v + dv;
+   if (AlphaZero(q,image,width,height))
+      return(FALSE);
+
+	// Test along all edges
+   q.v = p.v;
+   for (q.h=p.h;q.h<p.h+dh;q.h++) 
+      if (AlphaZero(q,image,width,height)) 
+         return(FALSE);
+
+   q.v = p.v + dv;
+   for (q.h=p.h;q.h<p.h+dh;q.h++) 
+      if (AlphaZero(q,image,width,height)) 
+         return(FALSE);
+
+   q.h = p.h;
+   for (q.v=p.v;q.v<p.v+dv;q.v++) 
+      if (AlphaZero(q,image,width,height)) 
+         return(FALSE);
+
+   q.h = p.h + dh;
+   for (q.v=p.v;q.v<p.v+dv;q.v++) 
+      if (AlphaZero(q,image,width,height)) 
+         return(FALSE);
+
+	return(TRUE);
+}
+
+/*
+	Return true if the alpha value at p in the image is zero
+	Return true also if the image is sampled out of bounds
+*/
+int AlphaZero(POINT p,BITMAP4 *image,int width,int height)
+{
+	int index;
+
+	if (p.h < 0 || p.v < 0 || p.h >= width || p.v >= height)
+		return(TRUE);
+	index = p.v * width + p.h;
+	if (image[index].a == 0)
+		return(TRUE);
+	else
+		return(FALSE);
+}
+
+// ------------------ The following are rough and ready debugging tools -------------------
+
+/*
+	Part of debugging only
+	Mask is on the alpha channel
+*/
+void SaveMasks(void)
+{
+	int n;
+	FILE *fptr = NULL;
+	char fname[256];
+
+   for (n=0;n<nmaterials;n++) {
+      sprintf(fname,"mask_%d.tga",n);
+      fptr = fopen(fname,"w");
+      Write_Bitmap(fptr,materials[n].image,materials[n].width,materials[n].height,13);
+      fclose(fptr);
+   }
+}
+
+/*
+	Part of debugging only
+	Note that this damages the material textures, need to reload afterwards and compute masks.
+*/
+void SaveIslands(void)
+{
+	int n,i,j,nmat,npoly;
+	FILE *fptr = NULL;
+	char fname[256];
+   BITMAP4 c,blue = {0,0,255,0},cyan = {0,255,255,0},green = {0,255,0,0};
+   BITMAP4 yellow = {255,255,0,0},red = {255,0,0,0},pink = {255,0,255,0};
+	double dx,dy,d;
+
+   for (n=0;n<nislands;n++) {
+      npoly = islands[n].npoly;
+      nmat = islands[n].matid;
+
+		// Island border
+      for (i=0;i<islands[n].npoly;i++) {
+         j = (i+1)%npoly;
+         dx = islands[n].poly[i].h - islands[n].poly[j].h;
+         dy = islands[n].poly[i].v - islands[n].poly[j].v;
+         d = sqrt(dx*dx+dy*dy);
+         c = blue; // Single line
+         if (d > 1) // 1 diagonal + 2 straight
+            c = cyan;
+         if (d > 2) // 2 diagonal or 3 straight
+            c = green;
+         if (d > 3) // 3 diagonals or 4 straight
+            c = yellow;
+         if (d > 5)
+            c = red;
+         Draw_Line(materials[nmat].image,materials[nmat].width,materials[nmat].height,
+            islands[n].poly[i].h,islands[n].poly[i].v,
+            islands[n].poly[j].h,islands[n].poly[j].v,c);
+      }
+
+		// Island bounding box
+		Draw_Line(materials[nmat].image,materials[nmat].width,materials[nmat].height,
+			islands[n].themin.h,islands[n].themin.v,islands[n].themax.h,islands[n].themin.v,pink);
+      Draw_Line(materials[nmat].image,materials[nmat].width,materials[nmat].height,
+         islands[n].themax.h,islands[n].themin.v,islands[n].themax.h,islands[n].themax.v,pink);
+      Draw_Line(materials[nmat].image,materials[nmat].width,materials[nmat].height,
+         islands[n].themax.h,islands[n].themax.v,islands[n].themin.h,islands[n].themax.v,pink);
+      Draw_Line(materials[nmat].image,materials[nmat].width,materials[nmat].height,
+         islands[n].themin.h,islands[n].themax.v,islands[n].themin.h,islands[n].themin.v,pink);
+   }
+  
    // Save textures
    for (n=0;n<nmaterials;n++) {
       sprintf(fname,"border_%d.tga",n);
@@ -757,27 +1025,68 @@ void FindIslands(void)
       Write_Bitmap(fptr,materials[n].image,materials[n].width,materials[n].height,13);
       fclose(fptr);
    }
-
 }
 
 /*
-	Return normalised direction vector from p1 to p2
+   Part of debugging only
+	Intended to put borders around the final new texture
 */
-POINT CalcDir(POINT p1,POINT p2)
+void SaveIslands2(BITMAP4 *image,int width,int height)
 {
-	POINT d;
+   int n,i,j,nmat,npoly;
+   FILE *fptr = NULL;
+   char fname[256];
+   BITMAP4 c,blue = {0,0,255,0},cyan = {0,255,255,0},green = {0,255,0,0};
+   BITMAP4 yellow = {255,255,0,0},red = {255,0,0,0},pink = {255,0,255,0};
+   double dx,dy,d;
 
-	d.h = p2.h - p1.h;
-	if (d.h >= 1)
-		d.h = 1;
-	if (d.h <= -1)
-		d.h = -1;
-	d.v = p2.v - p1.v;
-   if (d.v >= 1)
-      d.v = 1;
-   if (d.v <= -1)
-      d.v = -1;
-	return(d);
+   for (n=0;n<nislands;n++) {
+      npoly = islands[n].npoly;
+      nmat = islands[n].matid;
+
+      // Island border
+      for (i=0;i<islands[n].npoly;i++) {
+         j = (i+1)%npoly;
+         dx = islands[n].poly[i].h - islands[n].poly[j].h;
+         dy = islands[n].poly[i].v - islands[n].poly[j].v;
+         d = sqrt(dx*dx+dy*dy);
+         c = blue; // Single line
+         if (d > 1) // 1 diagonal + 2 straight
+            c = cyan;
+         if (d > 2) // 2 diagonal or 3 straight
+            c = green;
+         if (d > 3) // 3 diagonals or 4 straight
+            c = yellow;
+         if (d > 5)
+            c = red;
+/*
+         Draw_Line(image,width,height,
+            islands[n].poly[i].h-islands[n].offset.h,islands[n].poly[i].v-islands[n].offset.v,
+            islands[n].poly[j].h-islands[n].offset.h,islands[n].poly[j].v-islands[n].offset.v,c);
+*/
+      }
+
+      // Island bounding box
+      Draw_Line(image,width,height,
+         islands[n].themin.h-islands[n].offset.h,islands[n].themin.v-islands[n].offset.v,
+			islands[n].themax.h-islands[n].offset.h,islands[n].themin.v-islands[n].offset.v,pink);
+      Draw_Line(image,width,height,
+         islands[n].themax.h-islands[n].offset.h,islands[n].themin.v-islands[n].offset.v,
+			islands[n].themax.h-islands[n].offset.h,islands[n].themax.v-islands[n].offset.v,pink);
+      Draw_Line(image,width,height,
+         islands[n].themax.h-islands[n].offset.h,islands[n].themax.v-islands[n].offset.v,
+			islands[n].themin.h-islands[n].offset.h,islands[n].themax.v-islands[n].offset.v,pink);
+      Draw_Line(image,width,height,
+         islands[n].themin.h-islands[n].offset.h,islands[n].themax.v-islands[n].offset.v,
+			islands[n].themin.h-islands[n].offset.h,islands[n].themin.v-islands[n].offset.v,pink);
+   }
+
+   // Save textures
+   for (n=0;n<nmaterials;n++) {
+      sprintf(fname,"newborder.tga");
+      fptr = fopen(fname,"w");
+      Write_Bitmap(fptr,image,width,height,13);
+      fclose(fptr);
+   }
 }
-
 

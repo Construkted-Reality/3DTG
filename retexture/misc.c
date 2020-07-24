@@ -110,3 +110,66 @@ double PointLine2D(XY p3,XY p1,XY p2,XY *close,double *mu)
    return(sqrt(dx * dx + dy * dy));
 }
 
+/*
+   Return normalised direction vector from p1 to p2
+*/
+POINT CalcDir(POINT p1,POINT p2)
+{
+   POINT d;
+
+   d.h = p2.h - p1.h;
+   if (d.h >= 1)
+      d.h = 1;
+   if (d.h <= -1)
+      d.h = -1;
+   d.v = p2.v - p1.v;
+   if (d.v >= 1)
+      d.v = 1;
+   if (d.v <= -1)
+      d.v = -1;
+   return(d);
+}
+
+/*
+	Determine if a point is inside a polygon
+*/
+int InsidePolygon(POINT *polygon,int n,POINT p)
+{
+   int i;
+   double angle=0;
+   POINT p1,p2;
+
+   for (i=0;i<n;i++) {
+      p1.h = polygon[i].h - p.h;
+      p1.v = polygon[i].v - p.v;
+      p2.h = polygon[(i+1)%n].h - p.h;
+      p2.v = polygon[(i+1)%n].v - p.v;
+      angle += Angle2D(p1.h,p1.v,p2.h,p2.v);
+   }
+
+   if (ABS(angle) < PI)
+      return(FALSE);
+   else
+      return(TRUE);
+}
+
+/*
+   Return the angle between two vectors on a plane
+   The angle is from vector 1 to vector 2, positive anticlockwise
+   The result is between -pi -> pi
+*/
+double Angle2D(double x1, double y1, double x2, double y2)
+{
+   double dtheta,theta1,theta2;
+
+   theta1 = atan2(y1,x1);
+   theta2 = atan2(y2,x2);
+   dtheta = theta2 - theta1;
+   while (dtheta > PI)
+      dtheta -= TWOPI;
+   while (dtheta < -PI)
+      dtheta += TWOPI;
+
+   return(dtheta);
+}
+

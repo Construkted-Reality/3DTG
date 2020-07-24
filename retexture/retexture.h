@@ -50,7 +50,7 @@ typedef struct {
    char texture[256];
    BITMAP4 *image;
    int width,height;
-} MATERIALNAME;
+} MATERIAL;
 
 typedef struct {
    double r,g,b;
@@ -61,9 +61,12 @@ typedef struct {
 } POINT;
 
 typedef struct {
-	int matid;    // An island is associated with a particular texturemap
-	POINT *poly;  // Polygon around the island
-	int npoly;
+   int matid;            // An island is associated with a particular texturemap
+   POINT *poly;          // Polygon around the island
+   int npoly;            // Length of polygon
+   int area;             // In pixels
+   POINT themin,themax;  // Bounding box
+   POINT offset;         // The offset of this island after packing
 } ISLAND;
 
 typedef struct {
@@ -71,6 +74,7 @@ typedef struct {
 } PARAMS;
 
 // Prototypes
+int islandcompare(const void *,const void *);
 void GiveUsage(char *);
 int ReadObj(FILE *);
 int ReadTextures(void);
@@ -82,7 +86,15 @@ void Init(void);
 void LineStatus(long);
 void MaskTextures(void);
 void FindIslands(void);
-POINT CalcDir(POINT,POINT);
+void PackIslands(void);
+int FindBestPosition(ISLAND,BITMAP4 *,int,int,POINT *);
+int AlphaZero(POINT,BITMAP4 *,int,int);
+int TestRectAlpha(POINT,int,int,BITMAP4 *,int,int);
+
+// --- debugging stuff
+void SaveMasks(void);
+void SaveIslands(void);
+void SaveIslands2(BITMAP4 *,int,int);
 
 // Misc.c
 void CleanString(char *);
@@ -91,4 +103,7 @@ void MinMaxXYZ(XYZ,XYZ *,XYZ *);
 XYZ CalcNormal(XYZ,XYZ,XYZ);
 void Normalise(XYZ *);
 double PointLine2D(XY,XY,XY,XY *,double *);
+POINT CalcDir(POINT,POINT);
+int InsidePolygon(POINT *,int,POINT);
+double Angle2D(double,double,double,double);
 
