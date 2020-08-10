@@ -31,18 +31,17 @@ typedef struct {
 } dXYZ;
 typedef struct {
    float x,y,z;
-   int flag;
 } XYZ;
 
 typedef struct {
-   float u,v;     // Double not required for uv coordinates
-   int flag;
+   float u,v;              // Double not required for uv coordinates
+	short materialid;       // Which material texture are in
 } UV;
 
 typedef struct {
    int xyzid[3];
    int uvid[3];
-   short materialid;
+   short materialid;       // Which material texture are in
 } FACE;
 
 typedef struct {
@@ -71,32 +70,31 @@ typedef struct {
 
 typedef struct {
    int verbose;          // How chatty
+	int debug;            // Saves images at various stages, for debugging
 } PARAMS;
 
 // Prototypes
-int islandcompare(const void *,const void *);
 void GiveUsage(char *);
 int ReadObj(FILE *);
 int ReadTextures(void);
 int ReadMaterial(char *,char *,int);
 int ProcessFaces(char *);
 int ParseFace(char *,FACE *);
-void CopyFace(FACE *,FACE *);
 void Init(void);
-void LineStatus(long);
 void MaskTextures(void);
 void FindIslands(void);
-void PackIslands(void);
+void PackIslands(char *);
 int FindBestPosition(ISLAND,BITMAP4 *,int,int,POINT *);
-int AlphaZero(POINT,BITMAP4 *,int,int);
 int TestRectAlpha(POINT,int,int,BITMAP4 *,int,int);
+int WriteOBJFile(char *,char *);
 
 // --- debugging stuff
 void SaveMasks(void);
 void SaveIslands(void);
 void SaveIslands2(BITMAP4 *,int,int);
 
-// Misc.c
+// Misc ... secondary functions
+void StripExtension(char *);
 void CleanString(char *);
 double GetRunTime(void);
 void MinMaxXYZ(XYZ,XYZ *,XYZ *);
@@ -104,6 +102,11 @@ XYZ CalcNormal(XYZ,XYZ,XYZ);
 void Normalise(XYZ *);
 double PointLine2D(XY,XY,XY,XY *,double *);
 POINT CalcDir(POINT,POINT);
-int InsidePolygon(POINT *,int,POINT);
+int InsidePolygon(POINT *,int,POINT,float *);
 double Angle2D(double,double,double,double);
+int islandcompare(const void *,const void *);
+void CopyFace(FACE *,FACE *);
+void LineStatus(long);
+int AlphaZero(POINT,BITMAP4 *,int,int);
+void PointClip(int,int,POINT *);
 

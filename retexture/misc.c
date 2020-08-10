@@ -4,6 +4,18 @@
 	The following are general functions, not specifically part of the algorithm
 */
 
+void StripExtension(char *s)
+{
+	int i;
+
+   for (i=strlen(s)-1;i>0;i--) {
+      if (s[i] == '.') {
+         s[i] = '\0';
+         break;
+      }
+   }
+}
+
 double GetRunTime(void)
 {
    double sec = 0;
@@ -132,11 +144,13 @@ POINT CalcDir(POINT p1,POINT p2)
 
 /*
 	Determine if a point is inside a polygon
+	If not inside calculate closeness
 */
-int InsidePolygon(POINT *polygon,int n,POINT p)
+int InsidePolygon(POINT *polygon,int n,POINT p,float *closest)
 {
-   int i;
+   int i,dh,dv;
    double angle=0;
+	float distmin = 1e32,dist;
    POINT p1,p2;
 
    for (i=0;i<n;i++) {
@@ -145,12 +159,21 @@ int InsidePolygon(POINT *polygon,int n,POINT p)
       p2.h = polygon[(i+1)%n].h - p.h;
       p2.v = polygon[(i+1)%n].v - p.v;
       angle += Angle2D(p1.h,p1.v,p2.h,p2.v);
+
+		dh = p2.h - p1.h;
+		dv = p2.v - p1.v;
+		dist = dh*dh + dv*dv;
+		if (dist < distmin) 
+			distmin = dist;
    }
 
-   if (ABS(angle) < PI)
+   if (ABS(angle) < PI) {
+		*closest = sqrt(distmin);
       return(FALSE);
-   else
+   } else {
+		*closest = 0;
       return(TRUE);
+	}
 }
 
 /*
@@ -171,5 +194,87 @@ double Angle2D(double x1, double y1, double x2, double y2)
       dtheta += TWOPI;
 
    return(dtheta);
+}
+
+/*
+   Compare function for qsort
+*/
+int islandcompare(const void *p1,const void *p2)
+{
+   ISLAND *island1,*island2;
+
+   island1 = (ISLAND *)p1;
+   island2 = (ISLAND *)p2;
+
+   if (island1->area > island2->area)
+      return(-1);
+   else if (island1->area < island2->area)
+      return(1);
+   else
+      return(0);
+}
+
+/*
+   Copy the contents of a face from one face to another
+*/
+void CopyFace(FACE *source,FACE *destination)
+{
+   int i;
+
+   for (i=0;i<3;i++) {
+      destination->xyzid[i] = source->xyzid[i];
+      destination->uvid[i] = source->uvid[i];
+   }
+   destination->materialid = source->materialid;
+}
+
+/*
+   Line progress reports, designed to give feed back but not too
+   much for large files.
+*/
+void LineStatus(long n)
+{
+   if (n < 1000000) {
+      if ((n % 100000) == 0)
+         fprintf(stderr,"   Processing line %ld\n",n);
+   } else if (n < 10000000) {
+      if ((n % 1000000) == 0)
+         fprintf(stderr,"   Processing line %ld\n",n);
+   } else {
+      if ((n % 10000000) == 0)
+         fprintf(stderr,"   Processing line %ld\n",n);
+   }
+}
+
+/*
+   Return true if the alpha value at p in the image is zero
+   Return true also if the image is sampled out of bounds
+*/
+int AlphaZero(POINT p,BITMAP4 *image,int width,int height)
+{
+   int index;
+
+   if (p.h < 0 || p.v < 0 || p.h >= width || p.v >= height)
+      return(TRUE);
+   index = p.v * width + p.h;
+   if (image[index].a == 0)
+      return(TRUE);
+   else
+      return(FALSE);
+}
+
+/*
+	Clip a point to bounds
+*/
+void PointClip(int width,int height,POINT *p)
+{
+	if (p->h < 0)
+		p->h = 0;
+	if (p->v < 0)
+		p->v = 0;
+	if (p->h >= width)
+		p->h = width-1;
+	if (p->v >= height)
+		p->v = height-1;
 }
 
