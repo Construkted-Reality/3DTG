@@ -4,8 +4,6 @@
 #include <string.h>
 #include <sys/time.h>
 
-#define MESHLABPATH "/Applications/meshlab.app/Contents/MacOS/meshlabserver"
-
 #define TRUE  1
 #define FALSE 0
 
@@ -14,7 +12,6 @@
 #define ABS(x) (x < 0 ? -(x) : (x))
 #define MIN(x,y) (x < y ? x : y)
 #define MAX(x,y) (x > y ? x : y)
-#define sech(x) (1.0/cosh(x))
 #define SIGN(x) (x < 0 ? (-1) : 1)
 #define MODULUS(p) (sqrt(p.x*p.x + p.y*p.y + p.z*p.z))
 #define CROSSPROD(p1,p2,p3) \
@@ -57,16 +54,17 @@ typedef struct {
 } COLOUR;
 
 typedef struct {
-	int verbose;          // How chatty
-	int trisplit;         // Whether to split triangles at boundaries
-	int depth;           // The number of times to split along each axis
+	int verbose;              // How chatty
+	int trisplit;             // Whether to split triangles at boundaries
+	int xdepth,ydepth,zdepth; // Degree of splitting along each axis, power of 2
+	int treelevel;            // Override level in filename
+	int filenumber;           // Override file number on filename
 } PARAMS;
 
 // Prototypes
 void GiveUsage(char *);
 int ReadObj(FILE *);
 int ProcessFaces(char *);
-void WriteDecimateLine(FILE *,char *);
 int SplitFaceX(BBOX,FACE *,int);
 int SplitFaceY(BBOX,FACE *,int);
 int SplitFaceZ(BBOX,FACE *,int);
@@ -78,7 +76,7 @@ int ParseFace(char *,FACE *);
 void GenerateBBoxes(void);
 int FaceInBox(FACE,BBOX);
 void MinMaxXYZ(XYZ,XYZ *,XYZ *);
-void FormFileName(char *,char *,int,int,int,int);
+void FormFileName(char *,int,int,int,int,int);
 void SaveTileset(char *);
 void Init(void);
 void SaveBBoxes(void);
@@ -94,7 +92,6 @@ void CleanString(char *);
 void LineStatus(long);
 double GetRunTime(void);
 int Powerof2(int,int *,int *);
-int ObjExists(char *);
 
 #include "objlib.h"
 

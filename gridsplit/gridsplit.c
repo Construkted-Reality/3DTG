@@ -4,7 +4,8 @@
 
 /*
    Take a textured OBJ file and split into octtree pieces given a certain depth
-	Based upon origin "split.c"
+	Based upon original "split.c"
+	Aug 2020: Changed filename conventions
 */
 
 // Command line parameters
@@ -48,22 +49,27 @@ int main(int argc,char **argv)
       if (strcmp(argv[i],"-v") == 0)
          params.verbose = TRUE;
       if (strcmp(argv[i],"-n") == 0) {
-         params.depth = atoi(argv[i+1]);
-			if (params.depth < 1) {
-				fprintf(stderr,"Splitting depth must be greater than 0, resetting to 1\n");
-				params.depth = 1;
-			}
-         if (params.depth > 3) {
-            fprintf(stderr,"Splitting depth greater than 3 not yet supported, resetting to 3\n");
-            params.depth = 3;
+			i++;
+         params.xdepth = atoi(argv[i]);
+			i++;
+         params.ydepth = atoi(argv[i]);
+			i++;
+         params.zdepth = atoi(argv[i]);
+         if (params.xdepth > 3 || params.ydepth > 3 || params.zdepth > 3) {
+            fprintf(stderr,"Splitting depth must be less then 4\n");
+            exit(-1);
          }
 		}
       if (strcmp(argv[i],"-t") == 0)
          params.trisplit = !params.trisplit;
+      if (strcmp(argv[i],"-l") == 0)
+         params.treelevel = atoi(argv[i+1]);
+      if (strcmp(argv[i],"-m") == 0)
+         params.filenumber = atoi(argv[i+1]);
    }
-	params.depth = 1 << params.depth;
 	if (params.verbose)
-		fprintf(stderr,"Splitting the model %d times along each axis\n",params.depth);
+		fprintf(stderr,"Splitting the model %d x %d x %d times along each axis\n",
+			1<<params.xdepth,1<<params.ydepth,1<<params.zdepth);
    strcpy(objname,argv[argc-1]);
 
    // Parse the OBJ file
@@ -107,10 +113,11 @@ void GiveUsage(char *s)
    fprintf(stderr,"Usage: %s [options] objfilename\n",s);
 	fprintf(stderr,"Version: %s\n",VERSION);
    fprintf(stderr,"Options\n");
-   fprintf(stderr,"   -v     verbose mode, default: disabled\n");
-	fprintf(stderr,"   -t     toggle whether to split triangles at boundary, default: on\n");
-   fprintf(stderr,"   -n n   power of 2 depth to split along each axis, default: %d\n",params.depth);
-	fprintf(stderr,"   -d n   issue decimate script for cells with less than this number of triangles\n");
+   fprintf(stderr,"   -v           verbose mode, default: disabled\n");
+	fprintf(stderr,"   -t           toggle whether to split triangles at boundary, default: on\n");
+   fprintf(stderr,"   -n nx ny nz  power of 2 depth to split along each axis, default: %d\n",params.xdepth);
+	fprintf(stderr,"   -l n         override the treelevel, default: disabled\n");
+	fprintf(stderr,"   -m n         override auto filenumbers, default: disabled\n");
 
    exit(0);
 }
@@ -263,11 +270,11 @@ int ReadObj(FILE *fptr)
 */
 int ProcessFaces(char *fname)
 {
-   int d,i,j,n,k,ix,iy,iz;
+   int i,j,n,k;
    int xyzcount,uvcount;
 	int currentmaterial = -1;
    char objname[256];
-   FILE *fobj,*fptr;
+   FILE *fobj;
    XYZ p;
    UV u;
    FACE *aface = NULL;
@@ -275,9 +282,6 @@ int ProcessFaces(char *fname)
 	int maxface = 50; // Actually I think 16 is the maximum possible
 
 	aface = malloc(maxface*sizeof(FACE));
-
-	fptr = fopen("decimatescript","w");
-	fprintf(fptr,"# Decimate each grid cell\n");
 
    // Process each box in turn
    for (n=0;n<nbboxes;n++) {
@@ -289,7 +293,9 @@ int ProcessFaces(char *fname)
       bboxes[n].facecount = 0;
 
       // Create the nth output obj file
-      FormFileName(objname,fname,bboxes[n].ix,bboxes[n].iy,bboxes[n].iz,params.depth);
+      FormFileName(objname,bboxes[n].ix,bboxes[n].iy,bboxes[n].iz,params.treelevel,params.filenumber);
+		if (params.filenumber >= 0)
+			params.filenumber++;
 		strcat(objname,".obj");
       if ((fobj = fopen(objname,"w")) == NULL) {
          fprintf(stderr,"Failed to open output file \"%s\"\n",objname);
@@ -411,68 +417,9 @@ int ProcessFaces(char *fname)
 
 	   if (params.verbose)
    	   fprintf(stderr,". Contains %ld faces\n",bboxes[n].facecount);
-
-		WriteDecimateLine(fptr,objname);
    } // n
 
-	// Write merge and tessellation command to script
-	fprintf(fptr,"\n");
-	d = params.depth;
-	do {
-		fprintf(fptr,"# depth = %d\n",d);
-   	for (ix=0;ix<d;ix+=2) {
-  		   for (iy=0;iy<d;iy+=2) {
-   	  	   for (iz=0;iz<d;iz+=2) {
-					n = ix * d * d + iy * d + iz;
-					fprintf(fptr,"%s -i ",MESHLABPATH);
-					for (i=0;i<2;i++) {
-						for (j=0;j<2;j++) {
-							for (k=0;k<2;k++) {
-								FormFileName(objname,fname,ix+i,iy+j,iz+k,d);
-								if (ObjExists(objname)) { // To handle empty grid cells that MeshLab will fail on
-									fprintf(fptr,"%s_d.obj ",objname);
-								} else if (d != params.depth) {
-									fprintf(fptr,"%s_d.obj ",objname);
-								} else {
-									fprintf(stderr,"Didn't find \"%s\", probably empty\n",objname);
-								}
-							}
-						}
-					}
-					FormFileName(objname,fname,ix/2,iy/2,iz/2,d/2);
-					strcat(objname,".obj");
-					fprintf(fptr," -o %s -m wt -s flatten.mlx\n",objname);
-					WriteDecimateLine(fptr,objname);
-				}
-			}
-		}
-		d /= 2;
-		fprintf(fptr,"\n");
-	} while (d > 1);
-	fclose(fptr);
-
    return(TRUE);
-}
-
-/*
-	Issue decimate script
-*/
-void WriteDecimateLine(FILE *fptr,char *s)
-{
-	int i;
-	char fname[256];
-
-	// Form output file name
-	strcpy(fname,s);
-	for (i=strlen(fname)-1;i>0;i--) {
-		if (fname[i] == '.') {
-			fname[i] = '\0';
-			break;
-		}
-	}
-	strcat(fname,"_d.obj");
-
-	fprintf(fptr,"%s -i %s -o %s -m wt -s decimate.mlx\n",MESHLABPATH,s,fname);
 }
 
 /*
@@ -884,7 +831,7 @@ XYZ SplitXEdge(double x,XYZ p1,XYZ p2,double *mu)
 
 	if (fabs(p2.x-p1.x) < EPS) {
 		*mu = 0;
-		fprintf(stderr,"Warning: No x variation in edge, should not happen!\n");
+		//fprintf(stderr,"Warning: No x variation in edge, should not happen!\n");
 	} else {
 		*mu = (x - p1.x) / (p2.x - p1.x);
 	}
@@ -901,7 +848,7 @@ XYZ SplitYEdge(double y,XYZ p1,XYZ p2,double *mu)
 
    if (fabs(p2.y-p1.y) < EPS) {
       *mu = 0;
-		fprintf(stderr,"Warning: No y variation in edge, should not happen!\n");
+		//fprintf(stderr,"Warning: No y variation in edge, should not happen!\n");
    } else {
       *mu = (y - p1.y) / (p2.y - p1.y);
 	}
@@ -918,7 +865,7 @@ XYZ SplitZEdge(double z,XYZ p1,XYZ p2,double *mu)
 
    if (fabs(p2.z-p1.z) < EPS) {
       *mu = 0;
-		fprintf(stderr,"Warning: No z variation in edge, should not happen!\n");
+		//fprintf(stderr,"Warning: No z variation in edge, should not happen!\n");
    } else {
       *mu = (z - p1.z) / (p2.z - p1.z);
 	}
@@ -994,26 +941,31 @@ int ParseFace(char *s,FACE *f)
 }
 
 /*
-	Split the model into params.depth boxes along each axis
+	Split the model into 2^params.depth boxes along each axis
 */
 void GenerateBBoxes(void)
 {
    int ix,iy,iz,i,n;
+	int dx,dy,dz;
 
    if (params.verbose)
       fprintf(stderr,"Computing the boxes\n");
 
-	for (ix=0;ix<params.depth;ix++) {
-		for (iy=0;iy<params.depth;iy++) {
-			for (iz=0;iz<params.depth;iz++) {
+	dx = 1 << params.xdepth;
+   dy = 1 << params.ydepth;
+   dz = 1 << params.zdepth;
+
+	for (ix=0;ix<dx;ix++) {
+		for (iy=0;iy<dy;iy++) {
+			for (iz=0;iz<dz;iz++) {
 
       		bboxes = realloc(bboxes,(nbboxes+1)*sizeof(BBOX));
-      		bboxes[nbboxes].themin.x = themin.x + ix * (themax.x - themin.x) / (double)params.depth;
-            bboxes[nbboxes].themin.y = themin.y + iy * (themax.y - themin.y) / (double)params.depth;
-            bboxes[nbboxes].themin.z = themin.z + iz * (themax.z - themin.z) / (double)params.depth;
-      		bboxes[nbboxes].themax.x = themin.x + (ix+1) * (themax.x - themin.x) / (double)params.depth;
-            bboxes[nbboxes].themax.y = themin.y + (iy+1) * (themax.y - themin.y) / (double)params.depth;
-            bboxes[nbboxes].themax.z = themin.z + (iz+1) * (themax.z - themin.z) / (double)params.depth;
+      		bboxes[nbboxes].themin.x = themin.x + ix * (themax.x - themin.x) / dx;
+            bboxes[nbboxes].themin.y = themin.y + iy * (themax.y - themin.y) / dy;
+            bboxes[nbboxes].themin.z = themin.z + iz * (themax.z - themin.z) / dz;
+      		bboxes[nbboxes].themax.x = themin.x + (ix+1) * (themax.x - themin.x) / dx;
+            bboxes[nbboxes].themax.y = themin.y + (iy+1) * (themax.y - themin.y) / dy;
+            bboxes[nbboxes].themax.z = themin.z + (iz+1) * (themax.z - themin.z) / dz;
       		bboxes[nbboxes].vertexcount = 0;
       		bboxes[nbboxes].facecount = 0;
 				bboxes[nbboxes].ix = ix;
@@ -1096,39 +1048,42 @@ void MinMaxXYZ(XYZ p,XYZ *min,XYZ *max)
    max->z = MAX(max->z,p.z);
 }
 
-
 /*
    Create the output file name for the obj files
 */
-void FormFileName(char *outname,char *inname,int ix,int iy,int iz,int depth)
+void FormFileName(char *outname,int ix,int iy,int iz,int treelevel,int number)
 {
-/*
-   strcpy(tmp,inname);
-   for (i=strlen(tmp)-1;i>0;i--) {
-      if (tmp[i] == '.') {
-         tmp[i] = '\0';
-         break;
-      }
-   }
-   sprintf(outname,"%s_%03d_%03d_%03d",tmp,ix,iy,iz);
-*/
-	if (depth == 1) 
-		sprintf(outname,"%1d_%1d_%1d",ix,iy,iz);
-	else if (depth == 2)
-		sprintf(outname,"%02d_%02d_%02d",ix,iy,iz);
-	else if (depth == 4)
-		sprintf(outname,"%03d_%03d_%03d",ix,iy,iz);
-	else if (depth == 4)
-		sprintf(outname,"%04d_%04d_%04d",ix,iy,iz);
-	else
-		sprintf(outname,"%05d_%05d_%05d",ix,iy,iz);
+	int n,dx,dy,dz;
+	int level;
+
+	dx = 1 << params.xdepth;
+   dy = 1 << params.ydepth;
+   dz = 1 << params.zdepth;
+	
+	if (number < 0) {
+		n = iz * dx * dy + iy * dx + ix;
+	} else {
+		n = number;
+	}
+
+	if (treelevel < 0) {
+		level = MAX(params.xdepth,params.ydepth);
+		level = MAX(level,params.zdepth);
+	} else {
+		level = params.treelevel;
+	}
+	sprintf(outname,"%d_%05d",level,n);
 }
 
 void Init(void)
 {
 	params.verbose = FALSE;
-	params.trisplit = TRUE;   // Whether to split triangles at boundaries
-	params.depth = 2;         // The power of two depth to split along each axis
+	params.trisplit = TRUE;    // Whether to split triangles at boundaries
+	params.xdepth = 2;         // The power of two depth to split along each axis
+   params.ydepth = 2;
+   params.zdepth = 2;
+	params.treelevel = -1;     // Override treelevel in output filenames
+	params.filenumber = -1;
 
    // Create a default material
 	// Not really necessary but makes it easier to handle a bad OBJ without one

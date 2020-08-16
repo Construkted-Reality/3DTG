@@ -167,18 +167,3 @@ int Powerof2(int n,int *m,int *twopm)
       return(TRUE);
 }
 
-int ObjExists(char *fname)
-{
-   FILE *fptr;
-	char objname[256];
-
-	strcpy(objname,fname);
-	strcat(objname,".obj");
-   if ((fptr = fopen(objname,"r")) == NULL) {
-      return(FALSE);
-   } else {
-      fclose(fptr);
-      return(TRUE);
-   }
-}
-
