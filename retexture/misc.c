@@ -4,6 +4,45 @@
 	The following are general functions, not specifically part of the algorithm
 */
 
+// isLeft(): tests if a point is Left|On|Right of an infinite line.
+// Input:  three points P0, P1, and P2
+// Return: >0 for P2 left of the line through P0 and P1
+//         =0 for P2  on the line
+//         <0 for P2  right of the line
+// See: Algorithm 1 "Area of Triangles and Polygons"
+int isLeft(POINT p0,POINT p1,POINT p2)
+{
+   return ( (p1.h - p0.h) * (p2.v - p0.v) - (p2.h - p0.h) * (p1.v - p0.v) );
+}
+
+// inside polygon test using winding number test for a point in a polygon
+// Input: p = a point,
+//        poly[] = vertex points of a polygon poly[n+1] with poly[n]=poly[0]
+// Return:  wn = the winding number (=0 only when p is outside)
+int InsidePolygon(POINT p,POINT *poly,int n)
+{
+   int wn = 0; // the winding number counter
+	int i,ip1;
+
+   // loop through all edges of the polygon
+   for (i=0;i<n;i++) {                              // edge from poly[i] to poly[i+1]
+		ip1 = (i+1)%n;
+      if (poly[i].v <= p.v) {                       // start y <= p.y
+         if (poly[ip1].v > p.v)                     // an upward crossing
+            if (isLeft(poly[i],poly[ip1],p) > 0)    // p left of edge
+               wn++;                                // have  a valid up intersect
+      } else {                                      // start y > p.y (no test needed)
+         if (poly[ip1].v <= p.v)                 // a downward crossing
+            if (isLeft(poly[i],poly[ip1],p) < 0)    // p right of edge
+               wn--;                                // have a valid down intersect
+      }
+   }
+	if (wn != 0)
+		return(TRUE);
+	else
+   	return(FALSE);
+}
+
 void StripExtension(char *s)
 {
 	int i;
@@ -143,37 +182,24 @@ POINT CalcDir(POINT p1,POINT p2)
 }
 
 /*
-	Determine if a point is inside a polygon
-	If not inside calculate closeness
+	Find the closest distance to p on a polygon boundary
 */
-int InsidePolygon(POINT *polygon,int n,POINT p,float *closest)
+float ClosestPoint(POINT *polygon,int n,POINT p)
 {
-   int i,dh,dv;
-   double angle=0;
-	float distmin = 1e32,dist;
-   POINT p1,p2;
+   int i;
+   int dh,dv,dd,dmin=2100000000;
+   POINT closest;
 
    for (i=0;i<n;i++) {
-      p1.h = polygon[i].h - p.h;
-      p1.v = polygon[i].v - p.v;
-      p2.h = polygon[(i+1)%n].h - p.h;
-      p2.v = polygon[(i+1)%n].v - p.v;
-      angle += Angle2D(p1.h,p1.v,p2.h,p2.v);
-
-		dh = p2.h - p1.h;
-		dv = p2.v - p1.v;
-		dist = dh*dh + dv*dv;
-		if (dist < distmin) 
-			distmin = dist;
+      dh = p.h - polygon[i].h;
+      dv = p.v - polygon[i].v;
+      if ((dd = dh*dh + dv*dv) < dmin) {
+         dmin = dd;
+         closest = polygon[i];
+      }
    }
 
-   if (ABS(angle) < PI) {
-		*closest = sqrt(distmin);
-      return(FALSE);
-   } else {
-		*closest = 0;
-      return(TRUE);
-	}
+	return(sqrt((float)dd));
 }
 
 /*

@@ -84,6 +84,7 @@ void Init(void);
 void MaskTextures(void);
 void FindIslands(void);
 void PackIslands(char *);
+int PointInIsland(int,POINT,float *);
 int FindBestPosition(ISLAND,BITMAP4 *,int,int,POINT *);
 int TestRectAlpha(POINT,int,int,BITMAP4 *,int,int);
 int WriteOBJFile(char *,char *);
@@ -94,6 +95,8 @@ void SaveIslands(void);
 void SaveIslands2(BITMAP4 *,int,int);
 
 // Misc ... secondary functions
+int isLeft(POINT,POINT,POINT);
+int InsidePolygon(POINT,POINT *,int);
 void StripExtension(char *);
 void CleanString(char *);
 double GetRunTime(void);
@@ -102,7 +105,7 @@ XYZ CalcNormal(XYZ,XYZ,XYZ);
 void Normalise(XYZ *);
 double PointLine2D(XY,XY,XY,XY *,double *);
 POINT CalcDir(POINT,POINT);
-int InsidePolygon(POINT *,int,POINT,float *);
+float ClosestPoint(POINT *,int,POINT);
 double Angle2D(double,double,double,double);
 int islandcompare(const void *,const void *);
 void CopyFace(FACE *,FACE *);

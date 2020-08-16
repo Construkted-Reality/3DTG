@@ -16,6 +16,7 @@
 	10 Jul 2020: First version
 	25 Jul 2020: Completed texture packing, stage 4
 	09 Aug 2020: Fixed multiple identical texture issue 
+	14 Aug 2020: Replaced pointinpolygon with the fast winding solution
 */
 
 // Command line parameters
@@ -76,6 +77,7 @@ int main(int argc,char **argv)
       fprintf(stderr,"Failed to open input OBJ file \"%s\"\n",objname);
       exit(-1);
    }
+	fprintf(stderr,"Processing file \"%s\"\n",objname);
    if (!ReadObj(fptr)) {
       fclose(fptr);
       exit(-1);
@@ -128,6 +130,7 @@ int main(int argc,char **argv)
 	WriteOBJFile(argv[0],objname);
    if (params.verbose)
       fprintf(stderr,"Time to remap UV and save OBJ: %.1lf seconds\n",GetRunTime()-starttime);
+	fprintf(stderr,"\n");
 
    exit(0);
 }
@@ -160,9 +163,6 @@ int ReadObj(FILE *fptr)
 	float u,v;
    XYZ p;
 	FACE aface;
-
-   if (params.verbose)
-      fprintf(stderr,"Parsing OBJ file\n");
 
    // Read a line at a time
 	// Only interested in vertex and texture coordinate lines
@@ -279,18 +279,14 @@ int ReadObj(FILE *fptr)
 	}
 
    if (params.verbose) {
-      fprintf(stderr,"Found %ld vertices\n",nvertices);
-      fprintf(stderr,"Found %ld uv coordinates\n",nuv);
-      fprintf(stderr,"Found %ld faces\n",nfaces);
-      fprintf(stderr,"Storage per vertex is %ld bytes\n",sizeof(XYZ)+sizeof(UV));
-      ram = (nvertices*sizeof(XYZ)+nuv*sizeof(UV))/1024/1024;
-      if (ram < 1024)
+      fprintf(stderr,"Found %ld vertices, ",nvertices);
+      fprintf(stderr,"%ld uv coordinates, ",nuv);
+      fprintf(stderr,"and %ld faces\n",nfaces);
+      if ((ram = (nvertices*sizeof(XYZ)+nuv*sizeof(UV))/1024/1024) < 1024)
          fprintf(stderr,"Require %ld MB of memory for vertices and uv\n",ram);
       else
          fprintf(stderr,"Require %ld GB of memory for vertices and uv\n",ram/1024);
-		fprintf(stderr,"Storage per face is %ld bytes\n",sizeof(FACE));
-		ram = nfaces*sizeof(FACE)/1024/1024;
-	   if (ram < 1024)
+	   if ((ram = nfaces*sizeof(FACE)/1024/1024) < 1024)
 	      fprintf(stderr,"Require %ld MB of memory for faces\n",ram);
 	   else
 	      fprintf(stderr,"Require %ld GB of memory for faces\n",ram/1024);
@@ -312,12 +308,14 @@ int ReadObj(FILE *fptr)
 	Only support jpeg at this stage
 	If a material doesn't use a texture, make one up, for consistentcy later on.
 	Limitations: Only supports materials with textures, plain colours will fail
+	Update the newwidth and newheight planned for the island packing.
 */
 int ReadTextures(void)
 {
 	int i,j;
 	FILE *fptr;
 	int width,height,depth;
+	int maxtsize = 0;
 	BITMAP4 missing = {255,128,128,0};
 
 	// For each material
@@ -353,9 +351,15 @@ int ReadTextures(void)
 			return(FALSE);
 		}
 		fclose(fptr);
+
+		maxtsize = MAX(maxtsize,height);
+		maxtsize = MAX(maxtsize,width);
 	}
 
-	return(FALSE);
+	newwidth = maxtsize * 1.5;
+	newheight = newwidth;
+
+	return(TRUE);
 }
 
 /*
@@ -522,11 +526,11 @@ void MaskTextures(void)
 		ratio /= (materials[n].width*materials[n].height);
 	ratio *= 100;
 	if (params.verbose) {
-		fprintf(stderr,"Total island area: %ld pixels\n",sum);
+		fprintf(stderr,"Total island area: %ld pixels. ",sum);
 		fprintf(stderr,"Percentage of island area to total area: %g\n",ratio);
 	}
 	if (ratio > 5)
-		fprintf(stderr,"Detected a rather high ratio of island area to total area\n");
+		fprintf(stderr,"*** Detected a rather high ratio of island area to total area\n");
 }
 
 /*
@@ -712,7 +716,7 @@ void FindIslands(void)
 
 	// Combined vectors where possible for efficiency
 	if (params.verbose)
-		fprintf(stderr,"Combining vectors\n");
+		fprintf(stderr,"Combining vectors. ");
 	for (n=0;n<nislands;n++) {
 		for (i=2;i<islands[n].npoly;i++) {
 			dir1 = CalcDir(islands[n].poly[i-1],islands[n].poly[i]);
@@ -751,8 +755,10 @@ void PackIslands(char *objname)
 
 	for (n=0;n<nislands;n++) {
 		nmat = islands[n].matid;
-		if (n % (nislands/40) == 0)
-			fprintf(stderr,"Packing island %5d, area: %d\n",n,islands[n].area);
+		if (n < 20)
+			fprintf(stderr,"   Packing island %5d, area: %d\n",n,islands[n].area);
+		else if (n == 20)
+			fprintf(stderr,"   Packing remaining islands ...\n");
 
 		// Find an available position for the current island
 		if (!FindBestPosition(islands[n],newtex,newwidth,newheight,&p)) {
@@ -781,7 +787,7 @@ void PackIslands(char *objname)
 				index2 = newp.v * newwidth + newp.h;
 
             // Set clear flag if not inside polygon, slow for large islands
-            if (!InsidePolygon(islands[n].poly,islands[n].npoly,p,&dist)) {
+            if (!PointInIsland(n,p,&dist)) {
 					if (dist >= 2) {
 						newtex[index2] = black;
 						continue;
@@ -803,13 +809,14 @@ void PackIslands(char *objname)
    if (params.debug)
       SaveIslands2(newtex,newwidth,newheight);
 
-	// Trim the texture to the least required, make factor of 4 in size
+	// Trim the texture to the least required, make factor of 2 in size
 	// Copy the bottom left corner to a new cropped texture of required size
 	// Irrespective of the relative sizes of the texture maps, no scaling is performed
-	newmax.h++;
-	newmax.v++;
-	newmax.h = (newmax.h/4) * 4;
-   newmax.v = (newmax.v/4) * 4;
+	// That will left to a later process.
+	newmax.h = (newmax.h/2) * 2;
+   newmax.v = (newmax.v/2) * 2;
+   newmax.h += 4;
+   newmax.v += 4;
 	if (params.verbose)
 		fprintf(stderr,"Final texture has dimensions %d x %d\n",newmax.h,newmax.v);
 	croppedtex = Create_Bitmap(newmax.h,newmax.v);
@@ -844,27 +851,48 @@ void PackIslands(char *objname)
 }
 
 /*
+	Determine if point p is inside island n, calculate distance if not inside
+	No trig functions, based upon winding count method here
+		http://geomalgorithms.com/a03-_inclusion.html
+*/
+int PointInIsland(int n,POINT p,float *dist)
+{
+   if (p.h < islands[n].themin.h || p.v < islands[n].themin.v ||
+       p.h > islands[n].themax.h || p.v > islands[n].themax.v) {
+		*dist = ClosestPoint(islands[n].poly,islands[n].npoly,p);
+		return(FALSE);
+	}
+	if (InsidePolygon(p,islands[n].poly,islands[n].npoly)) {
+		*dist = 0;
+		return(TRUE);
+	} else {
+      *dist = ClosestPoint(islands[n].poly,islands[n].npoly,p);
+      return(FALSE);
+   }
+}
+
+/*
 	Find the best position in the image for an island
 	This code scans the destination image (square) in a square out from the bottom left corner
 */
 int FindBestPosition(ISLAND island,BITMAP4 *image,int width,int height,POINT *pbest)
 {
-	int dh,dv,n;
+	int dh,dv,n,border=2;
 	POINT p;
 	
 	dh = island.themax.h - island.themin.h;
 	dv = island.themax.v - island.themin.v;
 
-	for (n=0;n<width;n++) {
+	for (n=border;n<width;n++) {
 		p.h = n;
-		for (p.v=0;p.v<=n;p.v++) {
+		for (p.v=border;p.v<=n;p.v++) {
 			if (!TestRectAlpha(p,dh,dv,image,width,height))
 				continue;
 			*pbest = p;
 			return(TRUE);
 		}
 		p.v = n;
-		for (p.h=0;p.h<n;p.h++) {
+		for (p.h=border;p.h<n;p.h++) {
          if (!TestRectAlpha(p,dh,dv,image,width,height))
             continue;
          *pbest = p;
@@ -989,12 +1017,12 @@ int WriteOBJFile(char *s,char *srcname)
 	fprintf(fobj,"usemtl packed\n");
 
 	// Vertices
-	fprintf(stderr,"# %ld vertices\n",nvertices);
+	fprintf(fobj,"# %ld vertices\n",nvertices);
 	for (i=0;i<nvertices;i++) 
 		fprintf(fobj,"v %lf %lf %lf\n",vertices[i].x,vertices[i].y,vertices[i].z);
 
 	// Texture coordinates, remapped
-	fprintf(stderr,"# %ld uv coordinates\n",nuv);
+	fprintf(fobj,"# %ld uv coordinates\n",nuv);
 	for (i=0;i<nuv;i++) {
 		nmat = uv[i].materialid;
 
@@ -1004,10 +1032,7 @@ int WriteOBJFile(char *s,char *srcname)
 		old.v = uv[i].v * materials[nmat].height;
 		isl = -1;
 		for (j=0;j<nislands;j++) {
-			if (old.h < islands[j].themin.h || old.v < islands[j].themin.v ||
-				 old.h > islands[j].themax.h || old.v > islands[j].themax.v)
-				continue;
-			if (InsidePolygon(islands[j].poly,islands[j].npoly,old,&dist)) {
+			if (PointInIsland(j,old,&dist)) {
 				isl = j;
 				break;
 			}
@@ -1042,7 +1067,7 @@ int WriteOBJFile(char *s,char *srcname)
 	}
 
 	// Faces
-	fprintf(stderr,"# %ld faces\n",nfaces);
+	fprintf(fobj,"# %ld faces\n",nfaces);
 	for (i=0;i<nfaces;i++) 
 		fprintf(fobj,"f %d/%d %d/%d %d/%d\n",
 			faces[i].xyzid[0]+1,faces[i].uvid[0]+1,
