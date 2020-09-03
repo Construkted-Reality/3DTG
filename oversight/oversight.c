@@ -135,7 +135,7 @@ void UpStream(void)
                IssueCmd(cmd);
 
                // Check image size and possibly scale
-               FormFileName(srcname,ix,iy,iz,depth-1);
+               FormFileName(srcname,ix/2,iy/2,iz/2,depth-1);
                strcat(srcname,"_d.jpg");
                ScaleTexture(srcname);
             }
@@ -445,7 +445,7 @@ void CreateObjView(int depth)
       for (index=0;index<d*d*d;index++) {
 
          FormFileName2(srcname,index,depth);
-         strcat(srcname,".obj");
+         strcat(srcname,"_d.obj");
          if (!FileExists(srcname))
             continue;
 
