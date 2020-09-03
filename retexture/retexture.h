@@ -112,4 +112,5 @@ void CopyFace(FACE *,FACE *);
 void LineStatus(long);
 int AlphaZero(POINT,BITMAP4 *,int,int);
 void PointClip(int,int,POINT *);
+void ReportTime(double,char *);
 

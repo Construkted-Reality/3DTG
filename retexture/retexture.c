@@ -84,8 +84,8 @@ int main(int argc,char **argv)
    }
    fclose(fptr);
 	ReadTextures();
-   if (params.verbose)
-      fprintf(stderr,"Time to read OBJ file: %.1lf seconds\n",GetRunTime()-starttime);
+   if (params.verbose) 
+		ReportTime(starttime,"Time to read model");
 
 	// Create a mask of used portions of the texture image
 	// Create a polygon around each island of used texture
@@ -104,32 +104,33 @@ int main(int argc,char **argv)
 	qsort((void *)islands,nislands,sizeof(ISLAND),islandcompare);
 	if (params.verbose) { // Summary of islands
 		for (i=0;i<nislands;i++) {
-			fprintf(stderr,"   Island %5d has area %7d and bounds (%4d,%4d) to (%4d,%4d), boundary length: %5d\n",
+			fprintf(stderr,"   Island %5d has area %7d and bounds (%5d,%5d) to (%5d,%5d), boundary length: %5d\n",
 				i,islands[i].area,
 				islands[i].themin.h,islands[i].themin.v,islands[i].themax.h,islands[i].themax.v,
 				islands[i].npoly);
-			if (i > 100) {
-				fprintf(stderr,"... The remaining %d islands are even smaller\n",nislands-100);
+			if (i > 20) {
+				fprintf(stderr,"   The remaining %d islands are smaller\n",nislands-20);
 				break;
 			}
 		}
 	}
    if (params.verbose)
-      fprintf(stderr,"Time to create island boundaries: %.1lf seconds\n",GetRunTime()-starttime);
+      ReportTime(starttime,"Time to create island boundaries");
 
 	// Pack the textures into a new texture
 	starttime = GetRunTime();
 	PackIslands(objname);
-   if (params.verbose)
-      fprintf(stderr,"Time to pack islands: %.1lf seconds into a texture image of size %d x %d\n",
-			GetRunTime()-starttime,newwidth,newheight);
+   if (params.verbose) {
+      ReportTime(starttime,"Time to pack islands");
+		fprintf(stderr,"Islands packed into a texture image of size %d x %d\n",newwidth,newheight);
+	}
 
 	// Write output OBJ
 	// At the same time update UVs for each UV
 	starttime = GetRunTime();
 	WriteOBJFile(argv[0],objname);
    if (params.verbose)
-      fprintf(stderr,"Time to remap UV and save OBJ: %.1lf seconds\n",GetRunTime()-starttime);
+      ReportTime(starttime,"Time to remap UV and save OBJ");
 	fprintf(stderr,"\n");
 
    exit(0);
@@ -282,12 +283,14 @@ int ReadObj(FILE *fptr)
       fprintf(stderr,"Found %ld vertices, ",nvertices);
       fprintf(stderr,"%ld uv coordinates, ",nuv);
       fprintf(stderr,"and %ld faces\n",nfaces);
-      if ((ram = (nvertices*sizeof(XYZ)+nuv*sizeof(UV))/1024/1024) < 1024)
-         fprintf(stderr,"Require %ld MB of memory for vertices and uv\n",ram);
+		ram = (nvertices*sizeof(XYZ)+nuv*sizeof(UV))/1024/1024;
+      if (ram < 1024)
+         ; //fprintf(stderr,"Require %ld MB of memory for vertices and uv\n",ram);
       else
          fprintf(stderr,"Require %ld GB of memory for vertices and uv\n",ram/1024);
-	   if ((ram = nfaces*sizeof(FACE)/1024/1024) < 1024)
-	      fprintf(stderr,"Require %ld MB of memory for faces\n",ram);
+		ram = nfaces*sizeof(FACE)/1024/1024;
+	   if (ram < 1024)
+	      ; //fprintf(stderr,"Require %ld MB of memory for faces\n",ram);
 	   else
 	      fprintf(stderr,"Require %ld GB of memory for faces\n",ram/1024);
 		fprintf(stderr,"Found %d materials\n",nmaterials);
@@ -296,8 +299,8 @@ int ReadObj(FILE *fptr)
       fprintf(stderr,"   %g <= y <= %g\n",themin.y,themax.y);
       fprintf(stderr,"   %g <= z <= %g\n",themin.z,themax.z);
 		fprintf(stderr,"UV range\n");
-		fprintf(stderr,"   %g <= u <= %g\n",alluvmin.x,alluvmax.x);
-      fprintf(stderr,"   %g <= v <= %g\n",alluvmin.y,alluvmax.y);
+		fprintf(stderr,"   %.3f <= u <= %.3f\n",alluvmin.x,alluvmax.x);
+      fprintf(stderr,"   %.3f <= v <= %.3f\n",alluvmin.y,alluvmax.y);
    }
 
    return(TRUE);
@@ -522,14 +525,12 @@ void MaskTextures(void)
 		}
    }
 	ratio = sum;
-	for (n=0;n<nmaterials;n++)
-		ratio /= (materials[n].width*materials[n].height);
+	ratio /= (materials[0].width*materials[0].height);
+	ratio /= nmaterials; // Assumes they are all the same size
 	ratio *= 100;
-	if (params.verbose) {
-		fprintf(stderr,"Total island area: %ld pixels. ",sum);
-		fprintf(stderr,"Percentage of island area to total area: %g\n",ratio);
-	}
-	if (ratio > 5)
+	if (params.verbose)
+		fprintf(stderr,"Total island area: %ld pixels. %0.2lf%% of total area\n",sum,ratio);
+	if (ratio > 20)
 		fprintf(stderr,"*** Detected a rather high ratio of island area to total area\n");
 }
 
@@ -550,7 +551,7 @@ void FindIslands(void)
 
 	// Create islands for each material
 	if (params.verbose)
-		fprintf(stderr,"Creating islands\n");
+		fprintf(stderr,"Creating islands. ");
 	for (n=0;n<nmaterials;n++) {
 		nplist = 0;
 
@@ -694,13 +695,15 @@ void FindIslands(void)
                nplist--;
             }
 
-            if (params.verbose)
-               fprintf(stderr,"   Creating new island %4d with %5d boundary vertices and area of %7d\n",
-						nislands,islands[nislands].npoly,islands[nislands].area);
+            //if (params.verbose)
+            //   fprintf(stderr,"   Creating new island %4d with %5d boundary vertices and area of %7d\n",
+				//		nislands,islands[nislands].npoly,islands[nislands].area);
 				nislands++;
 			}
 		}
 	} // nth material
+	if (params.verbose)
+		fprintf(stderr,"Created %d islands\n",nislands);
 
 	free(plist);
 
@@ -716,7 +719,7 @@ void FindIslands(void)
 
 	// Combined vectors where possible for efficiency
 	if (params.verbose)
-		fprintf(stderr,"Combining vectors. ");
+		fprintf(stderr,"Merging vectors. ");
 	for (n=0;n<nislands;n++) {
 		for (i=2;i<islands[n].npoly;i++) {
 			dir1 = CalcDir(islands[n].poly[i-1],islands[n].poly[i]);
@@ -758,7 +761,9 @@ void PackIslands(char *objname)
 		if (n < 20)
 			fprintf(stderr,"   Packing island %5d, area: %d\n",n,islands[n].area);
 		else if (n == 20)
-			fprintf(stderr,"   Packing remaining islands ...\n");
+			fprintf(stderr,"   Packing remaining islands ");
+		else
+			fprintf(stderr,".");
 
 		// Find an available position for the current island
 		if (!FindBestPosition(islands[n],newtex,newwidth,newheight,&p)) {
@@ -804,6 +809,7 @@ void PackIslands(char *objname)
 			}
 		}
 	} // nth island
+	fprintf(stderr,"\n");
 
 	// Save the whole packed image in debug mode
    if (params.debug)

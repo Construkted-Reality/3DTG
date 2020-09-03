@@ -10,16 +10,16 @@
 //#define ADDEXR
 
 #ifdef ADDJPEG
-#include <jpeglib.h>
+#include "jpeglib.h"
 #endif
 #ifdef ADDPNG
-#include <png.h>
+#include "png.h"
 #endif
 #ifdef ADDTIFF
-#include <tiffio.h>
+#include "tiffio.h"
 #endif
 #ifdef ADDEXR
-#include <OpenEXR/ImfCRgbaFile.h>
+#include "OpenEXR/ImfCRgbaFile.h"
 #endif
 
 #define TGA   0

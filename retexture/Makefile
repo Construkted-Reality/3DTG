@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -O3 -g
-INCLUDES =
-LFLAGS = 
+INCLUDES = -I /opt/local/include/
+LFLAGS = -L /opt/local/lib/
 LIBS = -ljpeg  -lm 
 
 OBJS = retexture.o misc.o bitmaplib.o

@@ -304,3 +304,23 @@ void PointClip(int width,int height,POINT *p)
 		p->v = height-1;
 }
 
+/*
+	Report on running time
+*/
+void ReportTime(double tstart,char *msg)
+{
+	int minutes;
+	double dt;
+
+   dt = GetRunTime() - tstart;
+	minutes = (int)(dt/60);
+
+   if (dt < 10) {
+		;
+	} else if (dt < 60) {
+      fprintf(stderr,"%s: %.1lf seconds\n",msg,dt);
+	} else {
+		fprintf(stderr,"%s: %d minutes and %.1lf seconds\n",msg,minutes,dt-minutes*60);
+	}
+}
+
