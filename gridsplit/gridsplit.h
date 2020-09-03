@@ -56,6 +56,7 @@ typedef struct {
 typedef struct {
 	int verbose;              // How chatty
 	int trisplit;             // Whether to split triangles at boundaries
+	int bisect;               // Bisect or split each axis
 	int xdepth,ydepth,zdepth; // Degree of splitting along each axis, power of 2
 	int treelevel;            // Override level in filename
 	int filenumber;           // Override file number on filename

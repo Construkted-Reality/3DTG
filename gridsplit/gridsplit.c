@@ -1,11 +1,12 @@
 #include "gridsplit.h"
 
-#define VERSION "1.00"
+#define VERSION "1.01"
 
 /*
    Take a textured OBJ file and split into octtree pieces given a certain depth
 	Based upon original "split.c"
 	Aug 2020: Changed filename conventions
+	Aug 2020: Added option to only bisect based upon longest length and center of mass
 */
 
 // Command line parameters
@@ -15,6 +16,7 @@ PARAMS params;
 XYZ *vertices = NULL;
 long nvertices = 0;
 XYZ themin = {1e32,1e32,1e32},themax = {-1e32,-1e32,-1e32},themid;
+dXYZ centermass = {0,0,0}; // center of mass of vertices, only used for bisection
 
 // All the UV coordinates
 UV *uv = NULL;
@@ -48,6 +50,11 @@ int main(int argc,char **argv)
    for (i=1;i<argc;i++) {
       if (strcmp(argv[i],"-v") == 0)
          params.verbose = TRUE;
+      if (strcmp(argv[i],"-b") == 0) {
+         params.bisect = TRUE;
+			params.treelevel = 1;
+			params.filenumber = 0; 
+		}
       if (strcmp(argv[i],"-n") == 0) {
 			i++;
          params.xdepth = atoi(argv[i]);
@@ -67,9 +74,13 @@ int main(int argc,char **argv)
       if (strcmp(argv[i],"-m") == 0)
          params.filenumber = atoi(argv[i+1]);
    }
-	if (params.verbose)
-		fprintf(stderr,"Splitting the model %d x %d x %d times along each axis\n",
-			1<<params.xdepth,1<<params.ydepth,1<<params.zdepth);
+	if (params.verbose) {
+		if (params.bisect)
+			fprintf(stderr,"Bisecting the model along longest axis and at center of mass\n");
+		else
+			fprintf(stderr,"Splitting the model %d x %d x %d times along each axis\n",
+				1<<params.xdepth,1<<params.ydepth,1<<params.zdepth);
+	}
    strcpy(objname,argv[argc-1]);
 
    // Parse the OBJ file
@@ -115,6 +126,7 @@ void GiveUsage(char *s)
    fprintf(stderr,"Options\n");
    fprintf(stderr,"   -v           verbose mode, default: disabled\n");
 	fprintf(stderr,"   -t           toggle whether to split triangles at boundary, default: on\n");
+	fprintf(stderr,"   -b           toggle bisection only, default: disabled\n");
    fprintf(stderr,"   -n nx ny nz  power of 2 depth to split along each axis, default: %d\n",params.xdepth);
 	fprintf(stderr,"   -l n         override the treelevel, default: disabled\n");
 	fprintf(stderr,"   -m n         override auto filenumbers, default: disabled\n");
@@ -160,6 +172,9 @@ int ReadObj(FILE *fptr)
 			vertices[nvertices].flag = -1;
          nvertices++;
          MinMaxXYZ(p,&themin,&themax);
+			centermass.x += p.x;
+         centermass.y += p.y;
+         centermass.z += p.z;
          continue;
       }
 
@@ -249,6 +264,10 @@ int ReadObj(FILE *fptr)
       fprintf(stderr,"   %g <= z <= %g\n",themin.z,themax.z);
    }
 
+	centermass.x /= nvertices;
+   centermass.y /= nvertices;
+   centermass.z /= nvertices;
+
    // Tweek to get around issue of face vertices lying exactly on the bounding box
    themin.x -= EPS;
    themin.y -= EPS;
@@ -335,6 +354,7 @@ int ProcessFaces(char *fname)
 
       // flags are used to keep a sequential count of the added vertex ids
       // -1 in the vertex and uv flag means vertex is new, not yet saved
+		// Otherwise if >= 0 then it is the new vertex reference for this grid cell
       for (i=0;i<nvertices;i++)
          vertices[i].flag = -1;
       xyzcount = 0;
@@ -418,6 +438,8 @@ int ProcessFaces(char *fname)
 	   if (params.verbose)
    	   fprintf(stderr,". Contains %ld faces\n",bboxes[n].facecount);
    } // n
+
+	free(aface);
 
    return(TRUE);
 }
@@ -942,48 +964,128 @@ int ParseFace(char *s,FACE *f)
 
 /*
 	Split the model into 2^params.depth boxes along each axis
+	Or if bisection enabled then bisect the longest axis at the center of mass
 */
 void GenerateBBoxes(void)
 {
    int ix,iy,iz,i,n;
 	int dx,dy,dz;
+	double wx,wy,wz;
 
    if (params.verbose)
       fprintf(stderr,"Computing the boxes\n");
 
-	dx = 1 << params.xdepth;
-   dy = 1 << params.ydepth;
-   dz = 1 << params.zdepth;
+	if (params.bisect) {
 
-	for (ix=0;ix<dx;ix++) {
-		for (iy=0;iy<dy;iy++) {
-			for (iz=0;iz<dz;iz++) {
+		wx = themax.x - themin.x;
+      wy = themax.y - themin.y;
+      wz = themax.z - themin.z;
+		bboxes = realloc(bboxes,2*sizeof(BBOX));
+		if (wx > wy && wx > wz) {
+			bboxes[0].themin.x = themin.x;
+         bboxes[0].themin.y = themin.y;
+         bboxes[0].themin.z = themin.z;
+         bboxes[0].themax.x = centermass.x;
+         bboxes[0].themax.y = themax.y;
+         bboxes[0].themax.z = themax.z;
+         bboxes[1].themin.x = centermass.x;
+         bboxes[1].themin.y = themin.y;
+         bboxes[1].themin.z = themin.z;
+         bboxes[1].themax.x = themax.x;
+         bboxes[1].themax.y = themax.y;
+         bboxes[1].themax.z = themax.z;
+         bboxes[0].ix = 1;
+         bboxes[0].iy = 0;
+         bboxes[0].iz = 0;
+         bboxes[1].ix = 1;
+         bboxes[1].iy = 0;
+         bboxes[1].iz = 0;
+		} else if (wy > wx && wy > wz) {
+         bboxes[0].themin.x = themin.x;
+         bboxes[0].themin.y = themin.y;
+         bboxes[0].themin.z = themin.z;
+         bboxes[0].themax.x = themax.x;
+         bboxes[0].themax.y = centermass.y;
+         bboxes[0].themax.z = themax.z;
+         bboxes[1].themin.x = themin.x;
+         bboxes[1].themin.y = centermass.y;
+         bboxes[1].themin.z = themin.z;
+         bboxes[1].themax.x = themax.x;
+         bboxes[1].themax.y = themax.y;
+         bboxes[1].themax.z = themax.z;
+         bboxes[0].ix = 0;
+         bboxes[0].iy = 1;
+         bboxes[0].iz = 0;
+         bboxes[1].ix = 0;
+         bboxes[1].iy = 1;
+         bboxes[1].iz = 0;
+		} else {
+         bboxes[0].themin.x = themin.x;
+         bboxes[0].themin.y = themin.y;
+         bboxes[0].themin.z = themin.z;
+         bboxes[0].themax.x = themax.x;
+         bboxes[0].themax.y = themax.y;
+         bboxes[0].themax.z = centermass.z;
+         bboxes[1].themin.x = themin.x;
+         bboxes[1].themin.y = themin.y;
+         bboxes[1].themin.z = centermass.z;
+         bboxes[1].themax.x = themax.x;
+         bboxes[1].themax.y = themax.y;
+         bboxes[1].themax.z = themax.z;
+         bboxes[0].ix = 0;
+         bboxes[0].iy = 0;
+         bboxes[0].iz = 1;
+         bboxes[1].ix = 0;
+         bboxes[1].iy = 0;
+         bboxes[1].iz = 1;
+		}
+		nbboxes = 2;
 
-      		bboxes = realloc(bboxes,(nbboxes+1)*sizeof(BBOX));
-      		bboxes[nbboxes].themin.x = themin.x + ix * (themax.x - themin.x) / dx;
-            bboxes[nbboxes].themin.y = themin.y + iy * (themax.y - themin.y) / dy;
-            bboxes[nbboxes].themin.z = themin.z + iz * (themax.z - themin.z) / dz;
-      		bboxes[nbboxes].themax.x = themin.x + (ix+1) * (themax.x - themin.x) / dx;
-            bboxes[nbboxes].themax.y = themin.y + (iy+1) * (themax.y - themin.y) / dy;
-            bboxes[nbboxes].themax.z = themin.z + (iz+1) * (themax.z - themin.z) / dz;
-      		bboxes[nbboxes].vertexcount = 0;
-      		bboxes[nbboxes].facecount = 0;
-				bboxes[nbboxes].ix = ix;
-            bboxes[nbboxes].iy = iy;
-            bboxes[nbboxes].iz = iz;
-			
-				// Count the number of vertices in the box
-		      bboxes[nbboxes].vertexcount = 0;
-   		   for (i=0;i<nvertices;i++) {
-      		   if (VertexInBox(vertices[i],bboxes[nbboxes]) > 0) 
-           			bboxes[nbboxes].vertexcount++;
-      		}
+      // Count the number of vertices in the box
+		for (n=0;n<nbboxes;n++) {
+      	bboxes[n].vertexcount = 0;
+			bboxes[n].facecount = 0;
+      	for (i=0;i<nvertices;i++) {
+      	   if (VertexInBox(vertices[i],bboxes[n]) > 0)
+      	      bboxes[n].vertexcount++;
+			}
+      }
 
-				// Don't create empty boxes
-				if (bboxes[nbboxes].vertexcount <= 0)
-					continue;
+	} else {
 
-      		nbboxes++;
+		dx = 1 << params.xdepth;
+   	dy = 1 << params.ydepth;
+   	dz = 1 << params.zdepth;
+		for (ix=0;ix<dx;ix++) {
+			for (iy=0;iy<dy;iy++) {
+				for (iz=0;iz<dz;iz++) {
+	
+	      		bboxes = realloc(bboxes,(nbboxes+1)*sizeof(BBOX));
+	      		bboxes[nbboxes].themin.x = themin.x + ix * (themax.x - themin.x) / dx;
+	            bboxes[nbboxes].themin.y = themin.y + iy * (themax.y - themin.y) / dy;
+	            bboxes[nbboxes].themin.z = themin.z + iz * (themax.z - themin.z) / dz;
+	      		bboxes[nbboxes].themax.x = themin.x + (ix+1) * (themax.x - themin.x) / dx;
+	            bboxes[nbboxes].themax.y = themin.y + (iy+1) * (themax.y - themin.y) / dy;
+	            bboxes[nbboxes].themax.z = themin.z + (iz+1) * (themax.z - themin.z) / dz;
+	      		bboxes[nbboxes].vertexcount = 0;
+	      		bboxes[nbboxes].facecount = 0;
+					bboxes[nbboxes].ix = ix;
+	            bboxes[nbboxes].iy = iy;
+	            bboxes[nbboxes].iz = iz;
+				
+					// Count the number of vertices in the box
+			      bboxes[nbboxes].vertexcount = 0;
+	   		   for (i=0;i<nvertices;i++) {
+	      		   if (VertexInBox(vertices[i],bboxes[nbboxes]) > 0) 
+	           			bboxes[nbboxes].vertexcount++;
+	      		}
+	
+					// Don't create empty boxes
+					if (bboxes[nbboxes].vertexcount <= 0)
+						continue;
+	
+	      		nbboxes++;
+				}
 			}
 		}
 	}
@@ -1000,9 +1102,6 @@ void GenerateBBoxes(void)
 
 /*
    Return true if any part of a face is within a box
-	Two tests
-	- is any vertex in the box
-	- is a corner of the box in the triangle
 */
 int FaceInBox(FACE f,BBOX box)
 {
@@ -1012,7 +1111,7 @@ int FaceInBox(FACE f,BBOX box)
 	for (i=0;i<3;i++)
 		p[i] = vertices[f.xyzid[i]];
 
-   // First most common test, are all vertices outside
+   // Are all vertices outside
    if (p[0].x < box.themin.x && p[1].x < box.themin.x && p[2].x < box.themin.x)
       return(FALSE);
    if (p[0].x > box.themax.x && p[1].x > box.themax.x && p[2].x > box.themax.x)
@@ -1025,12 +1124,6 @@ int FaceInBox(FACE f,BBOX box)
       return(FALSE);
    if (p[0].z > box.themax.z && p[1].z > box.themax.z && p[2].z > box.themax.z)
       return(FALSE);
-
-	/* Next test, is any single vertex on the inside?
-	for (i=0;i<3;i++) {
-		if (VertexInBox(p[i],box))
-			return(TRUE);
-	}*/
 
    return(TRUE);
 }
