@@ -1,6 +1,6 @@
 #include "split.h"
 
-#define VERSION "1.06"
+#define VERSION "1.07"
 
 /*
    Take a textured OBJ file and split into pieces each with a maximum number of triangles.
@@ -198,7 +198,7 @@ int ReadObj(FILE *fptr)
       // Count the faces, optionally load into memory
       if (aline[0] == 'f' && aline[1] == ' ') {
          if (!ParseFace(aline,&aface)) {
-            fprintf(stderr,"Face parsing error occured on line %ld of tmp file\n",linecount);
+            fprintf(stderr,"Face parsing error occured on line %ld\n",linecount);
             return(FALSE);
          }
 			if ((faces = realloc(faces,(nfaces+1)*sizeof(FACE))) == NULL) {
@@ -313,7 +313,7 @@ int ProcessFaces(char *fname)
          return(FALSE);
       }
       fprintf(fobj,"#\n");
-      fprintf(fobj,"# Master OBJ file: %s\n",fname);
+      fprintf(fobj,"# Source OBJ file: %s\n",fname);
       fprintf(fobj,"#    Consists of %ld vertices\n",nvertices);
       fprintf(fobj,"#    Consists of %ld uv coordinates\n",nuv);
       fprintf(fobj,"#    Consists of %ld faces\n",nfaces);
