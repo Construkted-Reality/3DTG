@@ -1,6 +1,6 @@
 #include "split.h"
 
-#define VERSION "1.07"
+#define VERSION "1.08"
 
 /*
    Take a textured OBJ file and split into pieces each with a maximum number of triangles.
