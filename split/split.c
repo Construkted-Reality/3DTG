@@ -8,17 +8,17 @@
    - Subdivide the bounding box until each box contains less than a maximum number of vertices
    - Parse obj files faces, saving each to a OBJ file depending on which box it is inside
    Initial version: vertices in RAM, obj files parsed during analysis of faces
-	 3 June 2020: Use the center of mass for the subdivision rather than midpoint
+    3 June 2020: Use the center of mass for the subdivision rather than midpoint
     4 June 2020: switched to double precision for vertices and uv coordinates
     7 June 2020: Add option to extend the splitting box volumns, -g
    12 June 2020: Added -ram option to read faces into memory
                  General code cleanup
    13 June 2020: Added version number and some progress reporting. Made -ram the default.
    17 June 2002: Added timing and investigate vertex reading time.
-	08 July 2020: Added option for triangle spitting (-t)
+   08 July 2020: Added option for triangle spitting (-t)
                  Removed disk based solution
    09 July 2020: Fixed triangle splitting error at box corners.
-	05 Dec  2020: Added -gp option, split by percentage of bounding box maximum edge
+   05 Dec  2020: Added -gp option, split by percentage of bounding box maximum edge
 */
 
 // Command line parameters
@@ -51,10 +51,10 @@ int main(int argc,char **argv)
    int i;
    char objname[256];
    FILE *fptr;
-	double starttime,stoptime;
-	double growpercent = -1;
+   double starttime,stoptime;
+   double growpercent = -1;
 
-	Init();
+   Init();
 
    // Deal with command line
    if (argc < 2) 
@@ -79,7 +79,7 @@ int main(int argc,char **argv)
    params.ntriangles *= 1000;
 
    // Parse the OBJ file
-	starttime = GetRunTime();
+   starttime = GetRunTime();
    if ((fptr = fopen(objname,"r")) == NULL) {
       fprintf(stderr,"Failed to open input OBJ file \"%s\"\n",objname);
       exit(-1);
@@ -89,20 +89,20 @@ int main(int argc,char **argv)
       exit(-1);
    }
    fclose(fptr);
-	stoptime = GetRunTime();
-	if (params.verbose)
-		fprintf(stderr,"Time to read OBJ file: %.1lf seconds\n",stoptime-starttime);
-	if (growpercent > 0) {
-		params.growlength = MAX(themax.x-themin.x,themax.y-themin.y);
-		params.growlength = MAX(params.growlength,themax.z-themin.z);
-		params.growlength *= growpercent;
-		params.growlength /= 100.0;
-		if (params.verbose)
-			fprintf(stderr,"Grow length calculated as: %g\n",params.growlength);
-	}
+   stoptime = GetRunTime();
+   if (params.verbose)
+      fprintf(stderr,"Time to read OBJ file: %.1lf seconds\n",stoptime-starttime);
+   if (growpercent > 0) {
+      params.growlength = MAX(themax.x-themin.x,themax.y-themin.y);
+      params.growlength = MAX(params.growlength,themax.z-themin.z);
+      params.growlength *= growpercent;
+      params.growlength /= 100.0;
+      if (params.verbose)
+         fprintf(stderr,"Grow length calculated as: %g\n",params.growlength);
+   }
 
    // Create the bounding boxes based upon vertex counts
-	starttime = GetRunTime();
+   starttime = GetRunTime();
    while (GenerateBBoxes(params.ntriangles/2)) 
       ;
    stoptime = GetRunTime();
@@ -111,10 +111,10 @@ int main(int argc,char **argv)
 
    // Create an obj file showing the bounding boxes, debugging purposes only
    if (params.verbose) 
-		SaveSplitting();
+      SaveSplitting();
 
    // Read the faces and allocate to correct subvolume
-	starttime = GetRunTime();
+   starttime = GetRunTime();
    ProcessFaces(objname);
    stoptime = GetRunTime();
    if (params.verbose)
@@ -122,7 +122,7 @@ int main(int argc,char **argv)
 
    // Create an obj file showing the bounding boxes, debugging purposes only
    if (params.verbose) 
-		SaveBBoxes();
+      SaveBBoxes();
 
    // Create the meta tileset
    SaveTileset(objname);
@@ -133,13 +133,13 @@ int main(int argc,char **argv)
 void GiveUsage(char *s)
 {
    fprintf(stderr,"Usage: %s [options] objfilename\n",s);
-	fprintf(stderr,"Version: %s\n",VERSION);
+   fprintf(stderr,"Version: %s\n",VERSION);
    fprintf(stderr,"Options\n");
    fprintf(stderr,"   -v     verbose mode, default: disabled\n");
    fprintf(stderr,"   -g n   grow the splitting boxes by this amount, default: 0\n");
    fprintf(stderr,"   -gp n  grow the splitting boxes by this percentage of longest bounding box length, default: 0\n");
    fprintf(stderr,"   -s     switch to bisection method to split boxes, default: center of mass\n");
-	fprintf(stderr,"   -t     whether to split triangles at boundary, default: off\n");
+   fprintf(stderr,"   -t     whether to split triangles at boundary, default: off\n");
    fprintf(stderr,"   -n n   triangle target per box in thousands, default: %ld\n",params.ntriangles);
 
    exit(0);
@@ -156,17 +156,17 @@ int ReadObj(FILE *fptr)
    char aline[1024],ignore[256];
    UV t;
    XYZ p;
-	FACE aface;
+   FACE aface;
 
    if (params.verbose)
       fprintf(stderr,"Parsing OBJ file\n");
 
    // Read a line at a time
-	// Only interested in vertex and texture coordinate lines
+   // Only interested in vertex and texture coordinate lines
    while (fgets(aline,1023,fptr) != NULL) {
       linecount++;
       if (params.verbose)
-			LineStatus(linecount);
+         LineStatus(linecount);
 
       // Vertex line
       if (aline[0] == 'v' && aline[1] == ' ') {
@@ -176,11 +176,11 @@ int ReadObj(FILE *fptr)
             break;
          }
          if ((vertices = realloc(vertices,(nvertices+1)*sizeof(XYZ))) == NULL) {
-				fprintf(stderr,"Ran out of memory allocating memory for vertices\n");
-				return(FALSE);
-			}
+            fprintf(stderr,"Ran out of memory allocating memory for vertices\n");
+            return(FALSE);
+         }
          vertices[nvertices] = p;
-			vertices[nvertices].flag = -1;
+         vertices[nvertices].flag = -1;
          nvertices++;
          MinMaxXYZ(p,&themin,&themax);
          continue;
@@ -194,11 +194,11 @@ int ReadObj(FILE *fptr)
             break;
          }
          if ((uv = realloc(uv,(nuv+1)*sizeof(UV))) == NULL) {
-				fprintf(stderr,"Ran out of memory allocating memory for UV coordinates\n");
-				return(FALSE);
-			}
+            fprintf(stderr,"Ran out of memory allocating memory for UV coordinates\n");
+            return(FALSE);
+         }
          uv[nuv] = t;
-			uv[nuv].flag = -1;
+         uv[nuv].flag = -1;
          nuv++;
          continue;
       }
@@ -214,40 +214,40 @@ int ReadObj(FILE *fptr)
             fprintf(stderr,"Face parsing error occured on line %ld\n",linecount);
             return(FALSE);
          }
-			if ((faces = realloc(faces,(nfaces+1)*sizeof(FACE))) == NULL) {
-				fprintf(stderr,"Ran out of memory allocating memory for faces\n");
-				return(FALSE);
-			}
-			CopyFace(&(aface),&(faces[nfaces]));
-			faces[nfaces].materialid = nmaterials-1;
-			nfaces++;
-			continue;
-		}
+         if ((faces = realloc(faces,(nfaces+1)*sizeof(FACE))) == NULL) {
+            fprintf(stderr,"Ran out of memory allocating memory for faces\n");
+            return(FALSE);
+         }
+         CopyFace(&(aface),&(faces[nfaces]));
+         faces[nfaces].materialid = nmaterials-1;
+         nfaces++;
+         continue;
+      }
 
-     	// Materials
-     	if (strstr(aline,"mtllib ") != NULL) {
-     	   CleanString(aline);
-     	   sscanf(aline,"%s %s",ignore,materialfile);
-			if (params.verbose)	
-				fprintf(stderr,"Materials file is \"%s\"\n",materialfile);
-     	   continue;
-     	}
-     	if (strstr(aline,"usemtl ") != NULL) {
-     	   CleanString(aline);
-			materials = realloc(materials,(nmaterials+1)*sizeof(MATERIALNAME));
-			sscanf(aline,"%s %s",ignore,materials[nmaterials].name);
-			if (params.verbose)
-				fprintf(stderr,"Found material \"%s\"\n",materials[nmaterials].name);
-			nmaterials++;
-     	   continue;
-     	}
+        // Materials
+        if (strstr(aline,"mtllib ") != NULL) {
+           CleanString(aline);
+           sscanf(aline,"%s %s",ignore,materialfile);
+         if (params.verbose)   
+            fprintf(stderr,"Materials file is \"%s\"\n",materialfile);
+           continue;
+        }
+        if (strstr(aline,"usemtl ") != NULL) {
+           CleanString(aline);
+         materials = realloc(materials,(nmaterials+1)*sizeof(MATERIALNAME));
+         sscanf(aline,"%s %s",ignore,materials[nmaterials].name);
+         if (params.verbose)
+            fprintf(stderr,"Found material \"%s\"\n",materials[nmaterials].name);
+         nmaterials++;
+           continue;
+        }
    }
 
-	// Was it a useful OBJ file?
-	if (nvertices <= 0) {
-		fprintf(stderr,"Failed to find any vertices\n");
-		return(FALSE);
-	}
+   // Was it a useful OBJ file?
+   if (nvertices <= 0) {
+      fprintf(stderr,"Failed to find any vertices\n");
+      return(FALSE);
+   }
 
    if (params.verbose) {
       fprintf(stderr,"Found %ld vertices\n",nvertices);
@@ -259,13 +259,13 @@ int ReadObj(FILE *fptr)
          fprintf(stderr,"Require %ld MB of memory for vertices and uv\n",ram);
       else
          fprintf(stderr,"Require %ld GB of memory for vertices and uv\n",ram/1024);
-		fprintf(stderr,"Storage per face is %ld bytes\n",sizeof(FACE));
-		ram = nfaces*sizeof(FACE)/1024/1024;
-	   if (ram < 1024)
-	      fprintf(stderr,"Require %ld MB of memory for faces\n",ram);
-	   else
-	      fprintf(stderr,"Require %ld GB of memory for faces\n",ram/1024);
-		fprintf(stderr,"Found %d materials\n",nmaterials-1);
+      fprintf(stderr,"Storage per face is %ld bytes\n",sizeof(FACE));
+      ram = nfaces*sizeof(FACE)/1024/1024;
+      if (ram < 1024)
+         fprintf(stderr,"Require %ld MB of memory for faces\n",ram);
+      else
+         fprintf(stderr,"Require %ld GB of memory for faces\n",ram/1024);
+      fprintf(stderr,"Found %d materials\n",nmaterials-1);
       fprintf(stderr,"Bounding box\n");
       fprintf(stderr,"   %g <= x <= %g\n",themin.x,themax.x);
       fprintf(stderr,"   %g <= y <= %g\n",themin.y,themax.y);
@@ -288,33 +288,33 @@ int ReadObj(FILE *fptr)
 
 /*
    Process faces and deal with materials
-	Determines if any part of the face is in the current bounding box?
-	Optionally split the face
+   Determines if any part of the face is in the current bounding box?
+   Optionally split the face
 */
 int ProcessFaces(char *fname)
 {
    int i,j,n,k;
    int xyzcount,uvcount;
-	int currentmaterial = -1;
+   int currentmaterial = -1;
    char objname[256];
    FILE *fobj;
    XYZ p;
    XYZ big = {1e32,1e32,1e32},small = {-1e32,-1e32,-1e32};
    UV u;
    FACE *aface = NULL;
-	int nf = 0;
-	int maxface = 50; // Actually I think 16 is the maximum possible
+   int nf = 0;
+   int maxface = 50; // Actually I think 16 is the maximum possible
 
-	aface = malloc(maxface*sizeof(FACE));
+   aface = malloc(maxface*sizeof(FACE));
 
    // Process each box in turn
    for (n=0;n<nbboxes;n++) {
-		currentmaterial = -1;
+      currentmaterial = -1;
       if (params.verbose)
          fprintf(stderr,"Processing faces for box %10d of %10d\n",n+1,nbboxes);
 
-		// Will determine the actual bounding box since faces can extend
-		// outside of the splitting box if triangle splitting is off
+      // Will determine the actual bounding box since faces can extend
+      // outside of the splitting box if triangle splitting is off
       bboxes[n].datamin = big;
       bboxes[n].datamax = small;
       bboxes[n].facecount = 0;
@@ -354,7 +354,7 @@ int ProcessFaces(char *fname)
          (bboxes[n].themin.z+bboxes[n].themax.z)/2);
       fprintf(fobj,"#\n");
 
-		fprintf(fobj,"mtllib %s\n",materialfile);
+      fprintf(fobj,"mtllib %s\n",materialfile);
 
       // flags are used to keep a sequential count of the added vertex ids
       // -1 in the vertex and uv flag means vertex is new, not yet saved
@@ -365,78 +365,78 @@ int ProcessFaces(char *fname)
          uv[i].flag = -1;
       uvcount = 0;
 
-		for (i=0;i<nfaces;i++) {
-			if (i % (nfaces/10) == 0)
-				fprintf(stderr,"   Processing face %d of %ld\n",i,nfaces);
+      for (i=0;i<nfaces;i++) {
+         if (i % (nfaces/10) == 0)
+            fprintf(stderr,"   Processing face %d of %ld\n",i,nfaces);
 
-			nf = 1;
-			CopyFace(&(faces[i]),&(aface[0]));
+         nf = 1;
+         CopyFace(&(faces[i]),&(aface[0]));
 
-			// Write the material when it changes
-			if (aface[0].materialid != currentmaterial) {
-				fprintf(fobj,"usemtl %s\n",materials[aface[0].materialid].name);
-				currentmaterial = aface[0].materialid;
-			}
-				
+         // Write the material when it changes
+         if (aface[0].materialid != currentmaterial) {
+            fprintf(fobj,"usemtl %s\n",materials[aface[0].materialid].name);
+            currentmaterial = aface[0].materialid;
+         }
+            
          // Is this face within the bounding box
          if (!FaceInBox(aface[0],bboxes[n]))
-				continue;
+            continue;
 
-			// Split the face if there are 1 or 2 vertices inside the bounding box
-			if (params.trisplit) {
-				nf = SplitFaceX(bboxes[n],aface,nf);
+         // Split the face if there are 1 or 2 vertices inside the bounding box
+         if (params.trisplit) {
+            nf = SplitFaceX(bboxes[n],aface,nf);
             nf = SplitFaceY(bboxes[n],aface,nf);
             nf = SplitFaceZ(bboxes[n],aface,nf);
-				if (nf > 16)
-					fprintf(stderr,"Split to %d faces, not ever expecting more than 16\n",nf);
-			}
+            if (nf > 16)
+               fprintf(stderr,"Split to %d faces, not ever expecting more than 16\n",nf);
+         }
 
-			for (k=0;k<nf;k++) { // The k'th split face
+         for (k=0;k<nf;k++) { // The k'th split face
 
-				// Filter fragments that can arise from corners
-				if (params.trisplit) {
-      	   	if (!FaceInBox(aface[k],bboxes[n]))
-						continue;
-				}
+            // Filter fragments that can arise from corners
+            if (params.trisplit) {
+               if (!FaceInBox(aface[k],bboxes[n]))
+                  continue;
+            }
 
-         	for (j=0;j<3;j++) {
+            for (j=0;j<3;j++) {
 
-         	   // This vertex has not yet been saved
-         	   // Allocate it the next number in the sequence
-         	   // Save the vertex to the output OBJ file
-         	   // Remember the number the next time it is encountered
-         	   if (vertices[aface[k].xyzid[j]].flag < 0) {
-         	      vertices[aface[k].xyzid[j]].flag = xyzcount;
-         	      xyzcount++;
-         	      p = vertices[aface[k].xyzid[j]];
-         	      fprintf(fobj,"v %lf %lf %lf\n",p.x,p.y,p.z);
-         	   }
-         	   aface[k].xyzid[j] = vertices[aface[k].xyzid[j]].flag;
-	
-	            // Treat the uv coordinates the same as vertices above
-	            if (uv[aface[k].uvid[j]].flag < 0) {
-	               uv[aface[k].uvid[j]].flag = uvcount;
-	               uvcount++;
-	               u = uv[aface[k].uvid[j]];
-	               fprintf(fobj,"vt %lf %lf\n",u.u,u.v);
-	            }
-	            aface[k].uvid[j] = uv[aface[k].uvid[j]].flag;
-	
-	         } // j
-	
-	         // Finally save the face definition using the new numbers
-	         fprintf(fobj,"f %d/%d %d/%d %d/%d\n",
-	            aface[k].xyzid[0]+1,aface[k].uvid[0]+1,
-	            aface[k].xyzid[1]+1,aface[k].uvid[1]+1,
-	            aface[k].xyzid[2]+1,aface[k].uvid[2]+1);
+               // This vertex has not yet been saved
+               // Allocate it the next number in the sequence
+               // Save the vertex to the output OBJ file
+               // Remember the number the next time it is encountered
+               if (vertices[aface[k].xyzid[j]].flag < 0) {
+                  vertices[aface[k].xyzid[j]].flag = xyzcount;
+                  xyzcount++;
+                  p = vertices[aface[k].xyzid[j]];
+                  fprintf(fobj,"v %lf %lf %lf\n",p.x,p.y,p.z);
+               }
+               aface[k].xyzid[j] = vertices[aface[k].xyzid[j]].flag;
+   
+               // Treat the uv coordinates the same as vertices above
+               if (uv[aface[k].uvid[j]].flag < 0) {
+                  uv[aface[k].uvid[j]].flag = uvcount;
+                  uvcount++;
+                  u = uv[aface[k].uvid[j]];
+                  fprintf(fobj,"vt %lf %lf\n",u.u,u.v);
+               }
+               aface[k].uvid[j] = uv[aface[k].uvid[j]].flag;
+   
+            } // j
+   
+            // Finally save the face definition using the new numbers
+            fprintf(fobj,"f %d/%d %d/%d %d/%d\n",
+               aface[k].xyzid[0]+1,aface[k].uvid[0]+1,
+               aface[k].xyzid[1]+1,aface[k].uvid[1]+1,
+               aface[k].xyzid[2]+1,aface[k].uvid[2]+1);
 
-	         for (j=0;j<3;j++) 
-	            MinMaxXYZ(vertices[aface[k].xyzid[j]],&bboxes[n].datamin,&bboxes[n].datamax);
+            for (j=0;j<3;j++) 
+               MinMaxXYZ(vertices[aface[k].xyzid[j]],&bboxes[n].datamin,&bboxes[n].datamax);
 
-   	      bboxes[n].facecount++;
-			} // k of nf split faces
-		}
-	
+            bboxes[n].facecount++;
+         } // k of nf split faces
+      }
+   
       // Report on the data bounds and centroid
       fprintf(fobj,"#\n");
       fprintf(fobj,"# Faces X bounds: %lf <= x <= %lf, length: %lf, halflength: %lf\n",
@@ -460,431 +460,431 @@ int ProcessFaces(char *fname)
       fprintf(fobj,"#\n");
       fclose(fobj);
 
-	   if (params.verbose)
-   	   fprintf(stderr,"   Contains %ld faces\n",bboxes[n].facecount);
+      if (params.verbose)
+         fprintf(stderr,"   Contains %ld faces\n",bboxes[n].facecount);
    } // n
 
    return(TRUE);
 }
 
 /*
-	Splits a series of faces between xmin and xmax of the bounding box
-	I admit this and the Y and Z axis versions is some of the crappiest code, but efficient.
+   Splits a series of faces between xmin and xmax of the bounding box
+   I admit this and the Y and Z axis versions is some of the crappiest code, but efficient.
 */
 int SplitFaceX(BBOX box,FACE *face,int n)
 {
-	int i,k;
-	int nf;
-	int fp = 0;
-	double mu1,mu2;
-	XYZ p[3],p1,p2;
-	UV uv1,uv2;
+   int i,k;
+   int nf;
+   int fp = 0;
+   double mu1,mu2;
+   XYZ p[3],p1,p2;
+   UV uv1,uv2;
 
-	nf = n;
+   nf = n;
 
-	// One vertex on the interior
-	for (i=0;i<nf;i++) {
-		for (k=0;k<3;k++) {
-			p[0] = vertices[face[i].xyzid[k]];
-			p[1] = vertices[face[i].xyzid[(k+1)%3]];
-			p[2] = vertices[face[i].xyzid[(k+2)%3]];
-			if (p[0].x > box.themin.x && p[1].x < box.themin.x && p[2].x < box.themin.x) {
-				p1 = SplitXEdge(box.themin.x,p[0],p[1],&mu1);
-   		   p2 = SplitXEdge(box.themin.x,p[0],p[2],&mu2);
-   			uv1.u = uv[face[i].uvid[k]].u + mu1 * (uv[face[i].uvid[(k+1)%3]].u - uv[face[i].uvid[k]].u);
-   			uv1.v = uv[face[i].uvid[k]].v + mu1 * (uv[face[i].uvid[(k+1)%3]].v - uv[face[i].uvid[k]].v);
-   			uv2.u = uv[face[i].uvid[k]].u + mu2 * (uv[face[i].uvid[(k+2)%3]].u - uv[face[i].uvid[k]].u);
-   			uv2.v = uv[face[i].uvid[k]].v + mu2 * (uv[face[i].uvid[(k+2)%3]].v - uv[face[i].uvid[k]].v);
-				AddXYZUV(p1,p2,uv1,uv2);
-				//face[i].xyzid[k] = face[i].xyzid[k];
-				face[i].xyzid[(k+1)%3] = nvertices-2;
-   		   face[i].xyzid[(k+2)%3] = nvertices-1;
-				//face[i].uvid[k] = face[i].uvid[k];
-   		   face[i].uvid[(k+1)%3] = nuv-2;
-   		   face[i].uvid[(k+2)%3] = nuv-1;
-				break;
-			}
-		}
-	}
+   // One vertex on the interior
+   for (i=0;i<nf;i++) {
+      for (k=0;k<3;k++) {
+         p[0] = vertices[face[i].xyzid[k]];
+         p[1] = vertices[face[i].xyzid[(k+1)%3]];
+         p[2] = vertices[face[i].xyzid[(k+2)%3]];
+         if (p[0].x > box.themin.x && p[1].x < box.themin.x && p[2].x < box.themin.x) {
+            p1 = SplitXEdge(box.themin.x,p[0],p[1],&mu1);
+            p2 = SplitXEdge(box.themin.x,p[0],p[2],&mu2);
+            uv1.u = uv[face[i].uvid[k]].u + mu1 * (uv[face[i].uvid[(k+1)%3]].u - uv[face[i].uvid[k]].u);
+            uv1.v = uv[face[i].uvid[k]].v + mu1 * (uv[face[i].uvid[(k+1)%3]].v - uv[face[i].uvid[k]].v);
+            uv2.u = uv[face[i].uvid[k]].u + mu2 * (uv[face[i].uvid[(k+2)%3]].u - uv[face[i].uvid[k]].u);
+            uv2.v = uv[face[i].uvid[k]].v + mu2 * (uv[face[i].uvid[(k+2)%3]].v - uv[face[i].uvid[k]].v);
+            AddXYZUV(p1,p2,uv1,uv2);
+            //face[i].xyzid[k] = face[i].xyzid[k];
+            face[i].xyzid[(k+1)%3] = nvertices-2;
+            face[i].xyzid[(k+2)%3] = nvertices-1;
+            //face[i].uvid[k] = face[i].uvid[k];
+            face[i].uvid[(k+1)%3] = nuv-2;
+            face[i].uvid[(k+2)%3] = nuv-1;
+            break;
+         }
+      }
+   }
 
-	for (i=0;i<nf;i++) {
-   	for (k=0;k<3;k++) {
-   	   p[0] = vertices[face[i].xyzid[k]];
-   	   p[1] = vertices[face[i].xyzid[(k+1)%3]];
-   	   p[2] = vertices[face[i].xyzid[(k+2)%3]];
-   	   if (p[0].x < box.themax.x && p[1].x > box.themax.x && p[2].x > box.themax.x) {
-   	      p1 = SplitXEdge(box.themax.x,p[0],p[1],&mu1);
-   	      p2 = SplitXEdge(box.themax.x,p[0],p[2],&mu2);
-   	      uv1.u = uv[face[i].uvid[k]].u + mu1 * (uv[face[i].uvid[(k+1)%3]].u - uv[face[i].uvid[k]].u);
-   	      uv1.v = uv[face[i].uvid[k]].v + mu1 * (uv[face[i].uvid[(k+1)%3]].v - uv[face[i].uvid[k]].v);
-   	      uv2.u = uv[face[i].uvid[k]].u + mu2 * (uv[face[i].uvid[(k+2)%3]].u - uv[face[i].uvid[k]].u);
-   	      uv2.v = uv[face[i].uvid[k]].v + mu2 * (uv[face[i].uvid[(k+2)%3]].v - uv[face[i].uvid[k]].v);
-   	      AddXYZUV(p1,p2,uv1,uv2);
-   	      //face[i].xyzid[k] = face[i].xyzid[k];
-   	      face[i].xyzid[(k+1)%3] = nvertices-2;
-   	      face[i].xyzid[(k+2)%3] = nvertices-1;
-   	      //face[i].uvid[k] = face[i].uvid[k];
-   	      face[i].uvid[(k+1)%3] = nuv-2;
-   	      face[i].uvid[(k+2)%3] = nuv-1;
-   	      break;
-   	   }
-		}
+   for (i=0;i<nf;i++) {
+      for (k=0;k<3;k++) {
+         p[0] = vertices[face[i].xyzid[k]];
+         p[1] = vertices[face[i].xyzid[(k+1)%3]];
+         p[2] = vertices[face[i].xyzid[(k+2)%3]];
+         if (p[0].x < box.themax.x && p[1].x > box.themax.x && p[2].x > box.themax.x) {
+            p1 = SplitXEdge(box.themax.x,p[0],p[1],&mu1);
+            p2 = SplitXEdge(box.themax.x,p[0],p[2],&mu2);
+            uv1.u = uv[face[i].uvid[k]].u + mu1 * (uv[face[i].uvid[(k+1)%3]].u - uv[face[i].uvid[k]].u);
+            uv1.v = uv[face[i].uvid[k]].v + mu1 * (uv[face[i].uvid[(k+1)%3]].v - uv[face[i].uvid[k]].v);
+            uv2.u = uv[face[i].uvid[k]].u + mu2 * (uv[face[i].uvid[(k+2)%3]].u - uv[face[i].uvid[k]].u);
+            uv2.v = uv[face[i].uvid[k]].v + mu2 * (uv[face[i].uvid[(k+2)%3]].v - uv[face[i].uvid[k]].v);
+            AddXYZUV(p1,p2,uv1,uv2);
+            //face[i].xyzid[k] = face[i].xyzid[k];
+            face[i].xyzid[(k+1)%3] = nvertices-2;
+            face[i].xyzid[(k+2)%3] = nvertices-1;
+            //face[i].uvid[k] = face[i].uvid[k];
+            face[i].uvid[(k+1)%3] = nuv-2;
+            face[i].uvid[(k+2)%3] = nuv-1;
+            break;
+         }
+      }
    }
 
 
-	// Two vertices on the interior
-	for (i=0;i<nf;i++) {
-   	for (k=0;k<3;k++) {
-   	   p[0] = vertices[face[i].xyzid[k]];
-   	   p[1] = vertices[face[i].xyzid[(k+1)%3]];
-   	   p[2] = vertices[face[i].xyzid[(k+2)%3]];
-   	   if (p[0].x < box.themin.x && p[1].x > box.themin.x && p[2].x > box.themin.x) {
-   	      p1 = SplitXEdge(box.themin.x,p[0],p[1],&mu1);
-   	      p2 = SplitXEdge(box.themin.x,p[0],p[2],&mu2);
-   	      uv1.u = uv[face[i].uvid[k]].u + mu1 * (uv[face[i].uvid[(k+1)%3]].u - uv[face[i].uvid[k]].u);
-   	      uv1.v = uv[face[i].uvid[k]].v + mu1 * (uv[face[i].uvid[(k+1)%3]].v - uv[face[i].uvid[k]].v);
-   	      uv2.u = uv[face[i].uvid[k]].u + mu2 * (uv[face[i].uvid[(k+2)%3]].u - uv[face[i].uvid[k]].u);
-   	      uv2.v = uv[face[i].uvid[k]].v + mu2 * (uv[face[i].uvid[(k+2)%3]].v - uv[face[i].uvid[k]].v);
-   	      AddXYZUV(p1,p2,uv1,uv2);
-				face[nf].xyzid[k] = nvertices-2;
-   	      face[nf].xyzid[(k+1)%3] = face[i].xyzid[(k+1)%3];
-   	      face[nf].xyzid[(k+2)%3] = face[i].xyzid[(k+2)%3];
-				face[nf].uvid[k] = nuv-2;
-   	      face[nf].uvid[(k+1)%3] = face[i].uvid[(k+1)%3];
-   	      face[nf].uvid[(k+2)%3] = face[i].uvid[(k+2)%3];
-				face[nf].materialid = face[i].materialid;
-				nf++;
-	
-				face[i].xyzid[k] = nvertices-2;
-	         face[i].xyzid[(k+1)%3] = face[i].xyzid[(k+2)%3];
-	         face[i].xyzid[(k+2)%3] = nvertices-1;
-				face[i].uvid[k] = nuv-2;
-	         face[i].uvid[(k+1)%3] = face[i].uvid[(k+2)%3];
-	         face[i].uvid[(k+2)%3] = nuv-1;
-				//face[i].materialid = face[i].materialid;
-				break;
-	      }
-	   }
-	}
+   // Two vertices on the interior
+   for (i=0;i<nf;i++) {
+      for (k=0;k<3;k++) {
+         p[0] = vertices[face[i].xyzid[k]];
+         p[1] = vertices[face[i].xyzid[(k+1)%3]];
+         p[2] = vertices[face[i].xyzid[(k+2)%3]];
+         if (p[0].x < box.themin.x && p[1].x > box.themin.x && p[2].x > box.themin.x) {
+            p1 = SplitXEdge(box.themin.x,p[0],p[1],&mu1);
+            p2 = SplitXEdge(box.themin.x,p[0],p[2],&mu2);
+            uv1.u = uv[face[i].uvid[k]].u + mu1 * (uv[face[i].uvid[(k+1)%3]].u - uv[face[i].uvid[k]].u);
+            uv1.v = uv[face[i].uvid[k]].v + mu1 * (uv[face[i].uvid[(k+1)%3]].v - uv[face[i].uvid[k]].v);
+            uv2.u = uv[face[i].uvid[k]].u + mu2 * (uv[face[i].uvid[(k+2)%3]].u - uv[face[i].uvid[k]].u);
+            uv2.v = uv[face[i].uvid[k]].v + mu2 * (uv[face[i].uvid[(k+2)%3]].v - uv[face[i].uvid[k]].v);
+            AddXYZUV(p1,p2,uv1,uv2);
+            face[nf].xyzid[k] = nvertices-2;
+            face[nf].xyzid[(k+1)%3] = face[i].xyzid[(k+1)%3];
+            face[nf].xyzid[(k+2)%3] = face[i].xyzid[(k+2)%3];
+            face[nf].uvid[k] = nuv-2;
+            face[nf].uvid[(k+1)%3] = face[i].uvid[(k+1)%3];
+            face[nf].uvid[(k+2)%3] = face[i].uvid[(k+2)%3];
+            face[nf].materialid = face[i].materialid;
+            nf++;
+   
+            face[i].xyzid[k] = nvertices-2;
+            face[i].xyzid[(k+1)%3] = face[i].xyzid[(k+2)%3];
+            face[i].xyzid[(k+2)%3] = nvertices-1;
+            face[i].uvid[k] = nuv-2;
+            face[i].uvid[(k+1)%3] = face[i].uvid[(k+2)%3];
+            face[i].uvid[(k+2)%3] = nuv-1;
+            //face[i].materialid = face[i].materialid;
+            break;
+         }
+      }
+   }
 
-	for (i=0;i<nf;i++) {
-   	for (k=0;k<3;k++) {
-   	   p[0] = vertices[face[i].xyzid[k]];
-   	  	p[1] = vertices[face[i].xyzid[(k+1)%3]];
-     		p[2] = vertices[face[i].xyzid[(k+2)%3]];
-      	if (p[0].x > box.themax.x && p[1].x < box.themax.x && p[2].x < box.themax.x) {
-	         p1 = SplitXEdge(box.themax.x,p[0],p[1],&mu1);
-  	      	p2 = SplitXEdge(box.themax.x,p[0],p[2],&mu2);
-         	uv1.u = uv[face[i].uvid[k]].u + mu1 * (uv[face[i].uvid[(k+1)%3]].u - uv[face[i].uvid[k]].u);
-         	uv1.v = uv[face[i].uvid[k]].v + mu1 * (uv[face[i].uvid[(k+1)%3]].v - uv[face[i].uvid[k]].v);
-         	uv2.u = uv[face[i].uvid[k]].u + mu2 * (uv[face[i].uvid[(k+2)%3]].u - uv[face[i].uvid[k]].u);
-         	uv2.v = uv[face[i].uvid[k]].v + mu2 * (uv[face[i].uvid[(k+2)%3]].v - uv[face[i].uvid[k]].v);
-         	AddXYZUV(p1,p2,uv1,uv2);
-         	face[nf].xyzid[k] = nvertices-2;
-         	face[nf].xyzid[(k+1)%3] = face[i].xyzid[(k+1)%3];
-         	face[nf].xyzid[(k+2)%3] = face[i].xyzid[(k+2)%3];
-         	face[nf].uvid[k] = nuv-2;
-         	face[nf].uvid[(k+1)%3] = face[i].uvid[(k+1)%3];
-         	face[nf].uvid[(k+2)%3] = face[i].uvid[(k+2)%3];
-         	face[nf].materialid = face[i].materialid;
-         	nf++;
-	
-	         face[i].xyzid[k] = nvertices-2;
-	         face[i].xyzid[(k+1)%3] = face[fp].xyzid[(k+2)%3];
-	         face[i].xyzid[(k+2)%3] = nvertices-1;
-	         face[i].uvid[k] = nuv-2;
-	         face[i].uvid[(k+1)%3] = face[fp].uvid[(k+2)%3];
-	         face[i].uvid[(k+2)%3] = nuv-1;
-	         //face[i].materialid = face[fp].materialid;
-	         break;
-	      }
-		}
+   for (i=0;i<nf;i++) {
+      for (k=0;k<3;k++) {
+         p[0] = vertices[face[i].xyzid[k]];
+           p[1] = vertices[face[i].xyzid[(k+1)%3]];
+           p[2] = vertices[face[i].xyzid[(k+2)%3]];
+         if (p[0].x > box.themax.x && p[1].x < box.themax.x && p[2].x < box.themax.x) {
+            p1 = SplitXEdge(box.themax.x,p[0],p[1],&mu1);
+              p2 = SplitXEdge(box.themax.x,p[0],p[2],&mu2);
+            uv1.u = uv[face[i].uvid[k]].u + mu1 * (uv[face[i].uvid[(k+1)%3]].u - uv[face[i].uvid[k]].u);
+            uv1.v = uv[face[i].uvid[k]].v + mu1 * (uv[face[i].uvid[(k+1)%3]].v - uv[face[i].uvid[k]].v);
+            uv2.u = uv[face[i].uvid[k]].u + mu2 * (uv[face[i].uvid[(k+2)%3]].u - uv[face[i].uvid[k]].u);
+            uv2.v = uv[face[i].uvid[k]].v + mu2 * (uv[face[i].uvid[(k+2)%3]].v - uv[face[i].uvid[k]].v);
+            AddXYZUV(p1,p2,uv1,uv2);
+            face[nf].xyzid[k] = nvertices-2;
+            face[nf].xyzid[(k+1)%3] = face[i].xyzid[(k+1)%3];
+            face[nf].xyzid[(k+2)%3] = face[i].xyzid[(k+2)%3];
+            face[nf].uvid[k] = nuv-2;
+            face[nf].uvid[(k+1)%3] = face[i].uvid[(k+1)%3];
+            face[nf].uvid[(k+2)%3] = face[i].uvid[(k+2)%3];
+            face[nf].materialid = face[i].materialid;
+            nf++;
+   
+            face[i].xyzid[k] = nvertices-2;
+            face[i].xyzid[(k+1)%3] = face[fp].xyzid[(k+2)%3];
+            face[i].xyzid[(k+2)%3] = nvertices-1;
+            face[i].uvid[k] = nuv-2;
+            face[i].uvid[(k+1)%3] = face[fp].uvid[(k+2)%3];
+            face[i].uvid[(k+2)%3] = nuv-1;
+            //face[i].materialid = face[fp].materialid;
+            break;
+         }
+      }
    } 
 
-	return(nf);
+   return(nf);
 }
 
 int SplitFaceY(BBOX box,FACE *face,int n) 
 {
-	int i,k;
-	int nf;
-	int fp = 0;
-	double mu1,mu2;
-	XYZ p[3],p1,p2;
-	UV uv1,uv2;
+   int i,k;
+   int nf;
+   int fp = 0;
+   double mu1,mu2;
+   XYZ p[3],p1,p2;
+   UV uv1,uv2;
 
-	nf = n;
+   nf = n;
 
-	// One vertex on the interior
-	for (i=0;i<nf;i++) {
-		for (k=0;k<3;k++) {
-			p[0] = vertices[face[i].xyzid[k]];
-			p[1] = vertices[face[i].xyzid[(k+1)%3]];
-			p[2] = vertices[face[i].xyzid[(k+2)%3]];
-			if (p[0].y > box.themin.y && p[1].y < box.themin.y && p[2].y < box.themin.y) {
-				p1 = SplitYEdge(box.themin.y,p[0],p[1],&mu1);
-   		   p2 = SplitYEdge(box.themin.y,p[0],p[2],&mu2);
-   			uv1.u = uv[face[i].uvid[k]].u + mu1 * (uv[face[i].uvid[(k+1)%3]].u - uv[face[i].uvid[k]].u);
-   			uv1.v = uv[face[i].uvid[k]].v + mu1 * (uv[face[i].uvid[(k+1)%3]].v - uv[face[i].uvid[k]].v);
-   			uv2.u = uv[face[i].uvid[k]].u + mu2 * (uv[face[i].uvid[(k+2)%3]].u - uv[face[i].uvid[k]].u);
-   			uv2.v = uv[face[i].uvid[k]].v + mu2 * (uv[face[i].uvid[(k+2)%3]].v - uv[face[i].uvid[k]].v);
-				AddXYZUV(p1,p2,uv1,uv2);
-				//face[i].xyzid[k] = face[i].xyzid[k];
-				face[i].xyzid[(k+1)%3] = nvertices-2;
-   		   face[i].xyzid[(k+2)%3] = nvertices-1;
-				//face[i].uvid[k] = face[i].uvid[k];
-   		   face[i].uvid[(k+1)%3] = nuv-2;
-   		   face[i].uvid[(k+2)%3] = nuv-1;
-				break;
-			}
-		}
-	}
+   // One vertex on the interior
+   for (i=0;i<nf;i++) {
+      for (k=0;k<3;k++) {
+         p[0] = vertices[face[i].xyzid[k]];
+         p[1] = vertices[face[i].xyzid[(k+1)%3]];
+         p[2] = vertices[face[i].xyzid[(k+2)%3]];
+         if (p[0].y > box.themin.y && p[1].y < box.themin.y && p[2].y < box.themin.y) {
+            p1 = SplitYEdge(box.themin.y,p[0],p[1],&mu1);
+            p2 = SplitYEdge(box.themin.y,p[0],p[2],&mu2);
+            uv1.u = uv[face[i].uvid[k]].u + mu1 * (uv[face[i].uvid[(k+1)%3]].u - uv[face[i].uvid[k]].u);
+            uv1.v = uv[face[i].uvid[k]].v + mu1 * (uv[face[i].uvid[(k+1)%3]].v - uv[face[i].uvid[k]].v);
+            uv2.u = uv[face[i].uvid[k]].u + mu2 * (uv[face[i].uvid[(k+2)%3]].u - uv[face[i].uvid[k]].u);
+            uv2.v = uv[face[i].uvid[k]].v + mu2 * (uv[face[i].uvid[(k+2)%3]].v - uv[face[i].uvid[k]].v);
+            AddXYZUV(p1,p2,uv1,uv2);
+            //face[i].xyzid[k] = face[i].xyzid[k];
+            face[i].xyzid[(k+1)%3] = nvertices-2;
+            face[i].xyzid[(k+2)%3] = nvertices-1;
+            //face[i].uvid[k] = face[i].uvid[k];
+            face[i].uvid[(k+1)%3] = nuv-2;
+            face[i].uvid[(k+2)%3] = nuv-1;
+            break;
+         }
+      }
+   }
 
-	for (i=0;i<nf;i++) {
-   	for (k=0;k<3;k++) {
-   	   p[0] = vertices[face[i].xyzid[k]];
-   	   p[1] = vertices[face[i].xyzid[(k+1)%3]];
-   	   p[2] = vertices[face[i].xyzid[(k+2)%3]];
-   	   if (p[0].y < box.themax.y && p[1].y > box.themax.y && p[2].y > box.themax.y) {
-   	      p1 = SplitYEdge(box.themax.y,p[0],p[1],&mu1);
-   	      p2 = SplitYEdge(box.themax.y,p[0],p[2],&mu2);
-   	      uv1.u = uv[face[i].uvid[k]].u + mu1 * (uv[face[i].uvid[(k+1)%3]].u - uv[face[i].uvid[k]].u);
-   	      uv1.v = uv[face[i].uvid[k]].v + mu1 * (uv[face[i].uvid[(k+1)%3]].v - uv[face[i].uvid[k]].v);
-   	      uv2.u = uv[face[i].uvid[k]].u + mu2 * (uv[face[i].uvid[(k+2)%3]].u - uv[face[i].uvid[k]].u);
-   	      uv2.v = uv[face[i].uvid[k]].v + mu2 * (uv[face[i].uvid[(k+2)%3]].v - uv[face[i].uvid[k]].v);
-   	      AddXYZUV(p1,p2,uv1,uv2);
-   	      //face[i].xyzid[k] = face[i].xyzid[k];
-   	      face[i].xyzid[(k+1)%3] = nvertices-2;
-   	      face[i].xyzid[(k+2)%3] = nvertices-1;
-   	      //face[i].uvid[k] = face[i].uvid[k];
-   	      face[i].uvid[(k+1)%3] = nuv-2;
-   	      face[i].uvid[(k+2)%3] = nuv-1;
-   	      break;
-   	   }
-		}
+   for (i=0;i<nf;i++) {
+      for (k=0;k<3;k++) {
+         p[0] = vertices[face[i].xyzid[k]];
+         p[1] = vertices[face[i].xyzid[(k+1)%3]];
+         p[2] = vertices[face[i].xyzid[(k+2)%3]];
+         if (p[0].y < box.themax.y && p[1].y > box.themax.y && p[2].y > box.themax.y) {
+            p1 = SplitYEdge(box.themax.y,p[0],p[1],&mu1);
+            p2 = SplitYEdge(box.themax.y,p[0],p[2],&mu2);
+            uv1.u = uv[face[i].uvid[k]].u + mu1 * (uv[face[i].uvid[(k+1)%3]].u - uv[face[i].uvid[k]].u);
+            uv1.v = uv[face[i].uvid[k]].v + mu1 * (uv[face[i].uvid[(k+1)%3]].v - uv[face[i].uvid[k]].v);
+            uv2.u = uv[face[i].uvid[k]].u + mu2 * (uv[face[i].uvid[(k+2)%3]].u - uv[face[i].uvid[k]].u);
+            uv2.v = uv[face[i].uvid[k]].v + mu2 * (uv[face[i].uvid[(k+2)%3]].v - uv[face[i].uvid[k]].v);
+            AddXYZUV(p1,p2,uv1,uv2);
+            //face[i].xyzid[k] = face[i].xyzid[k];
+            face[i].xyzid[(k+1)%3] = nvertices-2;
+            face[i].xyzid[(k+2)%3] = nvertices-1;
+            //face[i].uvid[k] = face[i].uvid[k];
+            face[i].uvid[(k+1)%3] = nuv-2;
+            face[i].uvid[(k+2)%3] = nuv-1;
+            break;
+         }
+      }
    }
 
 
-	// Two vertices on the interior
-	for (i=0;i<nf;i++) {
-   	for (k=0;k<3;k++) {
-   	   p[0] = vertices[face[i].xyzid[k]];
-   	   p[1] = vertices[face[i].xyzid[(k+1)%3]];
-   	   p[2] = vertices[face[i].xyzid[(k+2)%3]];
-   	   if (p[0].y < box.themin.y && p[1].y > box.themin.y && p[2].y > box.themin.y) {
-   	      p1 = SplitYEdge(box.themin.y,p[0],p[1],&mu1);
-   	      p2 = SplitYEdge(box.themin.y,p[0],p[2],&mu2);
-   	      uv1.u = uv[face[i].uvid[k]].u + mu1 * (uv[face[i].uvid[(k+1)%3]].u - uv[face[i].uvid[k]].u);
-   	      uv1.v = uv[face[i].uvid[k]].v + mu1 * (uv[face[i].uvid[(k+1)%3]].v - uv[face[i].uvid[k]].v);
-   	      uv2.u = uv[face[i].uvid[k]].u + mu2 * (uv[face[i].uvid[(k+2)%3]].u - uv[face[i].uvid[k]].u);
-   	      uv2.v = uv[face[i].uvid[k]].v + mu2 * (uv[face[i].uvid[(k+2)%3]].v - uv[face[i].uvid[k]].v);
-   	      AddXYZUV(p1,p2,uv1,uv2);
-				face[nf].xyzid[k] = nvertices-2;
-   	      face[nf].xyzid[(k+1)%3] = face[i].xyzid[(k+1)%3];
-   	      face[nf].xyzid[(k+2)%3] = face[i].xyzid[(k+2)%3];
-				face[nf].uvid[k] = nuv-2;
-   	      face[nf].uvid[(k+1)%3] = face[i].uvid[(k+1)%3];
-   	      face[nf].uvid[(k+2)%3] = face[i].uvid[(k+2)%3];
-				face[nf].materialid = face[i].materialid;
-				nf++;
-	
-				face[i].xyzid[k] = nvertices-2;
-	         face[i].xyzid[(k+1)%3] = face[i].xyzid[(k+2)%3];
-	         face[i].xyzid[(k+2)%3] = nvertices-1;
-				face[i].uvid[k] = nuv-2;
-	         face[i].uvid[(k+1)%3] = face[i].uvid[(k+2)%3];
-	         face[i].uvid[(k+2)%3] = nuv-1;
-				//face[i].materialid = face[i].materialid;
-				break;
-	      }
-	   }
-	}
+   // Two vertices on the interior
+   for (i=0;i<nf;i++) {
+      for (k=0;k<3;k++) {
+         p[0] = vertices[face[i].xyzid[k]];
+         p[1] = vertices[face[i].xyzid[(k+1)%3]];
+         p[2] = vertices[face[i].xyzid[(k+2)%3]];
+         if (p[0].y < box.themin.y && p[1].y > box.themin.y && p[2].y > box.themin.y) {
+            p1 = SplitYEdge(box.themin.y,p[0],p[1],&mu1);
+            p2 = SplitYEdge(box.themin.y,p[0],p[2],&mu2);
+            uv1.u = uv[face[i].uvid[k]].u + mu1 * (uv[face[i].uvid[(k+1)%3]].u - uv[face[i].uvid[k]].u);
+            uv1.v = uv[face[i].uvid[k]].v + mu1 * (uv[face[i].uvid[(k+1)%3]].v - uv[face[i].uvid[k]].v);
+            uv2.u = uv[face[i].uvid[k]].u + mu2 * (uv[face[i].uvid[(k+2)%3]].u - uv[face[i].uvid[k]].u);
+            uv2.v = uv[face[i].uvid[k]].v + mu2 * (uv[face[i].uvid[(k+2)%3]].v - uv[face[i].uvid[k]].v);
+            AddXYZUV(p1,p2,uv1,uv2);
+            face[nf].xyzid[k] = nvertices-2;
+            face[nf].xyzid[(k+1)%3] = face[i].xyzid[(k+1)%3];
+            face[nf].xyzid[(k+2)%3] = face[i].xyzid[(k+2)%3];
+            face[nf].uvid[k] = nuv-2;
+            face[nf].uvid[(k+1)%3] = face[i].uvid[(k+1)%3];
+            face[nf].uvid[(k+2)%3] = face[i].uvid[(k+2)%3];
+            face[nf].materialid = face[i].materialid;
+            nf++;
+   
+            face[i].xyzid[k] = nvertices-2;
+            face[i].xyzid[(k+1)%3] = face[i].xyzid[(k+2)%3];
+            face[i].xyzid[(k+2)%3] = nvertices-1;
+            face[i].uvid[k] = nuv-2;
+            face[i].uvid[(k+1)%3] = face[i].uvid[(k+2)%3];
+            face[i].uvid[(k+2)%3] = nuv-1;
+            //face[i].materialid = face[i].materialid;
+            break;
+         }
+      }
+   }
 
-	for (i=0;i<nf;i++) {
-   	for (k=0;k<3;k++) {
-   	   p[0] = vertices[face[i].xyzid[k]];
-   	  	p[1] = vertices[face[i].xyzid[(k+1)%3]];
-     		p[2] = vertices[face[i].xyzid[(k+2)%3]];
-      	if (p[0].y > box.themax.y && p[1].y < box.themax.y && p[2].y < box.themax.y) {
-	         p1 = SplitYEdge(box.themax.y,p[0],p[1],&mu1);
-  	      	p2 = SplitYEdge(box.themax.y,p[0],p[2],&mu2);
-         	uv1.u = uv[face[i].uvid[k]].u + mu1 * (uv[face[i].uvid[(k+1)%3]].u - uv[face[i].uvid[k]].u);
-         	uv1.v = uv[face[i].uvid[k]].v + mu1 * (uv[face[i].uvid[(k+1)%3]].v - uv[face[i].uvid[k]].v);
-         	uv2.u = uv[face[i].uvid[k]].u + mu2 * (uv[face[i].uvid[(k+2)%3]].u - uv[face[i].uvid[k]].u);
-         	uv2.v = uv[face[i].uvid[k]].v + mu2 * (uv[face[i].uvid[(k+2)%3]].v - uv[face[i].uvid[k]].v);
-         	AddXYZUV(p1,p2,uv1,uv2);
-         	face[nf].xyzid[k] = nvertices-2;
-         	face[nf].xyzid[(k+1)%3] = face[i].xyzid[(k+1)%3];
-         	face[nf].xyzid[(k+2)%3] = face[i].xyzid[(k+2)%3];
-         	face[nf].uvid[k] = nuv-2;
-         	face[nf].uvid[(k+1)%3] = face[i].uvid[(k+1)%3];
-         	face[nf].uvid[(k+2)%3] = face[i].uvid[(k+2)%3];
-         	face[nf].materialid = face[i].materialid;
-         	nf++;
-	
-	         face[i].xyzid[k] = nvertices-2;
-	         face[i].xyzid[(k+1)%3] = face[fp].xyzid[(k+2)%3];
-	         face[i].xyzid[(k+2)%3] = nvertices-1;
-	         face[i].uvid[k] = nuv-2;
-	         face[i].uvid[(k+1)%3] = face[fp].uvid[(k+2)%3];
-	         face[i].uvid[(k+2)%3] = nuv-1;
-	         //face[i].materialid = face[fp].materialid;
-	         break;
-	      }
-		}
+   for (i=0;i<nf;i++) {
+      for (k=0;k<3;k++) {
+         p[0] = vertices[face[i].xyzid[k]];
+           p[1] = vertices[face[i].xyzid[(k+1)%3]];
+           p[2] = vertices[face[i].xyzid[(k+2)%3]];
+         if (p[0].y > box.themax.y && p[1].y < box.themax.y && p[2].y < box.themax.y) {
+            p1 = SplitYEdge(box.themax.y,p[0],p[1],&mu1);
+              p2 = SplitYEdge(box.themax.y,p[0],p[2],&mu2);
+            uv1.u = uv[face[i].uvid[k]].u + mu1 * (uv[face[i].uvid[(k+1)%3]].u - uv[face[i].uvid[k]].u);
+            uv1.v = uv[face[i].uvid[k]].v + mu1 * (uv[face[i].uvid[(k+1)%3]].v - uv[face[i].uvid[k]].v);
+            uv2.u = uv[face[i].uvid[k]].u + mu2 * (uv[face[i].uvid[(k+2)%3]].u - uv[face[i].uvid[k]].u);
+            uv2.v = uv[face[i].uvid[k]].v + mu2 * (uv[face[i].uvid[(k+2)%3]].v - uv[face[i].uvid[k]].v);
+            AddXYZUV(p1,p2,uv1,uv2);
+            face[nf].xyzid[k] = nvertices-2;
+            face[nf].xyzid[(k+1)%3] = face[i].xyzid[(k+1)%3];
+            face[nf].xyzid[(k+2)%3] = face[i].xyzid[(k+2)%3];
+            face[nf].uvid[k] = nuv-2;
+            face[nf].uvid[(k+1)%3] = face[i].uvid[(k+1)%3];
+            face[nf].uvid[(k+2)%3] = face[i].uvid[(k+2)%3];
+            face[nf].materialid = face[i].materialid;
+            nf++;
+   
+            face[i].xyzid[k] = nvertices-2;
+            face[i].xyzid[(k+1)%3] = face[fp].xyzid[(k+2)%3];
+            face[i].xyzid[(k+2)%3] = nvertices-1;
+            face[i].uvid[k] = nuv-2;
+            face[i].uvid[(k+1)%3] = face[fp].uvid[(k+2)%3];
+            face[i].uvid[(k+2)%3] = nuv-1;
+            //face[i].materialid = face[fp].materialid;
+            break;
+         }
+      }
    } 
 
-	return(nf);
+   return(nf);
 }
 
 int SplitFaceZ(BBOX box,FACE *face,int n)
 {
-	int i,k;
-	int nf;
-	int fp = 0;
-	double mu1,mu2;
-	XYZ p[3],p1,p2;
-	UV uv1,uv2;
+   int i,k;
+   int nf;
+   int fp = 0;
+   double mu1,mu2;
+   XYZ p[3],p1,p2;
+   UV uv1,uv2;
 
-	nf = n;
+   nf = n;
 
-	// One vertex on the interior
-	for (i=0;i<nf;i++) {
-		for (k=0;k<3;k++) {
-			p[0] = vertices[face[i].xyzid[k]];
-			p[1] = vertices[face[i].xyzid[(k+1)%3]];
-			p[2] = vertices[face[i].xyzid[(k+2)%3]];
-			if (p[0].z > box.themin.z && p[1].z < box.themin.z && p[2].z < box.themin.z) {
-				p1 = SplitZEdge(box.themin.z,p[0],p[1],&mu1);
-   		   p2 = SplitZEdge(box.themin.z,p[0],p[2],&mu2);
-   			uv1.u = uv[face[i].uvid[k]].u + mu1 * (uv[face[i].uvid[(k+1)%3]].u - uv[face[i].uvid[k]].u);
-   			uv1.v = uv[face[i].uvid[k]].v + mu1 * (uv[face[i].uvid[(k+1)%3]].v - uv[face[i].uvid[k]].v);
-   			uv2.u = uv[face[i].uvid[k]].u + mu2 * (uv[face[i].uvid[(k+2)%3]].u - uv[face[i].uvid[k]].u);
-   			uv2.v = uv[face[i].uvid[k]].v + mu2 * (uv[face[i].uvid[(k+2)%3]].v - uv[face[i].uvid[k]].v);
-				AddXYZUV(p1,p2,uv1,uv2);
-				//face[i].xyzid[k] = face[i].xyzid[k];
-				face[i].xyzid[(k+1)%3] = nvertices-2;
-   		   face[i].xyzid[(k+2)%3] = nvertices-1;
-				//face[i].uvid[k] = face[i].uvid[k];
-   		   face[i].uvid[(k+1)%3] = nuv-2;
-   		   face[i].uvid[(k+2)%3] = nuv-1;
-				break;
-			}
-		}
-	}
+   // One vertex on the interior
+   for (i=0;i<nf;i++) {
+      for (k=0;k<3;k++) {
+         p[0] = vertices[face[i].xyzid[k]];
+         p[1] = vertices[face[i].xyzid[(k+1)%3]];
+         p[2] = vertices[face[i].xyzid[(k+2)%3]];
+         if (p[0].z > box.themin.z && p[1].z < box.themin.z && p[2].z < box.themin.z) {
+            p1 = SplitZEdge(box.themin.z,p[0],p[1],&mu1);
+            p2 = SplitZEdge(box.themin.z,p[0],p[2],&mu2);
+            uv1.u = uv[face[i].uvid[k]].u + mu1 * (uv[face[i].uvid[(k+1)%3]].u - uv[face[i].uvid[k]].u);
+            uv1.v = uv[face[i].uvid[k]].v + mu1 * (uv[face[i].uvid[(k+1)%3]].v - uv[face[i].uvid[k]].v);
+            uv2.u = uv[face[i].uvid[k]].u + mu2 * (uv[face[i].uvid[(k+2)%3]].u - uv[face[i].uvid[k]].u);
+            uv2.v = uv[face[i].uvid[k]].v + mu2 * (uv[face[i].uvid[(k+2)%3]].v - uv[face[i].uvid[k]].v);
+            AddXYZUV(p1,p2,uv1,uv2);
+            //face[i].xyzid[k] = face[i].xyzid[k];
+            face[i].xyzid[(k+1)%3] = nvertices-2;
+            face[i].xyzid[(k+2)%3] = nvertices-1;
+            //face[i].uvid[k] = face[i].uvid[k];
+            face[i].uvid[(k+1)%3] = nuv-2;
+            face[i].uvid[(k+2)%3] = nuv-1;
+            break;
+         }
+      }
+   }
 
-	for (i=0;i<nf;i++) {
-   	for (k=0;k<3;k++) {
-   	   p[0] = vertices[face[i].xyzid[k]];
-   	   p[1] = vertices[face[i].xyzid[(k+1)%3]];
-   	   p[2] = vertices[face[i].xyzid[(k+2)%3]];
-   	   if (p[0].z < box.themax.z && p[1].z > box.themax.z && p[2].z > box.themax.z) {
-   	      p1 = SplitZEdge(box.themax.z,p[0],p[1],&mu1);
-   	      p2 = SplitZEdge(box.themax.z,p[0],p[2],&mu2);
-   	      uv1.u = uv[face[i].uvid[k]].u + mu1 * (uv[face[i].uvid[(k+1)%3]].u - uv[face[i].uvid[k]].u);
-   	      uv1.v = uv[face[i].uvid[k]].v + mu1 * (uv[face[i].uvid[(k+1)%3]].v - uv[face[i].uvid[k]].v);
-   	      uv2.u = uv[face[i].uvid[k]].u + mu2 * (uv[face[i].uvid[(k+2)%3]].u - uv[face[i].uvid[k]].u);
-   	      uv2.v = uv[face[i].uvid[k]].v + mu2 * (uv[face[i].uvid[(k+2)%3]].v - uv[face[i].uvid[k]].v);
-   	      AddXYZUV(p1,p2,uv1,uv2);
-   	      //face[i].xyzid[k] = face[i].xyzid[k];
-   	      face[i].xyzid[(k+1)%3] = nvertices-2;
-   	      face[i].xyzid[(k+2)%3] = nvertices-1;
-   	      //face[i].uvid[k] = face[i].uvid[k];
-   	      face[i].uvid[(k+1)%3] = nuv-2;
-   	      face[i].uvid[(k+2)%3] = nuv-1;
-   	      break;
-   	   }
-		}
+   for (i=0;i<nf;i++) {
+      for (k=0;k<3;k++) {
+         p[0] = vertices[face[i].xyzid[k]];
+         p[1] = vertices[face[i].xyzid[(k+1)%3]];
+         p[2] = vertices[face[i].xyzid[(k+2)%3]];
+         if (p[0].z < box.themax.z && p[1].z > box.themax.z && p[2].z > box.themax.z) {
+            p1 = SplitZEdge(box.themax.z,p[0],p[1],&mu1);
+            p2 = SplitZEdge(box.themax.z,p[0],p[2],&mu2);
+            uv1.u = uv[face[i].uvid[k]].u + mu1 * (uv[face[i].uvid[(k+1)%3]].u - uv[face[i].uvid[k]].u);
+            uv1.v = uv[face[i].uvid[k]].v + mu1 * (uv[face[i].uvid[(k+1)%3]].v - uv[face[i].uvid[k]].v);
+            uv2.u = uv[face[i].uvid[k]].u + mu2 * (uv[face[i].uvid[(k+2)%3]].u - uv[face[i].uvid[k]].u);
+            uv2.v = uv[face[i].uvid[k]].v + mu2 * (uv[face[i].uvid[(k+2)%3]].v - uv[face[i].uvid[k]].v);
+            AddXYZUV(p1,p2,uv1,uv2);
+            //face[i].xyzid[k] = face[i].xyzid[k];
+            face[i].xyzid[(k+1)%3] = nvertices-2;
+            face[i].xyzid[(k+2)%3] = nvertices-1;
+            //face[i].uvid[k] = face[i].uvid[k];
+            face[i].uvid[(k+1)%3] = nuv-2;
+            face[i].uvid[(k+2)%3] = nuv-1;
+            break;
+         }
+      }
    }
 
 
-	// Two vertices on the interior
-	for (i=0;i<nf;i++) {
-   	for (k=0;k<3;k++) {
-   	   p[0] = vertices[face[i].xyzid[k]];
-   	   p[1] = vertices[face[i].xyzid[(k+1)%3]];
-   	   p[2] = vertices[face[i].xyzid[(k+2)%3]];
-   	   if (p[0].z < box.themin.z && p[1].z > box.themin.z && p[2].z > box.themin.z) {
-   	      p1 = SplitZEdge(box.themin.z,p[0],p[1],&mu1);
-   	      p2 = SplitZEdge(box.themin.z,p[0],p[2],&mu2);
-   	      uv1.u = uv[face[i].uvid[k]].u + mu1 * (uv[face[i].uvid[(k+1)%3]].u - uv[face[i].uvid[k]].u);
-   	      uv1.v = uv[face[i].uvid[k]].v + mu1 * (uv[face[i].uvid[(k+1)%3]].v - uv[face[i].uvid[k]].v);
-   	      uv2.u = uv[face[i].uvid[k]].u + mu2 * (uv[face[i].uvid[(k+2)%3]].u - uv[face[i].uvid[k]].u);
-   	      uv2.v = uv[face[i].uvid[k]].v + mu2 * (uv[face[i].uvid[(k+2)%3]].v - uv[face[i].uvid[k]].v);
-   	      AddXYZUV(p1,p2,uv1,uv2);
-				face[nf].xyzid[k] = nvertices-2;
-   	      face[nf].xyzid[(k+1)%3] = face[i].xyzid[(k+1)%3];
-   	      face[nf].xyzid[(k+2)%3] = face[i].xyzid[(k+2)%3];
-				face[nf].uvid[k] = nuv-2;
-   	      face[nf].uvid[(k+1)%3] = face[i].uvid[(k+1)%3];
-   	      face[nf].uvid[(k+2)%3] = face[i].uvid[(k+2)%3];
-				face[nf].materialid = face[i].materialid;
-				nf++;
-	
-				face[i].xyzid[k] = nvertices-2;
-	         face[i].xyzid[(k+1)%3] = face[i].xyzid[(k+2)%3];
-	         face[i].xyzid[(k+2)%3] = nvertices-1;
-				face[i].uvid[k] = nuv-2;
-	         face[i].uvid[(k+1)%3] = face[i].uvid[(k+2)%3];
-	         face[i].uvid[(k+2)%3] = nuv-1;
-				//face[i].materialid = face[i].materialid;
-				break;
-	      }
-	   }
-	}
+   // Two vertices on the interior
+   for (i=0;i<nf;i++) {
+      for (k=0;k<3;k++) {
+         p[0] = vertices[face[i].xyzid[k]];
+         p[1] = vertices[face[i].xyzid[(k+1)%3]];
+         p[2] = vertices[face[i].xyzid[(k+2)%3]];
+         if (p[0].z < box.themin.z && p[1].z > box.themin.z && p[2].z > box.themin.z) {
+            p1 = SplitZEdge(box.themin.z,p[0],p[1],&mu1);
+            p2 = SplitZEdge(box.themin.z,p[0],p[2],&mu2);
+            uv1.u = uv[face[i].uvid[k]].u + mu1 * (uv[face[i].uvid[(k+1)%3]].u - uv[face[i].uvid[k]].u);
+            uv1.v = uv[face[i].uvid[k]].v + mu1 * (uv[face[i].uvid[(k+1)%3]].v - uv[face[i].uvid[k]].v);
+            uv2.u = uv[face[i].uvid[k]].u + mu2 * (uv[face[i].uvid[(k+2)%3]].u - uv[face[i].uvid[k]].u);
+            uv2.v = uv[face[i].uvid[k]].v + mu2 * (uv[face[i].uvid[(k+2)%3]].v - uv[face[i].uvid[k]].v);
+            AddXYZUV(p1,p2,uv1,uv2);
+            face[nf].xyzid[k] = nvertices-2;
+            face[nf].xyzid[(k+1)%3] = face[i].xyzid[(k+1)%3];
+            face[nf].xyzid[(k+2)%3] = face[i].xyzid[(k+2)%3];
+            face[nf].uvid[k] = nuv-2;
+            face[nf].uvid[(k+1)%3] = face[i].uvid[(k+1)%3];
+            face[nf].uvid[(k+2)%3] = face[i].uvid[(k+2)%3];
+            face[nf].materialid = face[i].materialid;
+            nf++;
+   
+            face[i].xyzid[k] = nvertices-2;
+            face[i].xyzid[(k+1)%3] = face[i].xyzid[(k+2)%3];
+            face[i].xyzid[(k+2)%3] = nvertices-1;
+            face[i].uvid[k] = nuv-2;
+            face[i].uvid[(k+1)%3] = face[i].uvid[(k+2)%3];
+            face[i].uvid[(k+2)%3] = nuv-1;
+            //face[i].materialid = face[i].materialid;
+            break;
+         }
+      }
+   }
 
-	for (i=0;i<nf;i++) {
-   	for (k=0;k<3;k++) {
-   	   p[0] = vertices[face[i].xyzid[k]];
-   	  	p[1] = vertices[face[i].xyzid[(k+1)%3]];
-     		p[2] = vertices[face[i].xyzid[(k+2)%3]];
-      	if (p[0].z > box.themax.z && p[1].z < box.themax.z && p[2].z < box.themax.z) {
-	         p1 = SplitZEdge(box.themax.z,p[0],p[1],&mu1);
-  	      	p2 = SplitZEdge(box.themax.z,p[0],p[2],&mu2);
-         	uv1.u = uv[face[i].uvid[k]].u + mu1 * (uv[face[i].uvid[(k+1)%3]].u - uv[face[i].uvid[k]].u);
-         	uv1.v = uv[face[i].uvid[k]].v + mu1 * (uv[face[i].uvid[(k+1)%3]].v - uv[face[i].uvid[k]].v);
-         	uv2.u = uv[face[i].uvid[k]].u + mu2 * (uv[face[i].uvid[(k+2)%3]].u - uv[face[i].uvid[k]].u);
-         	uv2.v = uv[face[i].uvid[k]].v + mu2 * (uv[face[i].uvid[(k+2)%3]].v - uv[face[i].uvid[k]].v);
-         	AddXYZUV(p1,p2,uv1,uv2);
-         	face[nf].xyzid[k] = nvertices-2;
-         	face[nf].xyzid[(k+1)%3] = face[i].xyzid[(k+1)%3];
-         	face[nf].xyzid[(k+2)%3] = face[i].xyzid[(k+2)%3];
-         	face[nf].uvid[k] = nuv-2;
-         	face[nf].uvid[(k+1)%3] = face[i].uvid[(k+1)%3];
-         	face[nf].uvid[(k+2)%3] = face[i].uvid[(k+2)%3];
-         	face[nf].materialid = face[i].materialid;
-         	nf++;
-	
-	         face[i].xyzid[k] = nvertices-2;
-	         face[i].xyzid[(k+1)%3] = face[fp].xyzid[(k+2)%3];
-	         face[i].xyzid[(k+2)%3] = nvertices-1;
-	         face[i].uvid[k] = nuv-2;
-	         face[i].uvid[(k+1)%3] = face[fp].uvid[(k+2)%3];
-	         face[i].uvid[(k+2)%3] = nuv-1;
-	         //face[i].materialid = face[fp].materialid;
-	         break;
-	      }
-		}
+   for (i=0;i<nf;i++) {
+      for (k=0;k<3;k++) {
+         p[0] = vertices[face[i].xyzid[k]];
+           p[1] = vertices[face[i].xyzid[(k+1)%3]];
+           p[2] = vertices[face[i].xyzid[(k+2)%3]];
+         if (p[0].z > box.themax.z && p[1].z < box.themax.z && p[2].z < box.themax.z) {
+            p1 = SplitZEdge(box.themax.z,p[0],p[1],&mu1);
+              p2 = SplitZEdge(box.themax.z,p[0],p[2],&mu2);
+            uv1.u = uv[face[i].uvid[k]].u + mu1 * (uv[face[i].uvid[(k+1)%3]].u - uv[face[i].uvid[k]].u);
+            uv1.v = uv[face[i].uvid[k]].v + mu1 * (uv[face[i].uvid[(k+1)%3]].v - uv[face[i].uvid[k]].v);
+            uv2.u = uv[face[i].uvid[k]].u + mu2 * (uv[face[i].uvid[(k+2)%3]].u - uv[face[i].uvid[k]].u);
+            uv2.v = uv[face[i].uvid[k]].v + mu2 * (uv[face[i].uvid[(k+2)%3]].v - uv[face[i].uvid[k]].v);
+            AddXYZUV(p1,p2,uv1,uv2);
+            face[nf].xyzid[k] = nvertices-2;
+            face[nf].xyzid[(k+1)%3] = face[i].xyzid[(k+1)%3];
+            face[nf].xyzid[(k+2)%3] = face[i].xyzid[(k+2)%3];
+            face[nf].uvid[k] = nuv-2;
+            face[nf].uvid[(k+1)%3] = face[i].uvid[(k+1)%3];
+            face[nf].uvid[(k+2)%3] = face[i].uvid[(k+2)%3];
+            face[nf].materialid = face[i].materialid;
+            nf++;
+   
+            face[i].xyzid[k] = nvertices-2;
+            face[i].xyzid[(k+1)%3] = face[fp].xyzid[(k+2)%3];
+            face[i].xyzid[(k+2)%3] = nvertices-1;
+            face[i].uvid[k] = nuv-2;
+            face[i].uvid[(k+1)%3] = face[fp].uvid[(k+2)%3];
+            face[i].uvid[(k+2)%3] = nuv-1;
+            //face[i].materialid = face[fp].materialid;
+            break;
+         }
+      }
    } 
 
-	return(nf);
+   return(nf);
 }
 
 XYZ SplitXEdge(double x,XYZ p1,XYZ p2,double *mu) 
 {
-	XYZ p;
+   XYZ p;
 
-	if (fabs(p2.x-p1.x) < EPS) {
-		*mu = 0;
-		fprintf(stderr,"Warning: No x variation in edge, should not happen!\n");
-	} else {
-		*mu = (x - p1.x) / (p2.x - p1.x);
-	}
-	p.x = x;
-	p.y = p1.y + (*mu) * (p2.y - p1.y);
-	p.z = p1.z + (*mu) * (p2.z - p1.z);
-	
-	return(p);
+   if (fabs(p2.x-p1.x) < EPS) {
+      *mu = 0;
+      fprintf(stderr,"Warning: No x variation in edge, should not happen!\n");
+   } else {
+      *mu = (x - p1.x) / (p2.x - p1.x);
+   }
+   p.x = x;
+   p.y = p1.y + (*mu) * (p2.y - p1.y);
+   p.z = p1.z + (*mu) * (p2.z - p1.z);
+   
+   return(p);
 }
 
 XYZ SplitYEdge(double y,XYZ p1,XYZ p2,double *mu)
@@ -893,10 +893,10 @@ XYZ SplitYEdge(double y,XYZ p1,XYZ p2,double *mu)
 
    if (fabs(p2.y-p1.y) < EPS) {
       *mu = 0;
-		fprintf(stderr,"Warning: No y variation in edge, should not happen!\n");
+      fprintf(stderr,"Warning: No y variation in edge, should not happen!\n");
    } else {
       *mu = (y - p1.y) / (p2.y - p1.y);
-	}
+   }
    p.x = p1.x + (*mu) * (p2.x - p1.x);
    p.y = y;
    p.z = p1.z + (*mu) * (p2.z - p1.z);
@@ -910,10 +910,10 @@ XYZ SplitZEdge(double z,XYZ p1,XYZ p2,double *mu)
 
    if (fabs(p2.z-p1.z) < EPS) {
       *mu = 0;
-		fprintf(stderr,"Warning: No z variation in edge, should not happen!\n");
+      fprintf(stderr,"Warning: No z variation in edge, should not happen!\n");
    } else {
       *mu = (z - p1.z) / (p2.z - p1.z);
-	}
+   }
    p.x = p1.x + (*mu) * (p2.x - p1.x);
    p.y = p1.y + (*mu) * (p2.y - p1.y);
    p.z = z;
@@ -949,7 +949,7 @@ void AddXYZUV(XYZ p1,XYZ p2,UV uv1,UV uv2)
    Only handles 3 vertex faces
    Deals with vertex / texture / normal triples or just vertex / texture pairs
    Fails if there are no texture coordinates
-	Note: OBJ file indices start from 1, not 0
+   Note: OBJ file indices start from 1, not 0
 */
 int ParseFace(char *s,FACE *f)
 {
@@ -1035,11 +1035,11 @@ int GenerateBBoxes(int maxtarget)
    if (params.verbose) {
       for (n=0;n<nbboxes;n++) {
          fprintf(stderr,"   Box %3d has %10ld vertices",n+1,bboxes[n].vertexcount);
-			if (bboxes[n].vertexcount > maxtarget)
-				fprintf(stderr,", it will be split on next iteration.");
-			fprintf(stderr,"\n");
-		}
-	}
+         if (bboxes[n].vertexcount > maxtarget)
+            fprintf(stderr,", it will be split on next iteration.");
+         fprintf(stderr,"\n");
+      }
+   }
 
    // Do any of the current boxes need splitting?
    // Split any box along the longest side length
@@ -1058,7 +1058,7 @@ int GenerateBBoxes(int maxtarget)
          length.z = bboxes[n].themax.z - bboxes[n].themin.z;
 
          // Determine the splitting point
-			// Generally imagined that center of mass is better
+         // Generally imagined that center of mass is better
          if (params.splitmethod == BISECTION) 
             midp = MidPoint(bboxes[n].themin,bboxes[n].themax);
          else // Center of mass
@@ -1083,7 +1083,7 @@ int GenerateBBoxes(int maxtarget)
    
    // Optionally extend all the dimensions of the splitting boxes, see -g and -gp option
    // Could result in target triangle count being exceeded.
-	// Only do once all splitting is complete
+   // Only do once all splitting is complete
    if (!wassplit && params.growlength > 0) {
       for (n=0;n<nbboxes;n++) {
          bboxes[n].themin.x -= params.growlength;
@@ -1114,17 +1114,17 @@ int VertexInBox(XYZ p,BBOX box)
 
 /*
    Return true if any part of a face is within a box
-	Two tests
-	- is any vertex in the box
-	- is a corner of the box in the triangle
+   Two tests
+   - is any vertex in the box
+   - is a corner of the box in the triangle
 */
 int FaceInBox(FACE f,BBOX box)
 {
-	int i;
-	XYZ p[3];
+   int i;
+   XYZ p[3];
 
-	for (i=0;i<3;i++)
-		p[i] = vertices[f.xyzid[i]];
+   for (i=0;i<3;i++)
+      p[i] = vertices[f.xyzid[i]];
 
    // First most common test, are all vertices outside
    if (p[0].x < box.themin.x && p[1].x < box.themin.x && p[2].x < box.themin.x)
@@ -1140,11 +1140,11 @@ int FaceInBox(FACE f,BBOX box)
    if (p[0].z > box.themax.z && p[1].z > box.themax.z && p[2].z > box.themax.z)
       return(FALSE);
 
-	/* Next test, is any single vertex on the inside?
-	for (i=0;i<3;i++) {
-		if (VertexInBox(p[i],box))
-			return(TRUE);
-	}*/
+   /* Next test, is any single vertex on the inside?
+   for (i=0;i<3;i++) {
+      if (VertexInBox(p[i],box))
+         return(TRUE);
+   }*/
 
    return(TRUE);
 }
@@ -1349,25 +1349,25 @@ void SaveTileset(char *fname)
 
 void CopyFace(FACE *source,FACE *destination)
 {
-	int i;
+   int i;
 
    for (i=0;i<3;i++) {
       destination->xyzid[i] = source->xyzid[i];
       destination->uvid[i] = source->uvid[i];
    }
-	destination->materialid = source->materialid;
+   destination->materialid = source->materialid;
 }
 
 void Init(void)
 {
-	params.verbose = FALSE;
-	params.splitmethod = CENTEROFMASS; // or BISECTION
-	params.trisplit = FALSE;           // Whether to split triangles at boundaries
-	params.ntriangles = 1000;          // The maximum number of triangles per box, in thousands
-	params.growlength = 0;             // Extend the splitting boxes by this amount
+   params.verbose = FALSE;
+   params.splitmethod = CENTEROFMASS; // or BISECTION
+   params.trisplit = FALSE;           // Whether to split triangles at boundaries
+   params.ntriangles = 1000;          // The maximum number of triangles per box, in thousands
+   params.growlength = 0;             // Extend the splitting boxes by this amount
 
    // Create a default material
-	// Not really necessary but makes it easier to handle a bad OBJ without one
+   // Not really necessary but makes it easier to handle a bad OBJ without one
    materials = realloc(materials,sizeof(MATERIALNAME));
    sprintf(materials[0].name,"unknown");
    nmaterials = 1;
@@ -1375,11 +1375,11 @@ void Init(void)
 
 void SaveSplitting(void)
 {
-	int i;
-	double r;
-	XYZ p = {0,0,0};
-	FILE *fobj,*fmtl;
-	COLOUR colour = {0,0,0};
+   int i;
+   double r;
+   XYZ p = {0,0,0};
+   FILE *fobj,*fmtl;
+   COLOUR colour = {0,0,0};
 
    ObjVertex(NULL,p,p);
    AddColour(NULL,colour);

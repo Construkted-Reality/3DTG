@@ -30,12 +30,12 @@ typedef struct {
 } dXYZ;
 typedef struct {
    float x,y,z;
-	int flag;
+   int flag;
 } XYZ;
 
 typedef struct {
    float u,v;     // Double not required for uv coordinates
-	int flag;
+   int flag;
 } UV;
 
 typedef struct {
@@ -48,11 +48,11 @@ typedef struct {
 typedef struct {
    int xyzid[3];
    int uvid[3];
-	short materialid;
+   short materialid;
 } FACE;
 
 typedef struct {
-	char name[256];
+   char name[256];
 } MATERIALNAME;
 
 typedef struct {
@@ -60,11 +60,11 @@ typedef struct {
 } COLOUR;
 
 typedef struct {
-	int verbose;          // How chatty
-	int splitmethod;      // CENTEROFMASS or BISECTION
-	int trisplit;         // Whether to split triangles at boundaries
-	long ntriangles;      // The maximum number of triangles per box, in thousands
-	double growlength;    // Extend the splitting boxes by this amount
+   int verbose;          // How chatty
+   int splitmethod;      // CENTEROFMASS or BISECTION
+   int trisplit;         // Whether to split triangles at boundaries
+   long ntriangles;      // The maximum number of triangles per box, in thousands
+   double growlength;    // Extend the splitting boxes by this amount
 } PARAMS;
 
 // Prototypes
