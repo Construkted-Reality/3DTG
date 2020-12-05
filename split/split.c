@@ -18,6 +18,7 @@
 	08 July 2020: Added option for triangle spitting (-t)
                  Removed disk based solution
    09 July 2020: Fixed triangle splitting error at box corners.
+	05 Dec  2020: Added -gp option, split by percentage of bounding box maximum edge
 */
 
 // Command line parameters
@@ -51,6 +52,7 @@ int main(int argc,char **argv)
    char objname[256];
    FILE *fptr;
 	double starttime,stoptime;
+	double growpercent = -1;
 
 	Init();
 
@@ -68,6 +70,8 @@ int main(int argc,char **argv)
          params.trisplit = TRUE;
       if (strcmp(argv[i],"-g") == 0)
          params.growlength = atof(argv[i+1]);
+      if (strcmp(argv[i],"-gp") == 0)
+         growpercent = atof(argv[i+1]);
    }
    strcpy(objname,argv[argc-1]);
 
@@ -88,6 +92,14 @@ int main(int argc,char **argv)
 	stoptime = GetRunTime();
 	if (params.verbose)
 		fprintf(stderr,"Time to read OBJ file: %.1lf seconds\n",stoptime-starttime);
+	if (growpercent > 0) {
+		params.growlength = MAX(themax.x-themin.x,themax.y-themin.y);
+		params.growlength = MAX(params.growlength,themax.z-themin.z);
+		params.growlength *= growpercent;
+		params.growlength /= 100.0;
+		if (params.verbose)
+			fprintf(stderr,"Grow length calculated as: %g\n",params.growlength);
+	}
 
    // Create the bounding boxes based upon vertex counts
 	starttime = GetRunTime();
@@ -125,6 +137,7 @@ void GiveUsage(char *s)
    fprintf(stderr,"Options\n");
    fprintf(stderr,"   -v     verbose mode, default: disabled\n");
    fprintf(stderr,"   -g n   grow the splitting boxes by this amount, default: 0\n");
+   fprintf(stderr,"   -gp n  grow the splitting boxes by this percentage of longest bounding box length, default: 0\n");
    fprintf(stderr,"   -s     switch to bisection method to split boxes, default: center of mass\n");
 	fprintf(stderr,"   -t     whether to split triangles at boundary, default: off\n");
    fprintf(stderr,"   -n n   triangle target per box in thousands, default: %ld\n",params.ntriangles);
@@ -1068,7 +1081,7 @@ int GenerateBBoxes(int maxtarget)
       }
    }
    
-   // Optionally extend all the dimensions of the splitting boxes, see -g option
+   // Optionally extend all the dimensions of the splitting boxes, see -g and -gp option
    // Could result in target triangle count being exceeded.
 	// Only do once all splitting is complete
    if (!wassplit && params.growlength > 0) {
