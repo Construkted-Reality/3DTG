@@ -40,6 +40,10 @@ namespace utils {
 
   std::string concatPath (const std::string& basepath, const std::string& path);
   std::string getDirectory (const std::string& path);
+  std::string getFileName (const std::string& path);
+
+  float min(float a, float b);
+  float max(float a, float b);
 }
 
 #endif

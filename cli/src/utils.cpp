@@ -100,3 +100,27 @@ std::string utils::getDirectory (const std::string& path)
     size_t found = path.find_last_of("/\\");
     return(path.substr(0, found));
 }
+
+std::string utils::getFileName (const std::string& path)
+{
+    size_t foundFullName = path.find_last_of("/\\");
+    std::string fullName = path.substr(foundFullName + 1, path.size());
+
+    size_t foundWithoutExt = fullName.find_last_of(".");
+    return(fullName.substr(0, foundWithoutExt));
+}
+
+float utils::min(float a, float b) {
+    if (a < b) {
+        return a;
+    }
+
+    return b;
+};
+float utils::max(float a, float b) {
+    if (a < b) {
+        return b;
+    }
+
+    return a;
+};

@@ -2,12 +2,14 @@
 #define __LOADER_H__
 
 #include <vector>
+#include <map>
 #include <string>
 #include <variant>
 #include <functional>
 #include <memory>
 #include <cstdlib>
 
+#include "./../utils.h"
 
 
 class Mesh;
@@ -17,9 +19,42 @@ typedef std::shared_ptr<Group> GroupObject;
 typedef std::function<void (MeshObject)> TraverseMeshCallback;
 typedef std::function<void (GroupObject)> TraverseGroupCallback;
 
-class Material {
-  std::string name = "";
+struct Vector3f {
+  float x = 0.0f, y = 0.0f, z = 0.0f;
 };
+
+struct Vector3ui {
+  unsigned int x = 0, y = 0, z = 0;
+};
+
+struct Vector2f {
+  float x = 0.0f, y = 0.0f;
+};
+
+struct Face {
+  unsigned int positionIndices[3]{0, 0, 0};
+  unsigned int normalIndices[3]{0, 0, 0};
+  unsigned int uvIndices[3]{0, 0, 0};
+};
+
+struct BBoxf {
+  Vector3f min, max;
+  void extend(Vector3f position);
+  void extend(BBoxf box);
+  Vector3f size();
+  bool intersect(Vector3f point);
+  bool intersect(BBoxf box);
+  void translate(float x, float y, float z);
+};
+
+struct Material {
+  std::string name = "";
+
+  std::string diffuseMap = "";
+  Vector3f color;
+};
+
+typedef std::map<std::string, Material> MaterialMap;
 
 class Group {
   public:
@@ -27,26 +62,11 @@ class Group {
     std::vector<MeshObject> meshes;
     std::string name = "";
 
+    BBoxf boundingBox;
+
     void traverse(TraverseMeshCallback fn);
     void traverseGroup(TraverseGroupCallback fn);
-};
-
-struct Vector3f {
-  float x, y, z;
-};
-
-struct Vector3ui {
-  unsigned int x, y, z;
-};
-
-struct Vector2f {
-  float x, y;
-};
-
-struct Face {
-  unsigned int positionIndices[3]{0, 0, 0};
-  unsigned int normalIndices[3]{0, 0, 0};
-  unsigned int uvIndices[3]{0, 0, 0};
+    void computeBoundingBox();
 };
 
 class Mesh : public Group {

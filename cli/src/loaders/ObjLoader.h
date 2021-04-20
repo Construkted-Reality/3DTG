@@ -12,6 +12,7 @@
 class ObjLoader : public Loader {
   public:
     void parse(const char* path);
+    MaterialMap loadMaterials(const char* path);
 };
 
 #endif 

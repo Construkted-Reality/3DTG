@@ -40,7 +40,7 @@ rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
 
 SRC = $(call rwildcard,src,*.cpp)
 OBJ = $(SRC:.cpp=.o)
-
+CLEAN = $(call rwildcard,src,*.o)
 
 all: app
 
@@ -49,4 +49,4 @@ app: $(OBJ)
 
 .PHONY: clean
 clean:
-	del $(OBJ) $(OUT)
+	del "$(CLEAN)"

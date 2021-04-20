@@ -10,7 +10,7 @@
 
 class Exporter {
   public:
-    virtual void save(std::string dir, GroupObject object);
+    virtual void save(std::string directory, std::string fileName, GroupObject object);
 };
 
 #endif
