@@ -69,7 +69,7 @@ void ObjLoader::parse(const char* path) {
   std::string token;
 
   GroupObject currentGroup = this->object;
-  MeshObject currentMesh = nullptr;
+  MeshObject currentMesh = MeshObject(new Mesh());
 
   std::stringstream ss;
   std::stringstream faceReader;
@@ -98,29 +98,44 @@ void ObjLoader::parse(const char* path) {
       if (materialFile != "") {
         materialMap = this->loadMaterials(utils::concatPath(utils::getDirectory(path), materialFile).c_str());
       }
-    } else if (token == "o") { // Process objects
+    } else if (token == "old one o") { // Process objects
       if (currentMesh != nullptr) {
         currentMesh->finish();
+        std::cout << "Finished by o" << std::endl;
         currentGroup->meshes.push_back(currentMesh);
       }
 
       currentMesh = MeshObject(new Mesh());
       ss >> currentMesh->name;
     } else if (token == "usemtl") {
-      if (currentMesh != nullptr) {
-        std::string meshMaterialName;
-        ss >> meshMaterialName;
-
-        if (materialMap.find(meshMaterialName) != materialMap.end()) {
-          currentMesh->material = materialMap[meshMaterialName];
-        }
+      if (currentMesh != nullptr && currentMesh->faces.size() > 0) {
+        currentMesh->finish();
+        std::cout << "Finished by the new material" << std::endl;
+        currentGroup->meshes.push_back(currentMesh);
       }
-    } else if (token == "g") { // Process groups
-      GroupObject nextGroup = GroupObject(new Group());
-      ss >> nextGroup->name;
 
-      currentGroup->children.push_back(nextGroup);
-      currentGroup = nextGroup;
+      std::string meshMaterialName;
+      ss >> meshMaterialName;
+
+      std::cout << "New mtl: " << meshMaterialName << std::endl;
+
+      currentMesh = MeshObject(new Mesh());
+      currentMesh->name = currentGroup->name + "_" + meshMaterialName;
+
+      if (materialMap.find(meshMaterialName) != materialMap.end()) {
+        currentMesh->material = materialMap[meshMaterialName];
+      }
+    } else if (token == "g" || token == "o") { // Process groups
+      std::string groupName;
+      ss >> groupName;
+
+      if (currentGroup->name != groupName) {
+        GroupObject nextGroup = GroupObject(new Group());
+        nextGroup->name = groupName;
+
+        currentGroup->children.push_back(nextGroup);
+        currentGroup = nextGroup;
+      }
     } else if (token == "v") { // Process vertices
       Vector3f vertex;
       ss >> vertex.x >> vertex.y >> vertex.z;
@@ -150,6 +165,8 @@ void ObjLoader::parse(const char* path) {
       int* uvIndices = new int[points];
       int* normalIndices = new int[points];
       
+      bool hasNormals = false;
+      bool hasUVs = false;
 
       for (int i = 0; i < points; i++) {
         faceReader.clear();
@@ -170,8 +187,10 @@ void ObjLoader::parse(const char* path) {
             positionIndices[i] = (faces[k] == "") ? -1 : std::atoi(faces[0].c_str()) - 1;// - currentVertex;
           } else if (k == 1) {
             uvIndices[i] = (faces[k] == "") ? -1 : std::atoi(faces[1].c_str()) - 1;// - currentUV;
+            hasUVs = true;
           } else if (k == 2) {
             normalIndices[i] = (faces[k] == "") ? -1 : std::atoi(faces[2].c_str()) - 1;// - currentNormal;
+            hasNormals = true;
           }
         }
       }
@@ -201,13 +220,13 @@ void ObjLoader::parse(const char* path) {
         currentMesh->position.push_back(position[positionIndices[t]]);
         currentMesh->position.push_back(position[positionIndices[t + 1]]);
         
-        if (normalIndices[0] != -1) {
+        if (hasNormals && normalIndices[0] != -1) {
           currentMesh->normal.push_back(normal[normalIndices[0]]);
           currentMesh->normal.push_back(normal[normalIndices[t]]);
           currentMesh->normal.push_back(normal[normalIndices[t + 1]]);
         }
 
-        if (uvIndices[0] != -1) {
+        if (hasUVs && uvIndices[0] != -1) {
           currentMesh->uv.push_back(uv[uvIndices[0]]);
           currentMesh->uv.push_back(uv[uvIndices[t]]);
           currentMesh->uv.push_back(uv[uvIndices[t + 1]]);
@@ -218,7 +237,10 @@ void ObjLoader::parse(const char* path) {
     }
   }
 
+  std::cout << "Finished before by end of func" << std::endl;
   currentMesh->finish();
+  std::cout << "Finished by end of func" << std::endl;
+
   currentGroup->meshes.push_back(currentMesh);
   this->object->computeBoundingBox();
 
