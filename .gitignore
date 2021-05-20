@@ -4,3 +4,5 @@
 /construkted-tiler/.idea
 /construkted-tiler/test/lod_test.01
 /construkted-tiler/test/lod_test.01_tileset
+/3dtile-viewer/node_modules
+/.idea
