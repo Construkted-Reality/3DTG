@@ -1,5 +1,11 @@
 # Change Log
 
+### 1.0.2 - 2021-06-06
+
+#### Changed 
+- remove 3dtile-viewer.
+- add brute force geometric error logic.
+
 ### 1.0.1 - 2021-05-20
 
 #### Added

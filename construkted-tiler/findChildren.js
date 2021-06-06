@@ -1,7 +1,9 @@
 const {getAxisAlignedBoxFromBox, getLODFromNodeName, getOrientedBoundingBoxFromAxisAlignedBoundingBox} = require("./util");
 
-function findChildren(node, bBoxData, origModelName) {
+function findChildren(rootNode, node, bBoxData, origModelName) {
     const level = node.level;
+    const rootGeometricError = rootNode.geometricError;
+    const geometricError = (rootGeometricError / rootNode.level) * (level - 1);
     const boundingBox = getAxisAlignedBoxFromBox(node.boundingVolume.box);
 
     const nodeNames = Object.keys(bBoxData);
@@ -41,7 +43,7 @@ function findChildren(node, bBoxData, origModelName) {
                     box:  bBoxData[nodeName],
                     orientedBoundingBox: getOrientedBoundingBoxFromAxisAlignedBoundingBox(nodeBoundingBox)
                 },
-                geometricError: 1,
+                geometricError: geometricError,
                 level: level - 1,
                 children: [],
                 nodeName: nodeName
@@ -56,7 +58,7 @@ function findChildren(node, bBoxData, origModelName) {
         return;
 
     for(let i = 0; i < node.children.length; i++) {
-        findChildren(node.children[i], bBoxData, origModelName);
+        findChildren(rootNode, node.children[i], bBoxData, origModelName);
     }
 }
 

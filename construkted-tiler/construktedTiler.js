@@ -72,7 +72,7 @@ const root = {
 };
 
 // recursively find children
-findChildren(root, bBoxData, origModelName);
+findChildren(root, root, bBoxData, origModelName);
 
 // recursively remove unnecessary properties and generate glb files
 removeUnnecessaryPropertiesAndGenerateContents(root);
