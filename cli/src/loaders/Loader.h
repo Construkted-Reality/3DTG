@@ -8,6 +8,10 @@
 #include <functional>
 #include <memory>
 #include <cstdlib>
+#include <cmath>
+
+
+#include "./../helpers/stb_image.h"
 
 #include "./../utils.h"
 
@@ -21,6 +25,15 @@ typedef std::function<void (GroupObject)> TraverseGroupCallback;
 
 struct Vector3f {
   float x = 0.0f, y = 0.0f, z = 0.0f;
+  float dot(Vector3f vector);
+  float length();
+  void normalize();
+  void divideScalar(float value);
+  void multiplyScalar(float value);
+  void add(Vector3f vector);
+  void sub(Vector3f vector);
+  Vector3f clone();
+  Vector3f intersectPlane(Vector3f planePoint, Vector3f planeNormal, Vector3f lineBegin, Vector3f lineDirection);
 };
 
 struct Vector3ui {
@@ -40,17 +53,30 @@ struct Face {
 struct BBoxf {
   Vector3f min, max;
   void extend(Vector3f position);
+  void extend(float x, float y, float z);
   void extend(BBoxf box);
   Vector3f size();
   bool intersect(Vector3f point);
   bool intersect(BBoxf box);
   void translate(float x, float y, float z);
+  void fromPoint(float x, float y, float z);
+};
+
+struct Image {
+  int width;
+  int height;
+  int channels;
+  unsigned char *data = NULL;
+
+  void free();
 };
 
 struct Material {
   std::string name = "";
 
   std::string diffuseMap = "";
+  Image diffuseMapImage;
+
   Vector3f color;
 };
 
@@ -63,10 +89,12 @@ class Group {
     std::string name = "";
 
     BBoxf boundingBox;
+    BBoxf uvBox;
 
     void traverse(TraverseMeshCallback fn);
     void traverseGroup(TraverseGroupCallback fn);
     void computeBoundingBox();
+    void computeUVBox();
 };
 
 class Mesh : public Group {
@@ -88,6 +116,8 @@ class Loader {
   public:
     GroupObject object = GroupObject(new Group());
     Loader();
+
+    void free();
 
     virtual void parse(const char* path) {};
     virtual ~Loader() {};

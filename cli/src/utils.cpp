@@ -27,6 +27,21 @@ std::string utils::posix(std::string path) {
   return result;
 }
 
+std::string utils::nonposix(std::string path) {
+  std::string result = path;
+  std::replace(result.begin(), result.end(), '/', '\\');
+
+  return result;
+}
+
+std::string utils::normalize(std::string path) {
+  #if defined(_WIN32) || defined(_WIN64)
+    return utils::nonposix(path);
+  #else
+    return utils::posix(path);
+  #endif
+}
+
 /**
  * Checks if a folder exists
  * @param foldername path to the folder to check.
@@ -68,8 +83,7 @@ int utils::mkdir(const char *path)
     std::string level;
     std::stringstream ss(path);
 
-    char delimiter = (getOsName() == "Windows") ? '\\' : '/';
-    std::cout << "Delimiter: " << delimiter << std::endl;
+    char delimiter = DIRECTORY_SYMBOL;
 
     // split path using slash as a separator
     while (std::getline(ss, level, delimiter))
@@ -88,22 +102,33 @@ int utils::mkdir(const char *path)
 
 
 std::string utils::concatPath (const std::string& basepath, const std::string& path) {
-  if (getOsName() == "Windows") {
-    return basepath + "\\" + path;
+  std::string baseCopy = basepath;
+  std::string pathCopy = path;
+
+  if (baseCopy.back() == DIRECTORY_SYMBOL) {
+    baseCopy.pop_back();
   }
 
-  return basepath + "/" + path;
+  if (pathCopy.front() == DIRECTORY_SYMBOL) {
+    pathCopy.substr(1);
+  }
+
+  return baseCopy + DIRECTORY_SYMBOL + pathCopy;
 }
 
 std::string utils::getDirectory (const std::string& path)
 {
-    size_t found = path.find_last_of("/\\");
-    return(path.substr(0, found));
+  size_t found = path.find_last_of(DIRECTORY_SYMBOL);
+  if (found == std::string::npos) {
+    return utils::normalize("./");
+  }
+  
+  return(path.substr(0, found));
 }
 
 std::string utils::getFileName (const std::string& path)
 {
-    size_t foundFullName = path.find_last_of("/\\");
+    size_t foundFullName = path.find_last_of(DIRECTORY_SYMBOL);
     std::string fullName = path.substr(foundFullName + 1, path.size());
 
     size_t foundWithoutExt = fullName.find_last_of(".");

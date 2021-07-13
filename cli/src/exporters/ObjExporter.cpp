@@ -14,7 +14,8 @@ void ObjExporter::saveMaterial(std::string directory, std::string fileName, Mate
     materialMap.begin(),
     materialMap.end(),
     [&](std::pair<std::string, Material> it) {
-      std::cout << "Material name(saving): " << it.first << std::endl;//  + it.second
+      std::cout << "Material name: " << it.first << std::endl;//  + it.second
+      std::cout << "Saving..." << std::endl;
 
       fs << "newmtl " << it.first.c_str() << std::endl;
 
@@ -22,6 +23,19 @@ void ObjExporter::saveMaterial(std::string directory, std::string fileName, Mate
       fs << "map_Kd " << it.second.diffuseMap << std::endl;
 
       fs << std::endl;
+      
+      if (it.second.diffuseMapImage.data != NULL) {
+        std::string outputImage = utils::concatPath(directory, it.second.name + ".jpg");
+
+        stbi_write_jpg(
+          outputImage.c_str(),
+          it.second.diffuseMapImage.width,
+          it.second.diffuseMapImage.height,
+          it.second.diffuseMapImage.channels,
+          it.second.diffuseMapImage.data,
+          90
+        );
+      }
     }
   );
 
@@ -33,7 +47,7 @@ void ObjExporter::save(std::string directory, std::string fileName, GroupObject 
   std::string materialFileName = fileName + ".mtl";
 
   if (!utils::folder_exists(directory)) {
-    mkdir(directory.c_str());
+    utils::mkdir(directory.c_str());
   }
 
   std::fstream fs;

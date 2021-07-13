@@ -13,9 +13,17 @@
 #include <direct.h>
 #endif
 
+#if defined(_WIN32) || defined(_WIN64)
+const char DIRECTORY_SYMBOL = '\\';
+#else
+const char DIRECTORY_SYMBOL = '/';
+#endif
+
 namespace utils {
   std::string getOsName();
   std::string posix(std::string path);
+  std::string nonposix(std::string path);
+  std::string normalize(std::string path);
 
   /**
    * Checks if a folder exists

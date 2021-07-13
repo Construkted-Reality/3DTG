@@ -2,6 +2,9 @@
 #include <string>
 #include <vector>
 
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+
 #include "./loaders/ObjLoader.h"
 #include "./exporters/ObjExporter.h"
 #include "./split/splitter.h"
@@ -15,12 +18,14 @@ int main(int argc, char** argv) {
 
     std::cout << "Importing..." << std::endl;
 
+    std::string inputFile = utils::normalize(argv[1]);
+
     ObjLoader loader;
-    loader.parse(argv[1]); 
+    loader.parse(inputFile.c_str()); 
 
     std::cout << "Import finished" << std::endl << "Splitting..." << std::endl;
 
-    std::vector<GroupObject> splitted = splitter::splitObject(loader.object, 1, 1, 1);
+    std::vector<GroupObject> splitted = splitter::splitObject(loader.object, 2, 2, 1);
 
     if (splitted.size() == 0) {
         std::cerr << "Can't split an object" << "\n";
@@ -31,22 +36,29 @@ int main(int argc, char** argv) {
 
     std::string out = "";
 
-    if (argc < 3) {
-        out = utils::concatPath(utils::getDirectory(argv[1]), "exported");
+    if (argc < 3) { 
+        out = utils::concatPath(utils::getDirectory(inputFile), "exported");
     } else {
-        out = argv[2];
+        out = utils::getDirectory(argv[2]);
     }
 
-    std::cout << "Filename: " << utils::getFileName(argv[1]) << std::endl;
+    std::cout << "Output directory: " << out.c_str() << std::endl;
+
+    std::cout << "Filename: " << utils::getFileName(inputFile) << std::endl;
 
     ObjExporter exporter;
 
     for (GroupObject &group : splitted) // access by reference to avoid copying
-    {  
-        exporter.save(out, utils::getFileName(argv[1]) + "_" + group->name, group);
+    {
+        std::cout << "Group box (" << group->uvBox.min.x << ", " << group->uvBox.min.y << ", " << group->uvBox.min.z << ")";
+        std::cout << " (" << group->uvBox.max.x << ", " << group->uvBox.max.y << ", " << group->uvBox.max.z << ")"<< std::endl;
+
+        exporter.save(utils::concatPath(out, utils::getFileName(group->name)), utils::getFileName(inputFile) + "_" + group->name, group);
     }
     
     std::cout << "Exported" << std::endl;
+
+    loader.free();
     
     return 0;
 }

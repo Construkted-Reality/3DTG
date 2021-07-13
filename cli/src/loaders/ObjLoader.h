@@ -12,6 +12,7 @@
 class ObjLoader : public Loader {
   public:
     void parse(const char* path);
+    void finishMesh(GroupObject &group, MeshObject &mesh, std::vector<Vector3f> &position, std::vector<Vector3f> &normal, std::vector<Vector2f> &uv);
     MaterialMap loadMaterials(const char* path);
 };
 

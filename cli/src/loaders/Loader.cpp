@@ -28,6 +28,12 @@ void Group::computeBoundingBox() {
   });
 };
 
+void Group::computeUVBox() {
+  this->traverse([&](MeshObject mesh){
+    this->uvBox.extend(mesh->uvBox);
+  });
+};
+
 
 void Mesh::finish() {
   this->hasNormals = this->normal.size() > 0;
@@ -61,6 +67,16 @@ void BBoxf::extend(BBoxf box) {
   this->max.x = utils::max(this->max.x, box.max.x);
   this->max.y = utils::max(this->max.y, box.max.y);
   this->max.z = utils::max(this->max.z, box.max.z);
+};
+
+void BBoxf::extend(float x, float y, float z) {
+  this->min.x = utils::min(this->min.x, x);
+  this->min.y = utils::min(this->min.y, y);
+  this->min.z = utils::min(this->min.z, z);
+
+  this->max.x = utils::max(this->max.x, x);
+  this->max.y = utils::max(this->max.y, y);
+  this->max.z = utils::max(this->max.z, z);
 };
 
 Vector3f BBoxf::size() {
@@ -111,3 +127,90 @@ void BBoxf::translate(float x, float y, float z) {
   this->max.y = y + size.y;
   this->max.z = z + size.z;
 };
+
+void BBoxf::fromPoint(float x, float y, float z) {
+  this->min.x = x;
+  this->min.y = y;
+  this->min.z = z;
+
+  this->max.x = x;
+  this->max.y = y;
+  this->max.z = z;
+};
+
+
+float Vector3f::dot(Vector3f vector) {
+  return this->x * vector.x + this->y * vector.y + this->z * vector.z;
+};
+
+float Vector3f::length() {
+  return sqrt(this->x * this->x + this->y * this->y + this->z *this->z);
+};
+
+void Vector3f::divideScalar(float value) {
+  this->x /= value;
+  this->y /= value;
+  this->z /= value;
+};
+
+void Vector3f::normalize() {
+  float length = this->length();
+  this->divideScalar(length);
+};
+
+void Vector3f::multiplyScalar(float value) {
+  this->x *= value;
+  this->y *= value;
+  this->z *= value;
+};
+
+void Vector3f::add(Vector3f vector) {
+  this->x += vector.x;
+  this->y += vector.y;
+  this->z += vector.z;
+};
+
+void Vector3f::sub(Vector3f vector) {
+  this->x -= vector.x;
+  this->y -= vector.y;
+  this->z -= vector.z;
+};
+
+Vector3f Vector3f::clone() {
+  Vector3f cloned;
+
+  cloned.x = this->x;
+  cloned.y = this->y;
+  cloned.z = this->z;
+
+  return cloned;
+};
+
+Vector3f Vector3f::intersectPlane(Vector3f planePoint, Vector3f planeNormal, Vector3f lineBegin, Vector3f lineDirection) {
+  Vector3f direction = lineDirection.clone();
+  direction.normalize();
+
+  float t = (planeNormal.dot(planePoint) - planeNormal.dot(lineBegin)) / planeNormal.dot(lineDirection);
+  direction.multiplyScalar(t);
+
+  Vector3f result = lineBegin.clone();
+  result.add(direction);
+
+  return result;
+};
+
+void Image::free() {
+  if (this->data != NULL) {
+    stbi_image_free(this->data);
+  }
+};
+
+void Loader::free() {
+  std::cout << "Cleaning up the memory..." << std::endl; 
+  this->object->traverse([&](MeshObject mesh){
+    mesh->material.diffuseMapImage.free();
+  });
+
+  std::cout << "Memory has been cleaned" << std::endl; 
+};
+
