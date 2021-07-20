@@ -32,6 +32,7 @@ struct Vector3f {
   void multiplyScalar(float value);
   void add(Vector3f vector);
   void sub(Vector3f vector);
+  void set(float x, float y, float z);
   Vector3f clone();
   Vector3f intersectPlane(Vector3f planePoint, Vector3f planeNormal, Vector3f lineBegin, Vector3f lineDirection);
 };
@@ -57,6 +58,7 @@ struct BBoxf {
   void extend(BBoxf box);
   Vector3f size();
   bool intersect(Vector3f point);
+  bool intersect(Vector2f point);
   bool intersect(BBoxf box);
   void translate(float x, float y, float z);
   void fromPoint(float x, float y, float z);
@@ -95,6 +97,8 @@ class Group {
     void traverseGroup(TraverseGroupCallback fn);
     void computeBoundingBox();
     void computeUVBox();
+
+    void free();
 };
 
 class Mesh : public Group {
@@ -110,6 +114,9 @@ class Mesh : public Group {
     bool hasUVs = false;
 
     void finish();
+
+    void remesh(std::vector<Vector3f> &position, std::vector<Vector3f> &normal, std::vector<Vector2f> &uv);
+    void free();
 };
 
 class Loader {

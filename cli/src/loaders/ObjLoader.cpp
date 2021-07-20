@@ -148,7 +148,7 @@ void ObjLoader::finishMesh(GroupObject &group, MeshObject &mesh, std::vector<Vec
     }
   }
 
-  std::cout << "Mesh loading finished." << std::endl;
+  // std::cout << "Mesh loading finished." << std::endl;
 
   mesh->finish();
   group->meshes.push_back(mesh);

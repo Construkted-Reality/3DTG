@@ -23,16 +23,16 @@ int main(int argc, char** argv) {
     ObjLoader loader;
     loader.parse(inputFile.c_str()); 
 
-    std::cout << "Import finished" << std::endl << "Splitting..." << std::endl;
+    std::cout << "Import finished" << std::endl;
 
-    std::vector<GroupObject> splitted = splitter::splitObject(loader.object, 2, 2, 1);
+    // std::vector<GroupObject> splitted = splitter::splitObject(loader.object, 2, 2, 1);
 
-    if (splitted.size() == 0) {
-        std::cerr << "Can't split an object" << "\n";
-        return 1;
-    }
+    // if (splitted.size() == 0) {
+    //     std::cerr << "Can't split an object" << "\n";
+    //     return 1;
+    // }
 
-    std::cout << "Splitting finished" << std::endl << "Meshes count after splitting: " << splitted[0]->meshes.size() << std::endl << "Exporting..." << std::endl;
+    // std::cout << "Splitting finished" << std::endl << "Meshes count after splitting: " << splitted[0]->meshes.size() << std::endl << "Exporting..." << std::endl;
 
     std::string out = "";
 
@@ -44,17 +44,22 @@ int main(int argc, char** argv) {
 
     std::cout << "Output directory: " << out.c_str() << std::endl;
 
-    std::cout << "Filename: " << utils::getFileName(inputFile) << std::endl;
-
     ObjExporter exporter;
 
-    for (GroupObject &group : splitted) // access by reference to avoid copying
-    {
-        std::cout << "Group box (" << group->uvBox.min.x << ", " << group->uvBox.min.y << ", " << group->uvBox.min.z << ")";
-        std::cout << " (" << group->uvBox.max.x << ", " << group->uvBox.max.y << ", " << group->uvBox.max.z << ")"<< std::endl;
 
-        exporter.save(utils::concatPath(out, utils::getFileName(group->name)), utils::getFileName(inputFile) + "_" + group->name, group);
-    }
+    std::cout << "Splitting..." << std::endl;
+    std::vector<GroupObject> splitted = splitter::splitObject(
+        loader.object,
+        [&](GroupObject group){
+            std::cout << "Group box (" << group->uvBox.min.x << ", " << group->uvBox.min.y << ", " << group->uvBox.min.z << ")";
+            std::cout << " (" << group->uvBox.max.x << ", " << group->uvBox.max.y << ", " << group->uvBox.max.z << ")"<< std::endl;
+
+            exporter.save(utils::concatPath(out, utils::getFileName(group->name)), utils::getFileName(inputFile) + "_" + group->name, group);
+
+            group->free();
+        },
+        2, 1, 2
+    );
     
     std::cout << "Exported" << std::endl;
 

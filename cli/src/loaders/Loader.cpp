@@ -34,6 +34,14 @@ void Group::computeUVBox() {
   });
 };
 
+void Group::free() {
+  this->traverse([&](MeshObject mesh){
+    mesh->free();
+  });
+
+  this->meshes.clear();
+  this->children.clear();
+};
 
 void Mesh::finish() {
   this->hasNormals = this->normal.size() > 0;
@@ -41,8 +49,104 @@ void Mesh::finish() {
 
   // std::cout << "Normals length: " << this->normal.size() << std::endl;
 
-  std::cout << "Loading finished: " << this->name << std::endl;
+  // std::cout << "Loading finished: " << this->name << std::endl;
 };
+
+void Mesh::free() {
+  this->uv.clear();
+  this->position.clear();
+  this->normal.clear();
+  this->faces.clear();
+  this->material.name = "";
+};
+
+void Mesh::remesh(std::vector<Vector3f> &position, std::vector<Vector3f> &normal, std::vector<Vector2f> &uv) {
+  std::map<unsigned int, Vector3f> positionMap;
+  std::map<unsigned int, Vector3f> normalMap;
+  std::map<unsigned int, Vector2f> uvMap;
+
+  std::map<unsigned int, unsigned int> positionDestMap;
+  std::map<unsigned int, unsigned int> normalDestMap;
+  std::map<unsigned int, unsigned int> uvDestMap;
+
+  for (Face &face : this->faces) // access by reference to avoid copying
+  {
+    positionMap[face.positionIndices[0]] = position[face.positionIndices[0]];
+    positionMap[face.positionIndices[1]] = position[face.positionIndices[1]];
+    positionMap[face.positionIndices[2]] = position[face.positionIndices[2]];
+
+    if (this->hasNormals) {
+      normalMap[face.normalIndices[0]] = normal[face.normalIndices[0]];
+      normalMap[face.normalIndices[1]] = normal[face.normalIndices[1]];
+      normalMap[face.normalIndices[2]] = normal[face.normalIndices[2]];
+    }
+
+    if (this->hasUVs) {
+      uvMap[face.uvIndices[0]] = uv[face.uvIndices[0]];
+      uvMap[face.uvIndices[1]] = uv[face.uvIndices[1]];
+      uvMap[face.uvIndices[2]] = uv[face.uvIndices[2]];
+    }
+  }
+
+  unsigned int lastPositionIndex = 0;
+  unsigned int lastNormalIndex = 0;
+  unsigned int lastUVIndex = 0;
+
+  for (std::map<unsigned int, Vector3f>::iterator it = positionMap.begin(); it != positionMap.end(); ++it) {
+    this->position.push_back(it->second);
+    positionDestMap[it->first] = lastPositionIndex;
+
+    lastPositionIndex++;
+  }
+
+  if (this->hasNormals) {
+    for (std::map<unsigned int, Vector3f>::iterator it = normalMap.begin(); it != normalMap.end(); ++it) {
+      this->normal.push_back(it->second);
+      normalDestMap[it->first] = lastNormalIndex;
+
+      lastNormalIndex++;
+    }
+  }
+
+  if (this->hasUVs) {
+    for (std::map<unsigned int, Vector2f>::iterator it = uvMap.begin(); it != uvMap.end(); ++it) {
+      this->uv.push_back(it->second);
+      uvDestMap[it->first] = lastUVIndex;
+
+      lastUVIndex++;
+
+      if (this->uv.size() == 1) {
+        this->uvBox.fromPoint(it->second.x, it->second.y, 0.0f);
+      } else {
+        this->uvBox.extend(it->second.x, it->second.y, 0.0f);
+      }
+    }
+  }
+
+  for (Face &face : this->faces) // access by reference to avoid copying
+  {
+    face.positionIndices[0] = positionDestMap[face.positionIndices[0]];
+    face.positionIndices[1] = positionDestMap[face.positionIndices[1]];
+    face.positionIndices[2] = positionDestMap[face.positionIndices[2]];
+
+    if (this->hasNormals) {
+      face.normalIndices[0] = normalDestMap[face.normalIndices[0]];
+      face.normalIndices[1] = normalDestMap[face.normalIndices[1]];
+      face.normalIndices[2] = normalDestMap[face.normalIndices[2]];
+    }
+
+    if (this->hasUVs) {
+      face.uvIndices[0] = uvDestMap[face.uvIndices[0]];
+      face.uvIndices[1] = uvDestMap[face.uvIndices[1]];
+      face.uvIndices[2] = uvDestMap[face.uvIndices[2]];
+    }
+  }
+
+  // std::cout << "Mesh loading finished." << std::endl;
+
+  this->finish();
+};
+
 
 Loader::Loader() {
   this->object->name = "root";
@@ -95,6 +199,13 @@ bool BBoxf::intersect(Vector3f point) {
   bool intersectZ = (point.z >= this->min.z) && (point.z <= this->max.z);
 
   return intersectX && intersectY && intersectZ;
+};
+
+bool BBoxf::intersect(Vector2f point) {
+  bool intersectX = (point.x >= this->min.x) && (point.x <= this->max.x);
+  bool intersectY = (point.y >= this->min.y) && (point.y <= this->max.y);
+
+  return intersectX && intersectY;
 };
 
 bool BBoxf::intersect(BBoxf box) {
@@ -174,6 +285,12 @@ void Vector3f::sub(Vector3f vector) {
   this->x -= vector.x;
   this->y -= vector.y;
   this->z -= vector.z;
+};
+
+void Vector3f::set(float x, float y, float z) {
+  this->x = x;
+  this->y = y;
+  this->z = z;
 };
 
 Vector3f Vector3f::clone() {

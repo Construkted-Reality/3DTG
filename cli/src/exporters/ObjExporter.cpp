@@ -14,8 +14,8 @@ void ObjExporter::saveMaterial(std::string directory, std::string fileName, Mate
     materialMap.begin(),
     materialMap.end(),
     [&](std::pair<std::string, Material> it) {
-      std::cout << "Material name: " << it.first << std::endl;//  + it.second
-      std::cout << "Saving..." << std::endl;
+      // std::cout << "Material name: " << it.first << std::endl;//  + it.second
+      // std::cout << "Saving..." << std::endl;
 
       fs << "newmtl " << it.first.c_str() << std::endl;
 
@@ -33,7 +33,7 @@ void ObjExporter::saveMaterial(std::string directory, std::string fileName, Mate
           it.second.diffuseMapImage.height,
           it.second.diffuseMapImage.channels,
           it.second.diffuseMapImage.data,
-          90
+          80
         );
       }
     }

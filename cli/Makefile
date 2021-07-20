@@ -40,13 +40,14 @@ rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
 
 SRC = $(call rwildcard,src,*.cpp)
 OBJ = $(SRC:.cpp=.o)
-CLEAN = $(call rwildcard,src,*.o)
+CLEAN =  $(foreach dir,$(OBJ),"$(dir)")
+
+.PHONY: clean all app
 
 all: app
 
 app: $(OBJ)
 	$(CC) $(OBJ) -o $(EXECUTABLE) $(LFLAGS) $(LIBS)
 
-.PHONY: clean
 clean:
-	del "$(CLEAN)"
+	del $(CLEAN)
