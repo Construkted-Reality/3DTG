@@ -56,6 +56,7 @@ MaterialMap ObjLoader::loadMaterials(const char* path) {
 
         if(diffuseMapImage.data == NULL) {
           std::cerr << "Image loading error" << std::endl;
+          if (stbi_failure_reason()) std::cerr << stbi_failure_reason() << std::endl;
         }
 
         std::cout << "Image width: " << diffuseMapImage.width << ", height: " << diffuseMapImage.height << ", channels: " << diffuseMapImage.channels << std::endl;
