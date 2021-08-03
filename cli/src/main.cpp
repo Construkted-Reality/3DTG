@@ -48,17 +48,19 @@ int main(int argc, char** argv) {
 
 
     std::cout << "Splitting..." << std::endl;
-    std::vector<GroupObject> splitted = splitter::splitObject(
+
+    unsigned int chunk = 0;
+    splitter::splitObject(
         loader.object,
         [&](GroupObject group){
-            std::cout << "Group box (" << group->uvBox.min.x << ", " << group->uvBox.min.y << ", " << group->uvBox.min.z << ")";
-            std::cout << " (" << group->uvBox.max.x << ", " << group->uvBox.max.y << ", " << group->uvBox.max.z << ")"<< std::endl;
+            // std::cout << "Group box (" << group->uvBox.min.x << ", " << group->uvBox.min.y << ", " << group->uvBox.min.z << ")";
+            // std::cout << " (" << group->uvBox.max.x << ", " << group->uvBox.max.y << ", " << group->uvBox.max.z << ")"<< std::endl;
 
-            exporter.save(utils::concatPath(out, utils::getFileName(group->name)), utils::getFileName(inputFile) + "_" + group->name, group);
+            exporter.save(utils::concatPath(out, utils::getFileName(group->name)) + std::to_string(chunk), utils::getFileName(inputFile) + "_" + std::to_string(chunk), group);
 
             group->free();
-        },
-        2, 1, 2
+            chunk++;
+        }
     );
     
     std::cout << "Exported" << std::endl;

@@ -12,7 +12,8 @@
 typedef std::function<void (GroupObject)> GroupCallback;
 
 namespace splitter {
-  std::vector<GroupObject> splitObject(GroupObject baseObject, GroupCallback fn, int x, int y, int z);
+  void splitObject(GroupObject baseObject, GroupCallback fn);
+  bool splitObject(GroupObject baseObject, GroupCallback fn, bool isVertical);
   GroupObject splitUV(GroupObject baseObject);
   void initBVH(GroupObject &group, int level, bool shouldDivideVertical);
 };
