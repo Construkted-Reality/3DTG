@@ -294,6 +294,7 @@ bool splitter::splitObject(GroupObject baseObject, GroupCallback fn, bool isVert
   // unsigned int rightFaces = 0;
 
   bool isLeft = false;
+  bool isRight = false;
 
   baseObject->traverse([&](MeshObject mesh){
     MeshObject leftMesh = MeshObject(new Mesh());
@@ -306,17 +307,23 @@ bool splitter::splitObject(GroupObject baseObject, GroupCallback fn, bool isVert
       pos3 = mesh->position[face.positionIndices[2]];
 
       if (isVertical) {
-        isLeft = pos1.x < xMedian || pos2.x < xMedian || pos3.x < xMedian;
+        isLeft = pos1.x <= xMedian || pos2.x <= xMedian || pos3.x <= xMedian;
+        isRight = pos1.x >= xMedian || pos2.x >= xMedian || pos3.x >= xMedian;
+
         if (isLeft) {
           leftMesh->faces.push_back(face);
-        } else {
+        }
+        if (isRight) {
           rightMesh->faces.push_back(face);
         }
       } else {
-        isLeft = pos1.z < zMedian || pos2.z < zMedian || pos3.z < zMedian;
+        isLeft = pos1.z <= zMedian || pos2.z <= zMedian || pos3.z <= zMedian;
+        isRight = pos1.z >= zMedian || pos2.z >= zMedian || pos3.z >= zMedian;
+
         if (isLeft) {
           leftMesh->faces.push_back(face);
-        } else {
+        }
+        if (isRight) {
           rightMesh->faces.push_back(face);
         }
       }
@@ -345,15 +352,338 @@ bool splitter::splitObject(GroupObject baseObject, GroupCallback fn, bool isVert
     }
   });
 
-  if (left->meshes.size() != 0) {
+  if (left->meshes.size() != 0) { 
+    splitter::straightLine(left, isVertical, true, xMedian, zMedian);
     splitter::splitObject(left, fn, !isVertical);
   }
 
   if (right->meshes.size() != 0) {
+    splitter::straightLine(right, isVertical, false, xMedian, zMedian);
     splitter::splitObject(right, fn, !isVertical);
   }
 
   return true;
+};
+
+// TODO optimize a lot
+void splitter::straightLineX(MeshObject &mesh, Face &face, bool isLeft, float xValue, std::vector<Vector3f> &position, std::vector<Vector3f> &normal, std::vector<Vector2f> &uv, std::vector<Face> &faces) {
+  Vector3f pos1, pos2, pos3;
+
+  pos1 = mesh->position[face.positionIndices[0]];
+  pos2 = mesh->position[face.positionIndices[1]];
+  pos3 = mesh->position[face.positionIndices[2]];
+
+  int intersectionCount = 0;
+  
+  if (isLeft) {
+    intersectionCount = int(pos1.x <= xValue) + int(pos2.x <= xValue) + int(pos3.x <= xValue);
+  } else {
+    intersectionCount = int(pos1.x >= xValue) + int(pos2.x >= xValue) + int(pos3.x >= xValue);
+  }
+
+  if (intersectionCount != 3) {
+    bool aInside = true;
+    bool bInside = true;
+    bool cInside = true;
+
+    if (isLeft) {
+      if (pos1.x > xValue) aInside = false;
+      if (pos2.x > xValue) bInside = false;
+      if (pos3.x > xValue) cInside = false;
+    } else {
+      if (pos1.x < xValue) aInside = false;
+      if (pos2.x < xValue) bInside = false;
+      if (pos3.x < xValue) cInside = false;
+    }
+
+    if (intersectionCount == 1) {
+      if (aInside) {
+        mesh->position[face.positionIndices[1]].lerpToX(mesh->position[face.positionIndices[1]], mesh->position[face.positionIndices[0]], xValue);
+        mesh->position[face.positionIndices[2]].lerpToX(mesh->position[face.positionIndices[2]], mesh->position[face.positionIndices[0]], xValue);
+      } else if (bInside) {
+        mesh->position[face.positionIndices[0]].lerpToX(mesh->position[face.positionIndices[0]], mesh->position[face.positionIndices[1]], xValue);
+        mesh->position[face.positionIndices[2]].lerpToX(mesh->position[face.positionIndices[2]], mesh->position[face.positionIndices[1]], xValue);
+      } else if (cInside) {
+        mesh->position[face.positionIndices[0]].lerpToX(mesh->position[face.positionIndices[0]], mesh->position[face.positionIndices[2]], xValue);
+        mesh->position[face.positionIndices[1]].lerpToX(mesh->position[face.positionIndices[1]], mesh->position[face.positionIndices[2]], xValue);
+      }
+    } else if (intersectionCount == 2) {
+      float deltaA = 0.0f;
+      float deltaB = 0.0f;
+
+      Vector3f pos4;
+      Face nextFace;
+
+      if (aInside && bInside) {
+        //std::cout << "Construct new vertex from C" << std::endl;
+
+        deltaA = Vector3f::deltaX(pos3, pos1, xValue);
+        deltaB = Vector3f::deltaX(pos3, pos2, xValue);
+
+        pos4.lerp(pos3, pos2, deltaB);
+        mesh->position[face.positionIndices[2]].lerp(pos3, pos1, deltaA);
+
+        position.push_back(pos4);
+        if (mesh->hasNormals) {
+          normal.push_back(mesh->normal[face.normalIndices[2]]);
+        }
+        if (mesh->hasUVs) {
+          uv.push_back(mesh->uv[face.uvIndices[2]]);
+        }
+
+        nextFace.positionIndices[0] = face.positionIndices[1];
+        nextFace.positionIndices[1] = mesh->position.size() + position.size() - 1;
+        nextFace.positionIndices[2] = face.positionIndices[2];
+
+        nextFace.normalIndices[0] = face.normalIndices[1];
+        nextFace.normalIndices[1] = mesh->normal.size() + normal.size() - 1;
+        nextFace.normalIndices[2] = face.normalIndices[2];
+
+        nextFace.uvIndices[0] = face.uvIndices[1];
+        nextFace.uvIndices[1] = mesh->uv.size() + uv.size() - 1;
+        nextFace.uvIndices[2] = face.uvIndices[2];
+
+        faces.push_back(nextFace);
+      } else if (aInside && cInside) {
+        //std::cout << "Construct new vertex from B" << std::endl;
+
+        deltaA = Vector3f::deltaX(pos2, pos3, xValue);
+        deltaB = Vector3f::deltaX(pos2, pos1, xValue);
+
+        pos4.lerp(pos2, pos1, deltaB);
+        mesh->position[face.positionIndices[1]].lerp(pos2, pos3, deltaA);
+
+        position.push_back(pos4);
+        if (mesh->hasNormals) {
+          normal.push_back(mesh->normal[face.normalIndices[2]]);
+        }
+        if (mesh->hasUVs) {
+          uv.push_back(mesh->uv[face.uvIndices[2]]);
+        }
+
+        nextFace.positionIndices[0] = face.positionIndices[0];
+        nextFace.positionIndices[1] = mesh->position.size() + position.size() - 1;
+        nextFace.positionIndices[2] = face.positionIndices[1];
+
+        nextFace.normalIndices[0] = face.normalIndices[0];
+        nextFace.normalIndices[1] = mesh->normal.size() + normal.size() - 1;
+        nextFace.normalIndices[2] = face.normalIndices[1];
+
+        nextFace.uvIndices[0] = face.uvIndices[0];
+        nextFace.uvIndices[1] = mesh->uv.size() + uv.size() - 1;
+        nextFace.uvIndices[2] = face.uvIndices[1];
+
+        faces.push_back(nextFace);
+      } else if (bInside && cInside) {
+        //std::cout << "Construct new vertex from B" << std::endl;
+
+        deltaA = Vector3f::deltaX(pos1, pos3, xValue);
+        deltaB = Vector3f::deltaX(pos1, pos2, xValue);
+
+        pos4.lerp(pos1, pos2, deltaB);
+        mesh->position[face.positionIndices[0]].lerp(pos1, pos3, deltaA);
+
+        position.push_back(pos4);
+        if (mesh->hasNormals) {
+          normal.push_back(mesh->normal[face.normalIndices[2]]);
+        }
+        if (mesh->hasUVs) {
+          uv.push_back(mesh->uv[face.uvIndices[2]]);
+        }
+
+        nextFace.positionIndices[0] = face.positionIndices[1];
+        nextFace.positionIndices[1] = mesh->position.size() + position.size() - 1;
+        nextFace.positionIndices[2] = face.positionIndices[0];
+
+        nextFace.normalIndices[0] = face.normalIndices[1];
+        nextFace.normalIndices[1] = mesh->normal.size() + normal.size() - 1;
+        nextFace.normalIndices[2] = face.normalIndices[0];
+
+        nextFace.uvIndices[0] = face.uvIndices[1];
+        nextFace.uvIndices[1] = mesh->uv.size() + uv.size() - 1;
+        nextFace.uvIndices[2] = face.uvIndices[0];
+
+        faces.push_back(nextFace);
+      }
+    }
+  }
+};
+
+// TODO optimize a lot
+void splitter::straightLineZ(MeshObject &mesh, Face &face, bool isLeft, float zValue, std::vector<Vector3f> &position, std::vector<Vector3f> &normal, std::vector<Vector2f> &uv, std::vector<Face> &faces) {
+  Vector3f pos1, pos2, pos3;
+
+  pos1 = mesh->position[face.positionIndices[0]];
+  pos2 = mesh->position[face.positionIndices[1]];
+  pos3 = mesh->position[face.positionIndices[2]];
+
+  int intersectionCount = 0;
+  
+  if (isLeft) {
+    intersectionCount = int(pos1.z <= zValue) + int(pos2.z <= zValue) + int(pos3.z <= zValue);
+  } else {
+    intersectionCount = int(pos1.z >= zValue) + int(pos2.z >= zValue) + int(pos3.z >= zValue);
+  }
+
+  if (intersectionCount != 3) {
+    bool aInside = true;
+    bool bInside = true;
+    bool cInside = true;
+
+    if (isLeft) {
+      if (pos1.z > zValue) aInside = false;
+      if (pos2.z > zValue) bInside = false;
+      if (pos3.z > zValue) cInside = false;
+    } else {
+      if (pos1.z < zValue) aInside = false;
+      if (pos2.z < zValue) bInside = false;
+      if (pos3.z < zValue) cInside = false;
+    }
+
+    if (intersectionCount == 1) {
+      if (aInside) {
+        mesh->position[face.positionIndices[1]].lerpToZ(mesh->position[face.positionIndices[1]], mesh->position[face.positionIndices[0]], zValue);
+        mesh->position[face.positionIndices[2]].lerpToZ(mesh->position[face.positionIndices[2]], mesh->position[face.positionIndices[0]], zValue);
+      } else if (bInside) {
+        mesh->position[face.positionIndices[0]].lerpToZ(mesh->position[face.positionIndices[0]], mesh->position[face.positionIndices[1]], zValue);
+        mesh->position[face.positionIndices[2]].lerpToZ(mesh->position[face.positionIndices[2]], mesh->position[face.positionIndices[1]], zValue);
+      } else if (cInside) {
+        mesh->position[face.positionIndices[0]].lerpToZ(mesh->position[face.positionIndices[0]], mesh->position[face.positionIndices[2]], zValue);
+        mesh->position[face.positionIndices[1]].lerpToZ(mesh->position[face.positionIndices[1]], mesh->position[face.positionIndices[2]], zValue);
+      }
+    } else if (intersectionCount == 2) {
+      float deltaA = 0.0f;
+      float deltaB = 0.0f;
+
+      Vector3f pos4;
+      Face nextFace;
+
+      if (aInside && bInside) {
+        //std::cout << "Construct new vertex from C" << std::endl;
+
+        deltaA = Vector3f::deltaZ(pos3, pos1, zValue);
+        deltaB = Vector3f::deltaZ(pos3, pos2, zValue);
+
+        pos4.lerp(pos3, pos2, deltaB);
+        mesh->position[face.positionIndices[2]].lerp(pos3, pos1, deltaA);
+
+        position.push_back(pos4);
+        if (mesh->hasNormals) {
+          normal.push_back(mesh->normal[face.normalIndices[2]]);
+        }
+        if (mesh->hasUVs) {
+          uv.push_back(mesh->uv[face.uvIndices[2]]);
+        }
+
+        nextFace.positionIndices[0] = face.positionIndices[1];
+        nextFace.positionIndices[1] = mesh->position.size() + position.size() - 1;
+        nextFace.positionIndices[2] = face.positionIndices[2];
+
+        nextFace.normalIndices[0] = face.normalIndices[1];
+        nextFace.normalIndices[1] = mesh->normal.size() + normal.size() - 1;
+        nextFace.normalIndices[2] = face.normalIndices[2];
+
+        nextFace.uvIndices[0] = face.uvIndices[1];
+        nextFace.uvIndices[1] = mesh->uv.size() + uv.size() - 1;
+        nextFace.uvIndices[2] = face.uvIndices[2];
+
+        faces.push_back(nextFace);
+      } else if (aInside && cInside) {
+        //std::cout << "Construct new vertex from B" << std::endl;
+
+        deltaA = Vector3f::deltaZ(pos2, pos3, zValue);
+        deltaB = Vector3f::deltaZ(pos2, pos1, zValue);
+
+        pos4.lerp(pos2, pos1, deltaB);
+        mesh->position[face.positionIndices[1]].lerp(pos2, pos3, deltaA);
+
+        position.push_back(pos4);
+        if (mesh->hasNormals) {
+          normal.push_back(mesh->normal[face.normalIndices[2]]);
+        }
+        if (mesh->hasUVs) {
+          uv.push_back(mesh->uv[face.uvIndices[2]]);
+        }
+
+        nextFace.positionIndices[0] = face.positionIndices[0];
+        nextFace.positionIndices[1] = mesh->position.size() + position.size() - 1;
+        nextFace.positionIndices[2] = face.positionIndices[1];
+
+        nextFace.normalIndices[0] = face.normalIndices[0];
+        nextFace.normalIndices[1] = mesh->normal.size() + normal.size() - 1;
+        nextFace.normalIndices[2] = face.normalIndices[1];
+
+        nextFace.uvIndices[0] = face.uvIndices[0];
+        nextFace.uvIndices[1] = mesh->uv.size() + uv.size() - 1;
+        nextFace.uvIndices[2] = face.uvIndices[1];
+
+        faces.push_back(nextFace);
+      } else if (bInside && cInside) {
+        //std::cout << "Construct new vertex from B" << std::endl;
+
+        deltaA = Vector3f::deltaZ(pos1, pos3, zValue);
+        deltaB = Vector3f::deltaZ(pos1, pos2, zValue);
+
+        pos4.lerp(pos1, pos2, deltaB);
+        mesh->position[face.positionIndices[0]].lerp(pos1, pos3, deltaA);
+
+        position.push_back(pos4);
+        if (mesh->hasNormals) {
+          normal.push_back(mesh->normal[face.normalIndices[2]]);
+        }
+        if (mesh->hasUVs) {
+          uv.push_back(mesh->uv[face.uvIndices[2]]);
+        }
+
+        nextFace.positionIndices[0] = face.positionIndices[1];
+        nextFace.positionIndices[1] = mesh->position.size() + position.size() - 1;
+        nextFace.positionIndices[2] = face.positionIndices[0];
+
+        nextFace.normalIndices[0] = face.normalIndices[1];
+        nextFace.normalIndices[1] = mesh->normal.size() + normal.size() - 1;
+        nextFace.normalIndices[2] = face.normalIndices[0];
+
+        nextFace.uvIndices[0] = face.uvIndices[1];
+        nextFace.uvIndices[1] = mesh->uv.size() + uv.size() - 1;
+        nextFace.uvIndices[2] = face.uvIndices[0];
+
+        faces.push_back(nextFace);
+      }
+    }
+  }
+};
+
+void splitter::straightLine(GroupObject &baseObject, bool isVertical, bool isLeft, float xValue, float zValue) {
+  std::vector<Vector3f> position;
+  std::vector<Vector3f> normal;
+  std::vector<Vector2f> uv;
+
+  std::vector<Face> faces;
+
+  baseObject->traverse([&](MeshObject mesh){
+    position.clear();
+    normal.clear();
+    uv.clear();
+    faces.clear();
+
+    for (Face &face : mesh->faces) // access by reference to avoid copying
+    {
+      if (isVertical) {
+        splitter::straightLineX(mesh, face, isLeft, xValue, position, normal, uv, faces);
+      } else {
+        splitter::straightLineZ(mesh, face, isLeft, zValue, position, normal, uv, faces);
+      }
+    }
+
+    if (position.size() != 0) {
+      std::copy(position.begin(), position.end(), std::back_inserter(mesh->position));
+      std::copy(normal.begin(), normal.end(), std::back_inserter(mesh->normal));
+      std::copy(uv.begin(), uv.end(), std::back_inserter(mesh->uv));
+      std::copy(faces.begin(), faces.end(), std::back_inserter(mesh->faces));
+
+      mesh->finish();
+    }
+  });
 };
 
 void splitter::splitObject(GroupObject baseObject, GroupCallback fn) {

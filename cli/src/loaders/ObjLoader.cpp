@@ -13,6 +13,8 @@ MaterialMap ObjLoader::loadMaterials(const char* path) {
     return materialMap;
   }
 
+  std::map<std::string, unsigned char*> imageList;
+
   std::cout << "Materials file is opened, processing...: " << std::endl;
 
   std::string line;
@@ -40,26 +42,36 @@ MaterialMap ObjLoader::loadMaterials(const char* path) {
       if (token == "map_Kd") {
         ss >> materialMap[lastMaterialName].diffuseMap;
 
-        std::cout << "Found an image:" << materialMap[lastMaterialName].diffuseMap.c_str() << std::endl;
-
         std::string imagePath = utils::concatPath(
             utils::getDirectory(path),
             materialMap[lastMaterialName].diffuseMap
           ).c_str();
 
-        std::cout << "Image path: " << imagePath.c_str() << std::endl;
-        std::cout << "Loading..." << std::endl;
 
         Image &diffuseMapImage = materialMap[lastMaterialName].diffuseMapImage;
 
-        diffuseMapImage.data = stbi_load(imagePath.c_str(), &diffuseMapImage.width, &diffuseMapImage.height, &diffuseMapImage.channels, 0);
+        if ( imageList.find(imagePath) == imageList.end() ) {
+          std::cout << "Found an image:" << materialMap[lastMaterialName].diffuseMap.c_str() << std::endl;
 
-        if(diffuseMapImage.data == NULL) {
-          std::cerr << "Image loading error" << std::endl;
-          if (stbi_failure_reason()) std::cerr << stbi_failure_reason() << std::endl;
+          std::cout << "Image path: " << imagePath.c_str() << std::endl;
+          std::cout << "Loading..." << std::endl;
+
+          imageList[imagePath] = stbi_load(imagePath.c_str(), &diffuseMapImage.width, &diffuseMapImage.height, &diffuseMapImage.channels, 0);
+
+          if(imageList[imagePath] == NULL) {
+            std::cerr << "Image loading error" << std::endl;
+            if (stbi_failure_reason()) std::cerr << stbi_failure_reason() << std::endl;
+          }
+
+          std::cout << "Image width: " << diffuseMapImage.width << ", height: " << diffuseMapImage.height << ", channels: " << diffuseMapImage.channels << std::endl;
         }
+        
+        diffuseMapImage.data = imageList[imagePath];
 
-        std::cout << "Image width: " << diffuseMapImage.width << ", height: " << diffuseMapImage.height << ", channels: " << diffuseMapImage.channels << std::endl;
+        // if(diffuseMapImage.data == NULL) {
+        //   std::cerr << "Image loading error" << std::endl;
+        //   if (stbi_failure_reason()) std::cerr << stbi_failure_reason() << std::endl;
+        // }
       } else if (token == "Kd") {
         ss >> materialMap[lastMaterialName].color.x >> materialMap[lastMaterialName].color.y >> materialMap[lastMaterialName].color.z;
       }

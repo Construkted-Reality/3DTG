@@ -293,6 +293,36 @@ void Vector3f::set(float x, float y, float z) {
   this->z = z;
 };
 
+void Vector3f::lerp(Vector3f a, Vector3f b, float delta) {
+  this->x = a.x + (b.x - a.x) * delta;
+  this->y = a.y + (b.y - a.y) * delta;
+  this->z = a.z + (b.z - a.z) * delta;
+};
+
+float Vector3f::deltaX(Vector3f a, Vector3f b, float x) {
+  return (x - a.x) / (b.x - a.x);
+};
+
+float Vector3f::deltaY(Vector3f a, Vector3f b, float y) {
+  return (y - a.y) / (b.y - a.y);
+};
+
+float Vector3f::deltaZ(Vector3f a, Vector3f b, float z) {
+  return (z - a.z) / (b.z - a.z);
+};
+
+void Vector3f::lerpToX(Vector3f a, Vector3f b, float x) {
+  this->lerp(a, b, Vector3f::deltaX(a, b, x));
+};
+
+void Vector3f::lerpToY(Vector3f a, Vector3f b, float y) {
+  this->lerp(a, b, Vector3f::deltaY(a, b, y));
+};
+
+void Vector3f::lerpToZ(Vector3f a, Vector3f b, float z) {
+  this->lerp(a, b, Vector3f::deltaZ(a, b, z));
+};
+
 Vector3f Vector3f::clone() {
   Vector3f cloned;
 

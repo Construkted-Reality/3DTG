@@ -33,6 +33,13 @@ struct Vector3f {
   void add(Vector3f vector);
   void sub(Vector3f vector);
   void set(float x, float y, float z);
+  void lerp(Vector3f a, Vector3f b, float delta);
+  void lerpToX(Vector3f a, Vector3f b, float x);
+  void lerpToY(Vector3f a, Vector3f b, float y);
+  void lerpToZ(Vector3f a, Vector3f b, float z);
+  static float deltaX(Vector3f a, Vector3f b, float x);
+  static float deltaY(Vector3f a, Vector3f b, float y);
+  static float deltaZ(Vector3f a, Vector3f b, float z);
   Vector3f clone();
   Vector3f intersectPlane(Vector3f planePoint, Vector3f planeNormal, Vector3f lineBegin, Vector3f lineDirection);
 };
