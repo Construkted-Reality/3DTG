@@ -165,6 +165,18 @@ void ObjLoader::finishMesh(GroupObject &group, MeshObject &mesh, std::vector<Vec
 
   mesh->finish();
   group->meshes.push_back(mesh);
+
+  positionMap.clear();
+  normalMap.clear();
+  uvMap.clear();
+
+  positionDestMap.clear();
+  normalDestMap.clear();
+  uvDestMap.clear();
+
+  position.clear();
+  normal.clear();
+  uv.clear();
 };
 
 void ObjLoader::parse(const char* path) {
@@ -341,13 +353,17 @@ void ObjLoader::parse(const char* path) {
     }
   }
 
-  std::cout << "Finished before by end of func" << std::endl;
+  //std::cout << "Finished before by end of func" << std::endl;
   // currentMesh->finish();
-  std::cout << "Finished by end of func" << std::endl;
+  std::cout << "Model has been loaded" << std::endl;
 
   //currentGroup->meshes.push_back(currentMesh);
   this->finishMesh(currentGroup, currentMesh, position, normal, uv);
   this->object->computeBoundingBox();
+
+  materialMap.clear();
+  faces.clear();
+  tokens.clear();
 
   // close the file stream
   input.close();

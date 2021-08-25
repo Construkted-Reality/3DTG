@@ -18,6 +18,10 @@
 
 class Mesh;
 class Group;
+class Vertex;
+class Triangle;
+typedef std::shared_ptr<Vertex> VertexPtr;
+typedef std::shared_ptr<Triangle> TrianglePtr;
 typedef std::shared_ptr<Mesh> MeshObject;
 typedef std::shared_ptr<Group> GroupObject;
 typedef std::function<void (MeshObject)> TraverseMeshCallback;
@@ -27,12 +31,16 @@ struct Vector3f {
   float x = 0.0f, y = 0.0f, z = 0.0f;
   float dot(Vector3f vector);
   float length();
+  float distanceTo(Vector3f vector);
   void normalize();
   void divideScalar(float value);
   void multiplyScalar(float value);
   void add(Vector3f vector);
   void sub(Vector3f vector);
+  void sub(Vector3f vectorA, Vector3f vectorB);
   void set(float x, float y, float z);
+  void set(Vector3f vector);
+  void cross(Vector3f vector);
   void lerp(Vector3f a, Vector3f b, float delta);
   void lerpToX(Vector3f a, Vector3f b, float x);
   void lerpToY(Vector3f a, Vector3f b, float y);
@@ -50,12 +58,64 @@ struct Vector3ui {
 
 struct Vector2f {
   float x = 0.0f, y = 0.0f;
+  void set(float x, float y);
+  void set(Vector2f vector);
 };
 
 struct Face {
   unsigned int positionIndices[3]{0, 0, 0};
   unsigned int normalIndices[3]{0, 0, 0};
   unsigned int uvIndices[3]{0, 0, 0};
+};
+
+
+class Vertex {
+  public:
+    Vertex();
+    Vertex(Vector3f vector);
+
+    Vector3f position;
+    Vector3f normal;
+    Vector2f uv;
+
+    std::vector<TrianglePtr> faces;
+    std::vector<VertexPtr> neighbors;
+
+    float collapseCost = 0.0f;
+    VertexPtr collapseNeighbor = NULL;
+
+    float minCost = 0.0f;
+    float totalCost = 0.0f;
+    unsigned int costCount = 0;
+
+    unsigned int id = 0;
+    unsigned int positionId = 0;
+
+    void addUniqueNeighbor(VertexPtr vertex);
+    void removeIfNonNeighbor(VertexPtr vertex);
+    bool hasNeighbor(VertexPtr vertex);
+    void removeTriangle(TrianglePtr triangle);
+};
+
+class Triangle : public std::enable_shared_from_this<Triangle> {
+  public:
+    Triangle(VertexPtr v1, VertexPtr v2, VertexPtr v3, Face f);
+    void init();
+
+    unsigned int id = 0;
+
+    VertexPtr v1;
+    VertexPtr v2;
+    VertexPtr v3;
+
+    std::vector<Vector2f> faceVertexUvs;
+
+    Face face;
+    Vector3f normal;
+
+    void computeNormal();
+    bool hasVertex(VertexPtr vertex);
+    void replaceVertex(VertexPtr oldVertex, VertexPtr newVertex);
 };
 
 struct BBoxf {

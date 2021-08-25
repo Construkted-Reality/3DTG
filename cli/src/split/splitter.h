@@ -8,12 +8,13 @@
 #include <math.h>
 
 #include "./../loaders/Loader.h"
+#include "./../simplify/simplifier.h"
 
 typedef std::function<void (GroupObject)> GroupCallback;
 
 namespace splitter {
-  void splitObject(GroupObject baseObject, GroupCallback fn);
-  bool splitObject(GroupObject baseObject, GroupCallback fn, bool isVertical);
+  void splitObject(GroupObject baseObject, GroupCallback fn, GroupCallback lodFn);
+  bool splitObject(GroupObject baseObject, GroupCallback fn, GroupCallback lodFn, bool isVertical);
   void straightLine(GroupObject &baseObject, bool isVertical, bool isLeft, float xValue, float zValue);
   void straightLineX(MeshObject &mesh, Face &face, bool isLeft, float xValue, std::vector<Vector3f> &position, std::vector<Vector3f> &normal, std::vector<Vector2f> &uv, std::vector<Face> &faces);
   void straightLineZ(MeshObject &mesh, Face &face, bool isLeft, float zValue, std::vector<Vector3f> &position, std::vector<Vector3f> &normal, std::vector<Vector2f> &uv, std::vector<Face> &faces);

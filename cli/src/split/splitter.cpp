@@ -64,7 +64,10 @@ GroupObject splitter::splitUV(GroupObject baseObject) {
 
   bool ix, iy, iz;
 
+  // std::cout << "UV split has been started" << std::endl;
+
   baseObject->traverse([&](MeshObject mesh){
+    // std::cout << "Mesh material name: " << mesh->material.name << std::endl;
     if (mesh->material.name != "") {
       GroupObject group;
 
@@ -83,7 +86,9 @@ GroupObject splitter::splitUV(GroupObject baseObject) {
         //materialMap[mesh->material.name] = mesh->material;
 
         // Init full BVH tree with 3 inherite subtrees
+        // std::cout << "BVH generation has been started" << std::endl;
         splitter::initBVH(group);
+        // std::cout << "BVH generation has been finished" << std::endl;
       } else {
         group = meshMaterialMap[mesh->material.name];
       }
@@ -133,26 +138,42 @@ GroupObject splitter::splitUV(GroupObject baseObject) {
     }
   });
 
+  // std::cout << "Mesh split by material has been finished" << std::endl;
+
   GroupObject resultGroup = GroupObject(new Group());
   resultGroup->name = baseObject->name;
+
+  // std::cout << "Texture split has been staretd" << std::endl;
 
   int meshIndex = 0;
   for (std::map<std::string, GroupObject>::iterator it = meshMaterialMap.begin(); it != meshMaterialMap.end(); ++it) {
     it->second->traverse([&](MeshObject mesh){
-      //std::cout << "Mesh \"" << mesh->name << "\" has: " << mesh->faces.size() << " faces" << std::endl;
+      // std::cout << "Current mesh material name: " << mesh->material.name << std::endl;
+      // std::cout << "Mesh \"" << mesh->name << "\" has: " << mesh->faces.size() << " faces" << std::endl;
+
+      // std::cout << "Mesh info assign" << std::endl;
+      // std::cout << "Group data: " << it->second->meshes.size() << " meshes" << std::endl;
+      // std::cout << it->second->meshes[0]->position.size()  << "v, " << it->second->meshes[0]->normal.size()  << "n, " << it->second->meshes[0]->uv.size()  << "t" << std::endl;
+
       mesh->hasNormals = it->second->meshes[0]->normal.size() > 0;
       mesh->hasUVs = it->second->meshes[0]->uv.size() > 0;
       mesh->remesh(it->second->meshes[0]->position, it->second->meshes[0]->normal, it->second->meshes[0]->uv);
       mesh->finish();
 
+      // std::cout << "Material info assign" << std::endl;
       mesh->material = it->second->meshes[0]->material;
       mesh->material.name += std::to_string(meshIndex);
       mesh->material.diffuseMap = mesh->material.name + ".jpg";
       //mesh->material.diffuseMapImage = it->second->meshes[0]->material.diffuseMapImage;
 
+      // std::cout << "Info assigning has been finished" << std::endl;
+
       meshIndex++;
 
       if (mesh->hasUVs) {
+        // std::cout << "Can split" << std::endl;
+        // std::cout << "Calculating BBOX has been started" << std::endl;
+
         BBoxf uvBox = mesh->uvBox;
         // uvBox.fromPoint(mesh->uv[0].x, mesh->uv[0].y, 0.0f);
 
@@ -190,6 +211,10 @@ GroupObject splitter::splitUV(GroupObject baseObject) {
         int textureWidth = maxX - minX;
         int textureHeight = maxY - minY;
 
+        // std::cout << "Calculating BBOX has been finished" << std::endl;
+
+
+        // std::cout << "Texture copying has been started" << std::endl;
         // Image &diffuse = mesh->material.diffuseMapImage;
         Image diffuse;
 
@@ -197,8 +222,10 @@ GroupObject splitter::splitUV(GroupObject baseObject) {
         diffuse.width = textureWidth;
         diffuse.height = textureHeight;
         diffuse.data = new unsigned char[textureWidth * textureHeight * 3];
+
+        // std::cout << "Texture copying has been finished" << std::endl;
         
-        
+        // std::cout << "Texture clipping has been started" << std::endl;
         for (int j = 0; j < textureWidth; j++)
         {
           for (int i = 0; i < textureHeight; i++)
@@ -212,7 +239,11 @@ GroupObject splitter::splitUV(GroupObject baseObject) {
           }
         }
 
+        // std::cout << "Texture clipping has been finished" << std::endl;
+
         mesh->material.diffuseMapImage = diffuse;
+      } else {
+        // std::cout << "Can not be split" << std::endl;
       }
 
       // std::cout << "Mesh \"" << mesh->name << "\" has: " << mesh->faces.size() << " faces, " << mesh->position.size() << " vertices" << std::endl;
@@ -236,6 +267,8 @@ GroupObject splitter::splitUV(GroupObject baseObject) {
     it->second->meshes.clear();
   }
 
+  meshMaterialMap.clear();
+
   // baseObject->traverse([](MeshObject mesh) {
   //   mesh->free();
   // });
@@ -243,7 +276,7 @@ GroupObject splitter::splitUV(GroupObject baseObject) {
   return resultGroup;
 };
 
-bool splitter::splitObject(GroupObject baseObject, GroupCallback fn, bool isVertical = false) {
+bool splitter::splitObject(GroupObject baseObject, GroupCallback fn, GroupCallback lodFn, bool isVertical = false) {
   unsigned int polygonCount = 0;
 
   baseObject->traverse([&](MeshObject mesh){
@@ -255,10 +288,30 @@ bool splitter::splitObject(GroupObject baseObject, GroupCallback fn, bool isVert
   // fn(baseObject);
 
   if (polygonCount <= 20000) {
-    baseObject->name = "Chunk_";
-    fn(splitter::splitUV(baseObject));
+    GroupObject resultGroup = splitter::splitUV(baseObject);
+    resultGroup->name = "Chunk_";
+    //fn(splitter::splitUV(baseObject));
+    fn(resultGroup);
+
+    // resultGroup->name = "Lod_0_Chunk_";
+    // lodFn(simplifier::modify(resultGroup, 0.5f));
 
     return false;
+  } else {
+
+    for (unsigned int i = 2; i < 7; i++) {// 5 Levels
+      if (polygonCount <= 20000 * i) {
+        GroupObject resultGroup = splitter::splitUV(baseObject);
+
+        resultGroup->name = std::string("Lod_") + std::to_string(i - 2) + std::string("_Chunk_");
+        lodFn(simplifier::modify(resultGroup, 0.5f));
+
+        //return false;
+      }
+    }
+
+    // baseObject->name = "Lod_0_Chunk_";
+    //lodFn(simplifier::modify(splitter::splitUV(baseObject), 0.5f));//splitter::splitUV()
   }
 
   float xMedian = 0.0f;
@@ -354,12 +407,12 @@ bool splitter::splitObject(GroupObject baseObject, GroupCallback fn, bool isVert
 
   if (left->meshes.size() != 0) { 
     splitter::straightLine(left, isVertical, true, xMedian, zMedian);
-    splitter::splitObject(left, fn, !isVertical);
+    splitter::splitObject(left, fn, lodFn, !isVertical);
   }
 
   if (right->meshes.size() != 0) {
     splitter::straightLine(right, isVertical, false, xMedian, zMedian);
-    splitter::splitObject(right, fn, !isVertical);
+    splitter::splitObject(right, fn, lodFn, !isVertical);
   }
 
   return true;
@@ -686,7 +739,7 @@ void splitter::straightLine(GroupObject &baseObject, bool isVertical, bool isLef
   });
 };
 
-void splitter::splitObject(GroupObject baseObject, GroupCallback fn) {
-  splitter::splitObject(baseObject, fn, true);
+void splitter::splitObject(GroupObject baseObject, GroupCallback fn, GroupCallback lodFn) {
+  splitter::splitObject(baseObject, fn, lodFn, true);
   //fn(splitter::splitUV(group));
 };

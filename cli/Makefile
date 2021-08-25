@@ -1,5 +1,5 @@
 CC = g++
-CXXFLAGS = -Wall -O3 -std=c++17
+CXXFLAGS = -Wall -O0 -DDEBUG -g
 INCLUDES = 
 LFLAGS = 
 LIBS = 
@@ -28,7 +28,7 @@ ifeq ($(uname_S), Darwin)
 endif
 
 # Create OUT dir if not exists
-ifneq (wildcard $(OUT), $(OUT))
+ifeq (,$(wildcard $(OUT)))
 	createDirs := $(shell mkdir $("-p") $(OUT))
 endif
 
@@ -47,7 +47,8 @@ CLEAN =  $(foreach dir,$(OBJ),"$(dir)")
 all: app
 
 app: $(OBJ)
-	$(CC) $(OBJ) -o $(EXECUTABLE) $(LFLAGS) $(LIBS)
+	$(CC) $(CXXFLAGS) $(OBJ) -o $(EXECUTABLE) $(LFLAGS) $(LIBS)
 
 clean:
-	del $(CLEAN)
+	rm -f $(OBJ)
+	rm -f $(EXECUTABLE)

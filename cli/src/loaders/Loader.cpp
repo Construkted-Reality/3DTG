@@ -58,6 +58,10 @@ void Mesh::free() {
   this->normal.clear();
   this->faces.clear();
   this->material.name = "";
+
+  if (this->material.diffuseMapImage.data != NULL) {
+    this->material.diffuseMapImage.free();
+  }
 };
 
 void Mesh::remesh(std::vector<Vector3f> &position, std::vector<Vector3f> &normal, std::vector<Vector2f> &uv) {
@@ -249,13 +253,31 @@ void BBoxf::fromPoint(float x, float y, float z) {
   this->max.z = z;
 };
 
+void Vector2f::set(float x, float y) {
+  this->x = x;
+  this->y = y;
+};
+
+void Vector2f::set(Vector2f vector) {
+  this->x = vector.x;
+  this->y = vector.y;
+};
+
 
 float Vector3f::dot(Vector3f vector) {
-  return this->x * vector.x + this->y * vector.y + this->z * vector.z;
+  return (this->x * vector.x) + (this->y * vector.y) + (this->z * vector.z);
 };
 
 float Vector3f::length() {
-  return sqrt(this->x * this->x + this->y * this->y + this->z *this->z);
+  return sqrt((this->x * this->x) + (this->y * this->y) + (this->z * this->z));
+};
+
+float Vector3f::distanceTo(Vector3f vector) {
+  float dx = this->x - vector.x;
+  float dy = this->y - vector.y;
+  float dz = this->z - vector.z;
+
+  return sqrt((dx*dx) + (dy*dy) + (dz*dz));
 };
 
 void Vector3f::divideScalar(float value) {
@@ -287,10 +309,36 @@ void Vector3f::sub(Vector3f vector) {
   this->z -= vector.z;
 };
 
+void Vector3f::sub(Vector3f vectorA, Vector3f vectorB) {
+  this->x = vectorA.x - vectorB.x;
+  this->y = vectorA.y - vectorB.y;
+  this->z = vectorA.z - vectorB.z;
+};
+
 void Vector3f::set(float x, float y, float z) {
   this->x = x;
   this->y = y;
   this->z = z;
+};
+
+void Vector3f::set(Vector3f vector) {
+  this->x = vector.x;
+  this->y = vector.y;
+  this->z = vector.z;
+};
+
+void Vector3f::cross(Vector3f vector) {
+  float ax = this->x;
+  float ay = this->y;
+  float az = this->z;
+
+  float bx = vector.x;
+  float by = vector.y;
+  float bz = vector.z;
+
+  this->x = (ay * bz) - (az * by);
+  this->y = (az * bx) - (ax * bz);
+  this->z = (ax * by) - (ay * bx);
 };
 
 void Vector3f::lerp(Vector3f a, Vector3f b, float delta) {
@@ -358,6 +406,149 @@ void Loader::free() {
     mesh->material.diffuseMapImage.free();
   });
 
-  std::cout << "Memory has been cleaned" << std::endl; 
+  std::cout << "Memory has been cleaned" << std::endl;
 };
+
+
+Vertex::Vertex() {};
+Vertex::Vertex(Vector3f vector) {
+  this->position = vector.clone();
+};
+
+bool Vertex::hasNeighbor(VertexPtr vertex) {
+  for (VertexPtr &target : this->neighbors) // access by reference to avoid copying
+  {
+    if (target->id == vertex->id) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+void Vertex::addUniqueNeighbor(VertexPtr vertex) {
+  if (!this->hasNeighbor(vertex)) {
+    this->neighbors.push_back(vertex);
+  }
+};
+
+void Vertex::removeIfNonNeighbor(VertexPtr vertex) {
+  if (this->hasNeighbor(vertex)) {
+    bool isPartOfFace = false;
+
+    for (TrianglePtr &target : this->faces) // access by reference to avoid copying
+    {
+      if (target->hasVertex(vertex)) {
+        isPartOfFace = true;
+        break;
+      }
+    }
+
+    if (!isPartOfFace) {
+      this->neighbors.erase(
+        std::remove_if(
+          this->neighbors.begin(), 
+          this->neighbors.end(),
+          [&](VertexPtr v){ return v->id == vertex->id; }
+        ),
+        this->neighbors.end()
+      );
+    }
+  }
+};
+
+void Vertex::removeTriangle(TrianglePtr triangle) {
+  this->faces.erase(
+    std::remove_if(
+      this->faces.begin(), 
+      this->faces.end(),
+      [&](TrianglePtr t){ return t->id == triangle->id; }
+    ),
+    this->faces.end()
+  );
+  // std::remove(this->faces.begin(), this->faces.end(), triangle),
+};
+
+Triangle::Triangle(VertexPtr v1, VertexPtr v2, VertexPtr v3, Face f) {
+  this->v1 = v1;
+  this->v2 = v2;
+  this->v3 = v3;
+
+  this->face = f;
+
+  this->computeNormal();
+
+  this->v1->addUniqueNeighbor(this->v2);
+  this->v1->addUniqueNeighbor(this->v3);
+
+  this->v2->addUniqueNeighbor(this->v1);
+  this->v2->addUniqueNeighbor(this->v3);
+
+  this->v3->addUniqueNeighbor(this->v1);
+  this->v3->addUniqueNeighbor(this->v2);
+};
+
+void Triangle::init() {
+  this->v1->faces.push_back(shared_from_this());
+  this->v2->faces.push_back(shared_from_this());
+  this->v3->faces.push_back(shared_from_this());
+};
+
+void Triangle::computeNormal() {
+  Vector3f vA = this->v1->position;
+  Vector3f vB = this->v2->position;
+  Vector3f vC = this->v3->position;
+
+  Vector3f _ab;
+  Vector3f _cb;
+
+  _cb.sub(vC, vB);
+  _ab.sub(vA, vB);
+
+  _cb.cross(_ab);
+
+  if (_cb.length() != 0.0f) {
+    _cb.normalize();
+  }
+
+  this->normal.set(_cb);
+};
+
+bool Triangle::hasVertex(VertexPtr vertex) {
+  return this->v1->id == vertex->id || this->v2->id == vertex->id || this->v3->id == vertex->id;
+};
+
+void Triangle::replaceVertex(VertexPtr oldVertex, VertexPtr newVertex) {
+  if (oldVertex->id == this->v1->id) {
+    this->v1 = newVertex;
+  } else if (oldVertex->id == this->v2->id) {
+    this->v2 = newVertex;
+  } else if (oldVertex->id == this->v3->id) {
+    this->v3 = newVertex;
+  }
+
+  oldVertex->removeTriangle(shared_from_this());
+  newVertex->faces.push_back(shared_from_this());
+
+  oldVertex->removeIfNonNeighbor(this->v1);
+  this->v1->removeIfNonNeighbor(oldVertex);
+
+  oldVertex->removeIfNonNeighbor(this->v2);
+  this->v2->removeIfNonNeighbor(oldVertex);
+
+  oldVertex->removeIfNonNeighbor(this->v3);
+  this->v3->removeIfNonNeighbor(oldVertex);
+
+  this->v1->addUniqueNeighbor(this->v2);
+  this->v1->addUniqueNeighbor(this->v3);
+
+  this->v2->addUniqueNeighbor(this->v1);
+  this->v2->addUniqueNeighbor(this->v3);
+
+  this->v3->addUniqueNeighbor(this->v1);
+  this->v3->addUniqueNeighbor(this->v2);
+
+  this->computeNormal();
+};
+
 
