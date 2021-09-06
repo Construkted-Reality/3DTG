@@ -13,7 +13,7 @@ GroupObject simplifier::modify(GroupObject &group, float verticesCountModifier) 
 
 MeshObject simplifier::modify(MeshObject &mesh, float verticesCountModifier) {
   if (mesh->position.size() < simplifier::lowerLimit * 3) {
-    return mesh;
+    // return mesh;
   }
 
   MeshObject resultMesh = MeshObject(new Mesh());
@@ -21,7 +21,7 @@ MeshObject simplifier::modify(MeshObject &mesh, float verticesCountModifier) {
   resultMesh->name = mesh->name;
   resultMesh->material.diffuseMapImage = mesh->material.diffuseMapImage;
 
-  unsigned int count = floor(float(mesh->position.size()) * verticesCountModifier);
+  // unsigned int count = floor(float(mesh->position.size()) * verticesCountModifier);
   // count = count + (3 - (count % 3));
 
   // if (count > mesh->position.size()) {
@@ -117,7 +117,7 @@ MeshObject simplifier::modify(MeshObject &mesh, float verticesCountModifier) {
   
 
   // std::cout << "Initial data generation finished" << std::endl;
-  std::cout << "Vertices before LOD generation: " << vertices.size() << std::endl;
+  // std::cout << "Vertices before LOD generation: " << vertices.size() << std::endl;
 
   /*
   for (Face face : mesh->faces) {
@@ -140,19 +140,37 @@ MeshObject simplifier::modify(MeshObject &mesh, float verticesCountModifier) {
 
   VertexPtr nextVertex;
 
+  /*
   unsigned int z = count;
   while (z--) {
     nextVertex = simplifier::minimumCostEdge(vertices);
 
-    if (nextVertex == NULL) {
-      std::cout << "Stop at " << z << " step from back of " << count << std::endl;
+    if (nextVertex == NULL || nextVertex->collapseCost > 50.0f) {//  || nextVertex->collapseCost == 1.0f
+      // std::cout << "Stop at " << z << " step from back of " << count << std::endl;
       break;
     }
 
     simplifier::collapse(vertices, faces, nextVertex, nextVertex->collapseNeighbor);
   }
+  */
 
-  std::cout << "Vertices after LOD generation: " << vertices.size() << std::endl;
+  // unsigned int z = count;
+  nextVertex = simplifier::minimumCostEdge(vertices);
+
+  while (nextVertex != NULL && nextVertex->collapseCost < 0.5f) { // 50.0f
+    
+
+    // if (nextVertex == NULL || nextVertex->collapseCost > 50.0f) {//  || nextVertex->collapseCost == 1.0f
+    //   // std::cout << "Stop at " << z << " step from back of " << count << std::endl;
+    //   break;
+    // }
+
+    simplifier::collapse(vertices, faces, nextVertex, nextVertex->collapseNeighbor);
+
+    nextVertex = simplifier::minimumCostEdge(vertices);
+  }
+
+  // std::cout << "Vertices after LOD generation: " << vertices.size() << std::endl;
 
   for (unsigned int i = 0; i < vertices.size(); i++) {
     resultMesh->position.push_back(vertices[i]->position);
@@ -192,15 +210,15 @@ MeshObject simplifier::modify(MeshObject &mesh, float verticesCountModifier) {
     resultMesh->faces.push_back(face);
   }
 
-  std::cout << "Finishing mesh" << std::endl;
+  // std::cout << "Finishing mesh" << std::endl;
 
   resultMesh->finish();
 
-  std::cout << "Clearing memory" << std::endl;
+  // std::cout << "Clearing memory" << std::endl;
   vertices.clear();
   faces.clear();
 
-  std::cout << "Finished" << std::endl;
+  // std::cout << "Finished" << std::endl;
 
   return resultMesh;
 };
@@ -233,7 +251,8 @@ float simplifier::computeEdgeCollapseCost(VertexPtr u, VertexPtr v) {
   }
 
   if (sideFaces.size() < 2) {
-    curvature = 1.0f;
+    // curvature = 1.0f;
+    return 999999.0f;
   }
   
 

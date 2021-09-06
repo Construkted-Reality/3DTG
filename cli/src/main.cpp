@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
     std::cout << "Splitting..." << std::endl;
 
     unsigned int chunk = 0;
-    // unsigned int lodChunk = 0;
+    unsigned int lodChunk = 0;
     splitter::splitObject(
         loader.object,
         [&](GroupObject group){
@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
             std::cout << "Base export" << std::endl;
             exporter.save(utils::concatPath(out, utils::getFileName(group->name)) + std::to_string(chunk), utils::getFileName(inputFile) + "_" + std::to_string(chunk), group);
 
-            group->free();
+            // group->free();
             chunk++;
 
             std::cout << "---------------------------------------------" << std::endl;
@@ -68,10 +68,10 @@ int main(int argc, char** argv) {
             // std::cout << "Group box (" << group->uvBox.min.x << ", " << group->uvBox.min.y << ", " << group->uvBox.min.z << ")";
             // std::cout << " (" << group->uvBox.max.x << ", " << group->uvBox.max.y << ", " << group->uvBox.max.z << ")"<< std::endl;
             std::cout << "Lod export" << std::endl;
-            exporter.save(utils::concatPath(out, utils::getFileName(group->name)) + std::to_string(chunk), utils::getFileName(inputFile) + "_" + std::to_string(chunk), group);
+            exporter.save(utils::concatPath(out, utils::getFileName(group->name)) + std::to_string(lodChunk), utils::getFileName(inputFile) + "_" + std::to_string(lodChunk), group);
 
             group->free();
-            // lodChunk++;
+            lodChunk++;
 
             std::cout << "---------------------------------------------" << std::endl;
         }

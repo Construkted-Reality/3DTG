@@ -1,5 +1,5 @@
 CC = g++
-CXXFLAGS = -Wall -O0 -DDEBUG -g
+CXXFLAGS = -Wall -O3 -DDEBUG -g
 INCLUDES = 
 LFLAGS = 
 LIBS = 

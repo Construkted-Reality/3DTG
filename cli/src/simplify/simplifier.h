@@ -20,6 +20,7 @@
  */
 namespace simplifier {
   static constexpr unsigned int lowerLimit = 50;
+  // GroupObject modify(GroupObject &group, unsigned int verticesToRemove);
   GroupObject modify(GroupObject &group, float verticesCountModifier);
   MeshObject modify(MeshObject &mesh, float verticesCountModifier);
   float computeEdgeCollapseCost(VertexPtr u, VertexPtr v);

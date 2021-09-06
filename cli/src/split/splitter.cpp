@@ -293,7 +293,17 @@ bool splitter::splitObject(GroupObject baseObject, GroupCallback fn, GroupCallba
     //fn(splitter::splitUV(baseObject));
     fn(resultGroup);
 
-    // resultGroup->name = "Lod_0_Chunk_";
+    // GroupObject targetGroup = baseObject;
+    // for (unsigned int i = 2; i < 7; i++) {// 5 Levels
+    //     targetGroup = splitter::splitUV(targetGroup);
+    //     targetGroup = simplifier::modify(targetGroup, 0.5f);
+
+    //     targetGroup->name = std::string("Lod_") + std::to_string(i - 2) + std::string("_Chunk_");
+
+    //     lodFn(targetGroup);
+    // }
+
+    // resultGroup->name = "Lod_";
     // lodFn(simplifier::modify(resultGroup, 0.5f));
 
     return false;
@@ -303,8 +313,12 @@ bool splitter::splitObject(GroupObject baseObject, GroupCallback fn, GroupCallba
       if (polygonCount <= 20000 * i) {
         GroupObject resultGroup = splitter::splitUV(baseObject);
 
-        resultGroup->name = std::string("Lod_") + std::to_string(i - 2) + std::string("_Chunk_");
+        // float simplifyLevel = 1.0f - (1.0f / float(i));
+        resultGroup->name = std::string("Lod_");// + std::to_string(i - 2) + std::string("_Chunk_");
+ 
         lodFn(simplifier::modify(resultGroup, 0.5f));
+
+        break;
 
         //return false;
       }

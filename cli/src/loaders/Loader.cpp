@@ -101,6 +101,12 @@ void Mesh::remesh(std::vector<Vector3f> &position, std::vector<Vector3f> &normal
     positionDestMap[it->first] = lastPositionIndex;
 
     lastPositionIndex++;
+
+    if (this->position.size() == 1) {
+      this->boundingBox.fromPoint(it->second.x, it->second.y, it->second.z);
+    } else {
+      this->boundingBox.extend(it->second.x, it->second.y, it->second.z);
+    }
   }
 
   if (this->hasNormals) {
