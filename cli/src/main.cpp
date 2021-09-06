@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
             std::cout << "Base export" << std::endl;
             exporter.save(utils::concatPath(out, utils::getFileName(group->name)) + std::to_string(chunk), utils::getFileName(inputFile) + "_" + std::to_string(chunk), group);
 
-            // group->free();
+            group->free();
             chunk++;
 
             std::cout << "---------------------------------------------" << std::endl;
