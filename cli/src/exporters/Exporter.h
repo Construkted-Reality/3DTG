@@ -5,7 +5,7 @@
 #include <fstream>
 #include <iostream>
 
-#include "./../helpers/stb_image_write.h"
+#include <stb/stb_image_write.h>
 
 #include "./../utils.h"
 #include "./../loaders/Loader.h"

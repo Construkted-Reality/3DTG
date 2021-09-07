@@ -10,8 +10,9 @@
 #include <cstdlib>
 #include <cmath>
 
+#include <glm/vec3.hpp>
+#include <stb/stb_image.h>
 
-#include "./../helpers/stb_image.h"
 
 #include "./../utils.h"
 
@@ -131,6 +132,8 @@ struct BBoxf {
   bool intersect(BBoxf box);
   void translate(float x, float y, float z);
   void fromPoint(float x, float y, float z);
+  glm::vec3 getCenter();
+  glm::vec3 getSize();
 };
 
 struct Image {

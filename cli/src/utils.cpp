@@ -36,9 +36,13 @@ std::string utils::nonposix(std::string path) {
 
 std::string utils::normalize(std::string path) {
   #if defined(_WIN32) || defined(_WIN64)
-    return utils::nonposix(path);
+    // ([^:]|^)(\\{2,})
+    // return utils::nonposix(path);
+
+    return std::regex_replace(utils::nonposix(path), std::regex("([^:]|^)(\\\\{2,})"), "$1\\");
   #else
-    return utils::posix(path);
+    // return utils::posix(path);
+    return std::regex_replace(utils::posix(path), std::regex("([^:]|^)(\\/{2,})"), "$1/");
   #endif
 }
 

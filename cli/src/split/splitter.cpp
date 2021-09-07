@@ -276,22 +276,27 @@ GroupObject splitter::splitUV(GroupObject baseObject) {
   return resultGroup;
 };
 
-bool splitter::splitObject(GroupObject baseObject, GroupCallback fn, GroupCallback lodFn, bool isVertical = false) {
+bool splitter::splitObject(GroupObject baseObject, GroupCallback fn, GroupCallback lodFn, IdGenerator::ID parent, bool isVertical = false) {
   unsigned int polygonCount = 0;
 
   baseObject->traverse([&](MeshObject mesh){
     polygonCount += mesh->faces.size();
   });
 
+  IdGenerator::ID nextParent = parent;
+
   //std::cout << "Total polygons: " << polygonCount << std::endl;
 
   // fn(baseObject);
 
   if (polygonCount <= 20000) {
+    splitter::IDGen.next();
+    nextParent = splitter::IDGen.id;
+
     GroupObject resultGroup = splitter::splitUV(baseObject);
     resultGroup->name = "Chunk_";
     //fn(splitter::splitUV(baseObject));
-    fn(resultGroup);
+    fn(resultGroup, splitter::IDGen.id, parent);
 
     // GroupObject targetGroup = baseObject;
     // for (unsigned int i = 2; i < 7; i++) {// 5 Levels
@@ -311,12 +316,15 @@ bool splitter::splitObject(GroupObject baseObject, GroupCallback fn, GroupCallba
 
     for (unsigned int i = 2; i < 7; i++) {// 5 Levels
       if (polygonCount <= 20000 * i) {
+        splitter::IDGen.next();
+        nextParent = splitter::IDGen.id;
+
         GroupObject resultGroup = splitter::splitUV(baseObject);
 
         // float simplifyLevel = 1.0f - (1.0f / float(i));
         resultGroup->name = std::string("Lod_");// + std::to_string(i - 2) + std::string("_Chunk_");
  
-        lodFn(simplifier::modify(resultGroup, 0.5f));
+        lodFn(simplifier::modify(resultGroup, 0.5f), splitter::IDGen.id, parent);
 
         break;
 
@@ -421,12 +429,12 @@ bool splitter::splitObject(GroupObject baseObject, GroupCallback fn, GroupCallba
 
   if (left->meshes.size() != 0) { 
     splitter::straightLine(left, isVertical, true, xMedian, zMedian);
-    splitter::splitObject(left, fn, lodFn, !isVertical);
+    splitter::splitObject(left, fn, lodFn, nextParent, !isVertical);
   }
 
   if (right->meshes.size() != 0) {
     splitter::straightLine(right, isVertical, false, xMedian, zMedian);
-    splitter::splitObject(right, fn, lodFn, !isVertical);
+    splitter::splitObject(right, fn, lodFn, nextParent, !isVertical);
   }
 
   return true;
@@ -754,6 +762,6 @@ void splitter::straightLine(GroupObject &baseObject, bool isVertical, bool isLef
 };
 
 void splitter::splitObject(GroupObject baseObject, GroupCallback fn, GroupCallback lodFn) {
-  splitter::splitObject(baseObject, fn, lodFn, true);
-  //fn(splitter::splitUV(group));
+  // splitter::IDGen.reset();
+  splitter::splitObject(baseObject, fn, lodFn, splitter::IDGen.id, true);
 };

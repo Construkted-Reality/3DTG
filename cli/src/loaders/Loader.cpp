@@ -259,6 +259,26 @@ void BBoxf::fromPoint(float x, float y, float z) {
   this->max.z = z;
 };
 
+glm::vec3 BBoxf::getCenter() {
+  glm::vec3 res;
+
+  res.x = (this->min.x + this->max.x) / 2.0f;
+  res.y = (this->min.y + this->max.y) / 2.0f;
+  res.z = (this->min.z + this->max.z) / 2.0f;
+
+  return res;
+};
+
+glm::vec3 BBoxf::getSize() {
+  glm::vec3 res;
+
+  res.x = this->max.x - this->min.x;
+  res.y = this->max.y - this->min.y;
+  res.z = this->max.z - this->min.z;
+
+  return res;
+};
+
 void Vector2f::set(float x, float y) {
   this->x = x;
   this->y = y;

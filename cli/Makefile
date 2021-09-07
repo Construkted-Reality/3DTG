@@ -1,6 +1,6 @@
 CC = g++
-CXXFLAGS = -Wall -O3 -DDEBUG -g
-INCLUDES = 
+INCLUDE = -I ./include
+CXXFLAGS = -Wall -O3 -DDEBUG -g --std=c++17 -g $(INCLUDE)
 LFLAGS = 
 LIBS = 
 

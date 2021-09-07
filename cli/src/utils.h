@@ -2,6 +2,7 @@
 #define __UTILS_H__
 
 #include <algorithm>
+#include <regex>
 #include <string>
 #include <sstream>
 #include <sys/stat.h>
