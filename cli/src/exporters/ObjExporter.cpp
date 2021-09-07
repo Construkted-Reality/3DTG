@@ -60,6 +60,8 @@ void ObjExporter::save(std::string directory, std::string fileName, GroupObject 
   MaterialMap materialMap;
   std::cout << "Export to .OBJ has been started" << std::endl;
 
+  fs << "# geometricError " << object->geometricError << std::endl;
+
   fs << "mtllib " << materialFileName.c_str() << std::endl;
 
   object->traverse([&](MeshObject object){

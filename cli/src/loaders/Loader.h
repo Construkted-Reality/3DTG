@@ -84,6 +84,8 @@ class Vertex {
     float collapseCost = 0.0f;
     VertexPtr collapseNeighbor = NULL;
 
+    float geometricError = 0.0f;
+
     float minCost = 0.0f;
     float totalCost = 0.0f;
     unsigned int costCount = 0;
@@ -159,6 +161,8 @@ class Group {
 
     BBoxf boundingBox;
     BBoxf uvBox;
+
+    float geometricError = 0.0f;
 
     void traverse(TraverseMeshCallback fn);
     void traverseGroup(TraverseGroupCallback fn);

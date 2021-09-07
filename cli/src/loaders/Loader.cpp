@@ -525,6 +525,8 @@ bool Triangle::hasVertex(VertexPtr vertex) {
 };
 
 void Triangle::replaceVertex(VertexPtr oldVertex, VertexPtr newVertex) {
+  newVertex->geometricError += oldVertex->position.distanceTo(newVertex->position);
+
   if (oldVertex->id == this->v1->id) {
     this->v1 = newVertex;
   } else if (oldVertex->id == this->v2->id) {

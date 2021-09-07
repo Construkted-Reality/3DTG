@@ -5,8 +5,13 @@ GroupObject simplifier::modify(GroupObject &group, float verticesCountModifier) 
   result->name = group->name;
 
   group->traverse([&](MeshObject mesh){
-    result->meshes.push_back(simplifier::modify(mesh, verticesCountModifier));
+    MeshObject target = simplifier::modify(mesh, verticesCountModifier);
+
+    result->geometricError += target->geometricError;
+    result->meshes.push_back(target);
   });
+
+  result->geometricError /= float(result->meshes.size());
 
   return result;
 };
@@ -182,9 +187,13 @@ MeshObject simplifier::modify(MeshObject &mesh, float verticesCountModifier) {
       resultMesh->uv.push_back(vertices[i]->uv);
     }
 
+    resultMesh->geometricError += vertices[i]->geometricError;
+
     //vertices[i].id = i;
     vertices[i]->positionId = i;
   }
+
+  resultMesh->geometricError /= float(vertices.size());
 
   // std::cout << "Generating faces" << std::endl;
   for (unsigned int i = 0; i < faces.size(); i++) {
