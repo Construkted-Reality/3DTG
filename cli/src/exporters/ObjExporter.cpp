@@ -58,7 +58,7 @@ void ObjExporter::save(std::string directory, std::string fileName, GroupObject 
   int lastUV = 1;
 
   MaterialMap materialMap;
-  std::cout << "Export to .OBJ has been started" << std::endl;
+  // std::cout << "Export to .OBJ has been started" << std::endl;
 
   fs << "# geometricError " << object->geometricError << std::endl;
 
@@ -122,6 +122,6 @@ void ObjExporter::save(std::string directory, std::string fileName, GroupObject 
 
   fs.close();
 
-  std::cout << "Materials for saving: " << materialMap.size() << std::endl;
+  // std::cout << "Materials for saving: " << materialMap.size() << std::endl;
   this->saveMaterial(directory, fileName, materialMap);
 }

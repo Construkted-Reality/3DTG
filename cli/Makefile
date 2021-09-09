@@ -1,8 +1,9 @@
 CC = g++
 INCLUDE = -I ./include
-CXXFLAGS = -Wall -O3 -DDEBUG -g --std=c++17 -g $(INCLUDE)
+LIBF = -L ./lib
+CXXFLAGS = -Wall -Wno-comment -O1 -DDEBUG -g --std=c++17 -g $(INCLUDE) $(LIBF)
 LFLAGS = 
-LIBS = 
+LIBS = -lGLTF -ldraco -ldracoenc -ldracodec
 
 OUT = out
 APP = 3dtg
