@@ -27,10 +27,13 @@
 
 
 int main(int argc, char** argv) {
-
-    unsigned char data[44] = {
+    /*
+    unsigned char indexData[8] = {
         // 6 bytes of indices and two bytes of padding
-        0x00,0x00,0x01,0x00,0x02,0x00,0x00,0x00,
+        0x00,0x00,0x01,0x00,0x02,0x00,0x00,0x00
+    };
+
+    unsigned char posData[36] = {
         // 36 bytes of floating point numbers
         0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
         0x00,0x00,0x00,0x00,0x00,0x00,0x80,0x3f,
@@ -39,12 +42,13 @@ int main(int argc, char** argv) {
         0x00,0x00,0x00,0x00
     };
 
-    GLTF::Buffer *buffer = new GLTF::Buffer(data, 44);
+    GLTF::Buffer *indexBuffer = new GLTF::Buffer(indexData, 8);
+    GLTF::Buffer *dataBuffer = new GLTF::Buffer(posData, 36);
 
-    GLTF::BufferView *view1 = new GLTF::BufferView(0, 8, buffer);
+    GLTF::BufferView *view1 = new GLTF::BufferView(0, 8, indexBuffer);
     view1->target = GLTF::Constants::WebGL::ELEMENT_ARRAY_BUFFER;
 
-    GLTF::BufferView *view2 = new GLTF::BufferView(8, 36, buffer);
+    GLTF::BufferView *view2 = new GLTF::BufferView(0, 36, dataBuffer);
     view2->target = GLTF::Constants::WebGL::ARRAY_BUFFER;
 
     GLTF::Accessor *accessor1 = new GLTF::Accessor(
@@ -124,7 +128,8 @@ int main(int argc, char** argv) {
 
     std::cout << "GLTF successfuly exported!" << std::endl;
 
-    delete buffer;
+    delete indexBuffer;
+    delete dataBuffer;
 
     delete view1;
     delete view2;
@@ -143,6 +148,7 @@ int main(int argc, char** argv) {
 
 
     return 0;
+    */
 
     cxxopts::Options options("3dTG", "3d models compiler from various formats to tile format.");
 
@@ -196,9 +202,9 @@ int main(int argc, char** argv) {
 
     std::cout << "Output directory: " << out.c_str() << std::endl;
 
-    ObjExporter exporter;
+    GLTFExporter exporter;
 
-
+ 
     std::cout << "Splitting..." << std::endl;
 
 
@@ -215,7 +221,8 @@ int main(int argc, char** argv) {
     splitter::splitObject(
         loader.object,
         [&](GroupObject group, unsigned int targetId, unsigned int parentId){
-            // std::cout << "Base export" << std::endl;
+            group->computeBoundingBox();
+            group->computeGeometricError();
 
             std::string modelDir = utils::getFileName(group->name) + std::to_string(chunk);
             std::string modelName = utils::getFileName(inputFile) + "_" + std::to_string(chunk);
@@ -259,7 +266,7 @@ int main(int argc, char** argv) {
 
             exporter.save(utils::concatPath(out, modelDir), modelName, group);
 
-            group->free();
+            // group->free();
             chunk++;
 
             processed++;
@@ -270,7 +277,8 @@ int main(int argc, char** argv) {
             // std::cout << "---------------------------------------------" << std::endl;
         },
         [&](GroupObject group, unsigned int targetId, unsigned int parentId){
-            // std::cout << "Lod export" << std::endl;
+            group->computeBoundingBox();
+            group->computeGeometricError();
 
             std::string modelDir = utils::getFileName(group->name) + std::to_string(lodChunk);
             std::string modelName = utils::getFileName(inputFile) + "_" + std::to_string(lodChunk);
@@ -314,7 +322,7 @@ int main(int argc, char** argv) {
 
             exporter.save(utils::concatPath(out, modelDir), modelName, group);
 
-            group->free();
+            // group->free();
             lodChunk++;
 
             // std::cout << "---------------------------------------------" << std::endl;
@@ -324,6 +332,7 @@ int main(int argc, char** argv) {
     std::cout << "Exported" << std::endl;
 
     std::cout << "Saving JSON" << std::endl;
+    tileset.computeRootGeometricError();
 
     std::fstream fs;
     fs.open(utils::concatPath(out, "tileset.json"), std::fstream::out);

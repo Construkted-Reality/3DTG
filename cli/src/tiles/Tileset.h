@@ -21,6 +21,7 @@ class Tileset {
     std::shared_ptr<Tile> root;// Required
 
     void traverse(Tile::TileCallback fn);
+    void computeRootGeometricError();
     std::shared_ptr<Tile> search(Tile::TileSearchCallback fn);
     std::shared_ptr<Tile> findTileById(IdGenerator::ID id);
     nlohmann::json toJSON();

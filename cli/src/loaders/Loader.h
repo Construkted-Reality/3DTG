@@ -130,6 +130,7 @@ struct BBoxf {
   bool intersect(Vector3f point);
   bool intersect(Vector2f point);
   bool intersect(BBoxf box);
+  BBoxf clone();
   void translate(float x, float y, float z);
   void fromPoint(float x, float y, float z);
   glm::vec3 getCenter();
@@ -171,6 +172,7 @@ class Group {
     void traverseGroup(TraverseGroupCallback fn);
     void computeBoundingBox();
     void computeUVBox();
+    void computeGeometricError();
 
     void free();
 };
@@ -191,6 +193,7 @@ class Mesh : public Group {
 
     void remesh(std::vector<Vector3f> &position, std::vector<Vector3f> &normal, std::vector<Vector2f> &uv);
     void free();
+    void computeBoundingBox();
 };
 
 class Loader {

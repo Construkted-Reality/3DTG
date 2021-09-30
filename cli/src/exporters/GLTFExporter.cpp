@@ -1,5 +1,439 @@
 #include "./GLTFExporter.h"
 
+
+void GLTFExporter::updateAccessorFace(std::map<std::string, GLTF::Accessor*> &accessors, MeshObject &mesh, Face &face) {
+  for (unsigned int i = 0; i < 3; i++) {
+    GLTFExporter::updateAccessorMin3f(accessors[GLTF_BUFFER::POSITION_BUFFER], mesh->position[face.positionIndices[i]]);
+    GLTFExporter::updateAccessorMax3f(accessors[GLTF_BUFFER::POSITION_BUFFER], mesh->position[face.positionIndices[i]]);
+
+    // if (mesh->hasNormals && accessors.count(GLTF_BUFFER::NORMAL_BUFFER)) {
+    //   GLTFExporter::updateAccessorMin3f(accessors[GLTF_BUFFER::NORMAL_BUFFER], mesh->normal[face.normalIndices[i]]);
+    //   GLTFExporter::updateAccessorMax3f(accessors[GLTF_BUFFER::NORMAL_BUFFER], mesh->normal[face.normalIndices[i]]);
+    // }
+
+    // if (mesh->hasUVs && accessors.count(GLTF_BUFFER::UV_BUFFER)) {
+    //   GLTFExporter::updateAccessorMin2f(accessors[GLTF_BUFFER::UV_BUFFER], mesh->uv[face.uvIndices[i]]);
+    //   GLTFExporter::updateAccessorMax2f(accessors[GLTF_BUFFER::UV_BUFFER], mesh->uv[face.uvIndices[i]]);
+    // }
+  }
+};
+
+void GLTFExporter::updateAccessorIndex(GLTF::Accessor* accessor, std::vector<unsigned int> &data) {
+  accessor->min[0] = static_cast<float>(data[0]);
+  accessor->max[0] = static_cast<float>(data[0]);
+
+  for (unsigned int &index : data) {
+    accessor->min[0] = std::min(accessor->min[0], static_cast<float>(index));
+    accessor->max[0] = std::max(accessor->max[0], static_cast<float>(index));
+  }
+};
+
+void GLTFExporter::updateAccessorMin3f(GLTF::Accessor* accessor, Vector3f &vec) {
+  accessor->min[0] = std::min(accessor->min[0], vec.x);
+  accessor->min[1] = std::min(accessor->min[1], vec.y);
+  accessor->min[2] = std::min(accessor->min[2], vec.z);
+};
+void GLTFExporter::updateAccessorMax3f(GLTF::Accessor* accessor, Vector3f &vec) {
+  accessor->max[0] = std::max(accessor->max[0], vec.x);
+  accessor->max[1] = std::max(accessor->max[1], vec.y);
+  accessor->max[2] = std::max(accessor->max[2], vec.z);
+};
+
+void GLTFExporter::updateAccessorMin2f(GLTF::Accessor* accessor, Vector2f &vec) {
+  accessor->min[0] = std::min(accessor->min[0], vec.x);
+  accessor->min[1] = std::min(accessor->min[1], vec.y);
+};
+void GLTFExporter::updateAccessorMax2f(GLTF::Accessor* accessor, Vector2f &vec) {
+  accessor->max[0] = std::max(accessor->max[0], vec.x);
+  accessor->max[1] = std::max(accessor->max[1], vec.y);
+};
+
+void GLTFExporter::save(std::string directory, std::string fileName, GroupObject object) {
+  std::string exportModelPath = utils::concatPath(directory, fileName + ".glb");
+
+  if (!utils::folder_exists(directory)) {
+    utils::mkdir(directory.c_str());
+  }
+  std::cout << "Export begin" << std::endl;
+
+  std::vector<GLTF::Node*> memNodes;
+  std::vector<GLTF::Mesh*> memMeshes;
+  std::vector<std::map<std::string, GLTF::Accessor*>> memAccessors;
+  std::vector<std::map<std::string, GLTF::Primitive*>> memPrimitives;
+  std::vector<GLTF::MaterialCommon*> memMaterials;
+  std::vector<GLTF::Material::Values*> memMaterialValues;
+  std::vector<GLTF::Texture*> memTextures;
+  std::vector<GLTF::Sampler*> memSamplers;
+  std::vector<GLTF::Image*> memImages;
+
+
+  GLTF::Scene *scene = new GLTF::Scene();
+  // scene->nodes.push_back(node);
+
+  GLTF::Asset::Metadata meta;
+  meta.generator = "3DTG";
+
+  GLTF::Asset *asset = new GLTF::Asset();
+  asset->metadata = &meta;
+
+
+  object->traverse([&](MeshObject targetMesh){
+    // std::cout << "Mesh processing" << std::endl;
+    
+    GLTF::Node *node = new GLTF::Node();
+    // node->mesh = mesh;
+
+    GLTF::Mesh *mesh = new GLTF::Mesh();
+    // mesh->primitives.push_back(primitive);
+
+    std::map<std::string, GLTF::Accessor*> accessors;
+    std::map<std::string, GLTF::Primitive*> primitives;
+
+    std::vector<float> vertices;
+    std::vector<float> normals;
+    std::vector<float> uvs;
+
+    std::vector<unsigned int> positionIndexBuffer;
+    std::vector<unsigned int> normalIndexBuffer;
+    std::vector<unsigned int> uvIndexBuffer;
+
+    for (Face &face : targetMesh->faces) // access by reference to avoid copying
+    {
+      // positionIndexBuffer.insert(positionIndexBuffer.end(), face.positionIndices, face.positionIndices + 3);
+
+      vertices.push_back(targetMesh->position[face.positionIndices[0]].x);
+      vertices.push_back(targetMesh->position[face.positionIndices[0]].y);
+      vertices.push_back(targetMesh->position[face.positionIndices[0]].z);
+
+      vertices.push_back(targetMesh->position[face.positionIndices[1]].x);
+      vertices.push_back(targetMesh->position[face.positionIndices[1]].y);
+      vertices.push_back(targetMesh->position[face.positionIndices[1]].z);
+
+      vertices.push_back(targetMesh->position[face.positionIndices[2]].x);
+      vertices.push_back(targetMesh->position[face.positionIndices[2]].y);
+      vertices.push_back(targetMesh->position[face.positionIndices[2]].z);
+
+      if (targetMesh->hasNormals) {
+        // normalIndexBuffer.insert(normalIndexBuffer.end(), face.normalIndices, face.normalIndices + 3);
+
+        Vector3f normal1 = targetMesh->normal[face.normalIndices[0]].clone();
+        Vector3f normal2 = targetMesh->normal[face.normalIndices[1]].clone();
+        Vector3f normal3 = targetMesh->normal[face.normalIndices[2]].clone();
+
+        normal1.normalize();
+        normal2.normalize();
+        normal3.normalize();
+
+        normals.push_back(normal1.x);
+        normals.push_back(normal1.y);
+        normals.push_back(normal1.z);
+
+        normals.push_back(normal2.x);
+        normals.push_back(normal2.y);
+        normals.push_back(normal2.z);
+
+        normals.push_back(normal3.x);
+        normals.push_back(normal3.y);
+        normals.push_back(normal3.z);
+      }
+
+      if (targetMesh->hasUVs) {
+        // uvIndexBuffer.insert(uvIndexBuffer.end(), face.uvIndices, face.uvIndices + 3);
+
+        uvs.push_back(targetMesh->uv[face.uvIndices[0]].x);
+        uvs.push_back(targetMesh->uv[face.uvIndices[0]].y);
+
+        uvs.push_back(targetMesh->uv[face.uvIndices[1]].x);
+        uvs.push_back(targetMesh->uv[face.uvIndices[1]].y);
+
+        uvs.push_back(targetMesh->uv[face.uvIndices[2]].x);
+        uvs.push_back(targetMesh->uv[face.uvIndices[2]].y);
+      }
+    }
+
+
+    // DATA BUFFERS
+    // std::cout << "Generating data buffers" << std::endl;
+    if (targetMesh->position.size()) {
+      GLTF::Accessor* accessor = new GLTF::Accessor(
+        GLTF::Accessor::Type::VEC3, GLTF::Constants::WebGL::FLOAT,
+        (unsigned char*)&vertices[0],
+        vertices.size() / 3,// targetMesh->position.size(),
+        GLTF::Constants::WebGL::ARRAY_BUFFER
+      );
+
+      accessors[GLTF_BUFFER::POSITION_BUFFER] = accessor;
+    }
+    
+    if (targetMesh->hasNormals) {
+      GLTF::Accessor* accessor = new GLTF::Accessor(
+        GLTF::Accessor::Type::VEC3, GLTF::Constants::WebGL::FLOAT,
+        (unsigned char*)&normals[0],
+        normals.size() / 3,// targetMesh->normal.size(),
+        GLTF::Constants::WebGL::ARRAY_BUFFER
+      );
+
+      accessors[GLTF_BUFFER::NORMAL_BUFFER] = accessor;
+    }
+
+    if (targetMesh->hasUVs) {
+      GLTF::Accessor* accessor = new GLTF::Accessor(
+        GLTF::Accessor::Type::VEC2, GLTF::Constants::WebGL::FLOAT,
+        (unsigned char*)&uvs[0],
+        uvs.size() / 2,// targetMesh->uv.size(),
+        GLTF::Constants::WebGL::ARRAY_BUFFER
+      );
+
+      accessors[GLTF_BUFFER::UV_BUFFER] = accessor;
+    }
+
+    // DATA BUFFERS END
+
+
+    // INDEX BUFFERS
+    // std::cout << "Generating index buffers" << std::endl;
+
+    
+    /*
+    if (positionIndexBuffer.size()) {
+      GLTF::Accessor *accessor = new GLTF::Accessor(
+        GLTF::Accessor::Type::SCALAR, GLTF::Constants::WebGL::UNSIGNED_INT,
+        (unsigned char*)&positionIndexBuffer[0], positionIndexBuffer.size(),
+        GLTF::Constants::WebGL::ELEMENT_ARRAY_BUFFER
+      );
+
+      accessors[GLTF_BUFFER::INDEX_POSITION_BUFFER] = accessor;
+    }
+
+    if (normalIndexBuffer.size()) {
+      GLTF::Accessor *accessor = new GLTF::Accessor(
+        GLTF::Accessor::Type::SCALAR, GLTF::Constants::WebGL::UNSIGNED_INT,
+        (unsigned char*)&normalIndexBuffer[0], normalIndexBuffer.size(),
+        GLTF::Constants::WebGL::ELEMENT_ARRAY_BUFFER
+      );
+
+      accessors[GLTF_BUFFER::INDEX_NORMAL_BUFFER] = accessor;
+    }
+
+    if (uvIndexBuffer.size()) {
+      GLTF::Accessor *accessor = new GLTF::Accessor(
+        GLTF::Accessor::Type::SCALAR, GLTF::Constants::WebGL::UNSIGNED_INT,
+        (unsigned char*)&uvIndexBuffer[0], uvIndexBuffer.size(),
+        GLTF::Constants::WebGL::ELEMENT_ARRAY_BUFFER
+      );
+
+      accessors[GLTF_BUFFER::INDEX_UV_BUFFER] = accessor;
+    }
+    */
+
+    // INDEX BUFFERS END
+
+    // MATERIAL START
+    GLTF::MaterialCommon *material = new GLTF::MaterialCommon();
+    material->type = GLTF::Material::Type::MATERIAL_COMMON;
+    material->technique = GLTF::MaterialCommon::Technique::CONSTANT;
+    material->doubleSided = false;
+
+    GLTF::Material::Values *values = new GLTF::Material::Values();
+
+    if (targetMesh->material.diffuseMapImage.data == NULL) {
+      float diffuse[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+      values->diffuse = diffuse;
+    } else {  
+      GLTFExporter::ImageData ii;
+
+      stbi_flip_vertically_on_write(1);
+      int writeSuccess = stbi_write_jpg_to_func(
+        [](void *context, void *data, int size)
+        {
+          ((ImageData*)context)->data.write((const char*)data, size);
+          ((ImageData*)context)->size += size;
+        }
+        ,&ii,
+        targetMesh->material.diffuseMapImage.width,
+        targetMesh->material.diffuseMapImage.height,
+        targetMesh->material.diffuseMapImage.channels,
+        targetMesh->material.diffuseMapImage.data,
+        80
+      );
+      
+
+      // std::cout << "Image generating finished, size: " << ii.size << std::endl;
+
+      if (!writeSuccess) {
+        float diffuse[4] = {0.0f, 0.5f, 1.0f, 1.0f};
+        values->diffuse = diffuse;
+      } else {
+
+        char * imageData = new char [ii.size];
+        ii.data.read(imageData, ii.size);
+
+        // unsigned char* imageData = (unsigned char*) ii.data.str().c_str();
+
+        // if ((unsigned char) imageData[0] == 255 && (unsigned char) imageData[1] == 216) {
+          // std::cout << "Is JPEG!" << std::endl;
+        // }
+
+        // std::cout << "JPEG size: " << ii.data.str().size() << std::endl;
+
+        // unsigned char * buffer = new unsigned char [ii.data.str().size()];
+        // ii.data.read(buffer, ii.data.str().size());
+
+        values->diffuseTexture = new GLTF::Texture();
+
+        values->diffuseTexture->sampler = new GLTF::Sampler();
+        // values->diffuseTexture->sampler->minFilter = GLTF::Constants::WebGL::LINEAR;
+
+        values->diffuseTexture->source = new GLTF::Image(
+          targetMesh->material.name,
+          (unsigned char *) imageData,
+          ii.size,
+          "jpeg"
+        );
+
+        memTextures.push_back(values->diffuseTexture);
+        memSamplers.push_back(values->diffuseTexture->sampler);
+        memImages.push_back(values->diffuseTexture->source);
+      }
+
+      
+      // values->diffuseTexture->source->bufferView = imageView;
+      // values->diffuseTexture->source->mimeType = "image/jpeg";
+
+      // int size = (sizeof(imageView->buffer->data)/sizeof(imageView->buffer->data[0]));
+      // std::cout << "Buffer size: " << size << ", " << targetMesh->material.diffuseMapImage.width << ", " << targetMesh->material.name.c_str() << std::endl;
+    }
+
+    // values->diffuse = diffuse;
+    
+
+    material->values = values;
+    // MATERIAL END
+
+
+    // PRIMITIVE START
+    // std::cout << "Generating primitive" << std::endl;
+
+    GLTF::Primitive *primitive = new GLTF::Primitive();
+    // primitive->indices = accessors[GLTF_BUFFER::INDEX_POSITION_BUFFER];
+    primitive->attributes["POSITION"] = accessors[GLTF_BUFFER::POSITION_BUFFER];
+    if (accessors.count(GLTF_BUFFER::NORMAL_BUFFER)) {
+      primitive->attributes["NORMAL"] = accessors[GLTF_BUFFER::NORMAL_BUFFER];
+    }
+    if (accessors.count(GLTF_BUFFER::UV_BUFFER)) {
+      primitive->attributes["TEXCOORD_0"] = accessors[GLTF_BUFFER::UV_BUFFER];
+    }
+    primitive->mode = GLTF::Primitive::Mode::TRIANGLES;
+    primitive->material = material;
+
+    mesh->primitives.push_back(primitive);
+    primitives[GLTF_BUFFER::POSITION_BUFFER] = primitive;
+
+    if (targetMesh->position.size()) {
+      node->mesh = mesh;
+      scene->nodes.push_back(node);
+
+      memMeshes.push_back(mesh);
+      memNodes.push_back(node);
+    } else {
+      delete mesh;
+      delete node;
+    }
+    // PRIMITIVE END
+
+    // SAVE REFS TO DELETE
+    // std::cout << "Generating cleanup info" << std::endl;
+
+    memAccessors.push_back(accessors);
+    memPrimitives.push_back(primitives);
+    memMaterials.push_back(material);
+    memMaterialValues.push_back(values);
+  });
+
+  std::cout << "Model data has been collected, generating gltf..." << std::endl;
+
+  asset->scenes.push_back(scene);
+  asset->scene = 0;
+
+  GLTF::Options gltfOptions;
+  gltfOptions.binary = true;
+  gltfOptions.dracoCompression = true;
+  gltfOptions.embeddedTextures = true;
+  // gltfOptions.materialsCommon = true;
+
+  std::cout << "GLTF has been generated, exporting..." << std::endl;
+
+  GLTFExporter::exportGLTF(asset, &gltfOptions, utils::normalize(exportModelPath).c_str());
+  
+
+  std::cout << "Exported, cleaning up..." << std::endl;
+
+  
+  delete asset;
+
+  /*
+  delete scene;
+
+  
+  for ( GLTF::MaterialCommon* material : memMaterials ) {
+    delete material;
+  }
+
+  for ( GLTF::Material::Values* values : memMaterialValues ) {
+    delete values;
+  }
+
+
+  for ( GLTF::Texture* texture : memTextures ) {
+    delete texture;
+  }
+
+  for ( GLTF::Sampler* sampler : memSamplers ) {
+    delete sampler;
+  }
+
+  for ( GLTF::Image* image : memImages ) {
+    delete image;
+  }
+
+  for ( GLTF::Mesh* mesh : memMeshes ) {
+    delete mesh;
+  }
+
+  for ( GLTF::Node* node : memNodes ) {
+    delete node;
+  }
+
+  for ( std::map<std::string, GLTF::Accessor*> &accessorMap : memAccessors ) {
+    for (std::map<std::string, GLTF::Accessor*>::iterator it = accessorMap.begin(); it != accessorMap.end(); it++)
+    {
+      delete it->second;
+    }
+    accessorMap.clear();
+  }
+
+  for ( std::map<std::string, GLTF::Primitive*> &primitiveMap : memPrimitives ) {
+    for (std::map<std::string, GLTF::Primitive*>::iterator it = primitiveMap.begin(); it != primitiveMap.end(); it++)
+    {
+      delete it->second;
+    }
+    primitiveMap.clear();
+  }
+  */
+
+  memMaterials.clear();
+  memMaterialValues.clear();
+  memTextures.clear();
+  memSamplers.clear();
+  memImages.clear();
+  memMeshes.clear();
+  memNodes.clear();
+  memAccessors.clear();
+  memPrimitives.clear();
+
+};
+
+
 void GLTFExporter::exportGLTF(GLTF::Asset *asset, GLTF::Options *options, const char* outputPath) {
   
   std::cout << "Removing unused nodes" << std::endl;
@@ -25,13 +459,17 @@ void GLTFExporter::exportGLTF(GLTF::Asset *asset, GLTF::Options *options, const 
   std::cout << "Packing finished" << std::endl;
 
   // Create image bufferViews for binary glTF
-  /*
+  std::cout << "Texture saving started" << std::endl;
+  
   if (options->binary && options->embeddedTextures) {
     size_t imageBufferLength = 0;
     std::vector<GLTF::Image*> images = asset->getAllImages();
     for (GLTF::Image* image : images) {
       imageBufferLength += image->byteLength;
     }
+
+    std::cout << "Image buffer length: " << imageBufferLength << std::endl;
+
     unsigned char* bufferData = buffer->data;
     bufferData = (unsigned char*)realloc(
         bufferData, buffer->byteLength + imageBufferLength);
@@ -46,7 +484,6 @@ void GLTFExporter::exportGLTF(GLTF::Asset *asset, GLTF::Options *options, const 
     buffer->data = bufferData;
     buffer->byteLength += imageBufferLength;
   }
-  */
 
   std::cout << "Writing options to json" << std::endl; 
 

@@ -7,11 +7,11 @@ GroupObject simplifier::modify(GroupObject &group, float verticesCountModifier) 
   group->traverse([&](MeshObject mesh){
     MeshObject target = simplifier::modify(mesh, verticesCountModifier);
 
-    result->geometricError += target->geometricError;
+    // result->geometricError += target->geometricError;
     result->meshes.push_back(target);
   });
 
-  result->geometricError /= float(result->meshes.size());
+  // result->geometricError /= float(result->meshes.size());
 
   return result;
 };
@@ -37,74 +37,23 @@ MeshObject simplifier::modify(MeshObject &mesh, float verticesCountModifier) {
   std::map<unsigned int, VertexPtr> verticesMap;
   std::vector<TrianglePtr> faces;
 
-  // unsigned int vertexId = 0;
   unsigned int faceId = 0;
-
-  // unsigned int lastVertexIndex = 0;
-
-  /*
-  for (Vector3f pos : mesh->position) {
-    Vertex target = Vertex(pos);
-    target.id = vertexId;
-    vertexId++;
-
-    vertices.push_back(target);
-  }
-  */
-
-  // if (verticesMap.find(1) == verticesMap.end()) {} NOT FOUND
-
-  /*
-  for (Vector3f pos : mesh->position) {
-    VertexPtr targetVertex = VertexPtr( new Vertex(pos) );
-      // if (mesh->hasNormals) { targetVertex->normal.set(mesh->normal[face.normalIndices[i]]); }
-      // if (mesh->hasUVs)     { targetVertex->uv.set(mesh->uv[face.uvIndices[i]]); }
-
-      targetVertex->id = vertexId;
-      vertexId++;
-
-      vertices.push_back(targetVertex);
-  }
-
-  for (Face face : mesh->faces) {
-    TrianglePtr targetFace = TrianglePtr(
-      new Triangle(
-        vertices[face.positionIndices[0]],
-        vertices[face.positionIndices[1]],
-        vertices[face.positionIndices[2]],
-        face
-      )
-    );
-    targetFace->init();
-    targetFace->id = faceId;
-    faceId++;
-    
-    faces.push_back(targetFace);
-  }
-  */
-
-  // std::cout << "Generating initial data" << std::endl;
 
   
   for (Face face : mesh->faces) {
     for (int i = 0; i < 3; i++) {
-      //std::cout << "Triangle N" << i << std::endl;
       if (verticesMap.find(face.positionIndices[i]) == verticesMap.end()) {
         VertexPtr targetVertex = VertexPtr( new Vertex(mesh->position[face.positionIndices[i]]) );
         if (mesh->hasNormals) { targetVertex->normal.set(mesh->normal[face.normalIndices[i]]); }
         if (mesh->hasUVs)     { targetVertex->uv.set(mesh->uv[face.uvIndices[i]]); }
 
         targetVertex->id = face.positionIndices[i];
-        //vertexId++;
 
         vertices.push_back(targetVertex);
         verticesMap[face.positionIndices[i]] = targetVertex;
       }
     }
 
-    //std::cout << "Face N" << faceId << std::endl;
-    
-    // lastVertexIndex = vertices.size() - 3;
     TrianglePtr targetFace = TrianglePtr(
       new Triangle(
         verticesMap[face.positionIndices[0]],
@@ -119,25 +68,7 @@ MeshObject simplifier::modify(MeshObject &mesh, float verticesCountModifier) {
     
     faces.push_back(targetFace);
   }
-  
 
-  // std::cout << "Initial data generation finished" << std::endl;
-  // std::cout << "Vertices before LOD generation: " << vertices.size() << std::endl;
-
-  /*
-  for (Face face : mesh->faces) {
-    Triangle* target = new Triangle(
-      vertices[face.positionIndices[0]],
-      vertices[face.positionIndices[1]],
-      vertices[face.positionIndices[2]],
-      face
-    );
-    target->id = faceId;
-    faceId++;
-    
-    faces.push_back(target);
-  }
-  */
 
   for (VertexPtr &vertex : vertices) {
     simplifier::computeEdgeCostAtVertex(vertex);
@@ -145,37 +76,13 @@ MeshObject simplifier::modify(MeshObject &mesh, float verticesCountModifier) {
 
   VertexPtr nextVertex;
 
-  /*
-  unsigned int z = count;
-  while (z--) {
-    nextVertex = simplifier::minimumCostEdge(vertices);
-
-    if (nextVertex == NULL || nextVertex->collapseCost > 50.0f) {//  || nextVertex->collapseCost == 1.0f
-      // std::cout << "Stop at " << z << " step from back of " << count << std::endl;
-      break;
-    }
-
-    simplifier::collapse(vertices, faces, nextVertex, nextVertex->collapseNeighbor);
-  }
-  */
-
-  // unsigned int z = count;
   nextVertex = simplifier::minimumCostEdge(vertices);
 
   while (nextVertex != NULL && nextVertex->collapseCost < 0.5f) { // 50.0f
-    
-
-    // if (nextVertex == NULL || nextVertex->collapseCost > 50.0f) {//  || nextVertex->collapseCost == 1.0f
-    //   // std::cout << "Stop at " << z << " step from back of " << count << std::endl;
-    //   break;
-    // }
-
     simplifier::collapse(vertices, faces, nextVertex, nextVertex->collapseNeighbor);
 
     nextVertex = simplifier::minimumCostEdge(vertices);
   }
-
-  // std::cout << "Vertices after LOD generation: " << vertices.size() << std::endl;
 
   for (unsigned int i = 0; i < vertices.size(); i++) {
     resultMesh->position.push_back(vertices[i]->position);
@@ -195,11 +102,8 @@ MeshObject simplifier::modify(MeshObject &mesh, float verticesCountModifier) {
 
   resultMesh->geometricError /= float(vertices.size());
 
-  // std::cout << "Generating faces" << std::endl;
   for (unsigned int i = 0; i < faces.size(); i++) {
     Face face;
-
-    //std::cout << "F: " << faces[i]->v1.id << "/" << faces[i]->v2.id << "/" << faces[i]->v3.id << std::endl;
 
     face.positionIndices[0] = faces[i]->v1->positionId;
     face.positionIndices[1] = faces[i]->v2->positionId;
@@ -219,15 +123,10 @@ MeshObject simplifier::modify(MeshObject &mesh, float verticesCountModifier) {
     resultMesh->faces.push_back(face);
   }
 
-  // std::cout << "Finishing mesh" << std::endl;
-
   resultMesh->finish();
 
-  // std::cout << "Clearing memory" << std::endl;
   vertices.clear();
   faces.clear();
-
-  // std::cout << "Finished" << std::endl;
 
   return resultMesh;
 };

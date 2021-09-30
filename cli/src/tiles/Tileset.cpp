@@ -10,6 +10,25 @@ void Tileset::traverse(Tile::TileCallback fn) {
   this->root->traverse(fn);
 };
 
+void Tileset::computeRootGeometricError() {
+  unsigned int i = 0;
+  for (std::shared_ptr<Tile> &child : this->root->children) {
+    if (i == 0) {
+      this->root->geometricError = child->geometricError;
+    } else {
+      this->root->geometricError += child->geometricError;
+    }
+
+    i++;
+  }
+
+  if (i > 0) {
+    this->root->geometricError /= (float) i;
+  }
+
+  this->geometricError = this->root->geometricError;
+};
+
 std::shared_ptr<Tile> Tileset::findTileById(IdGenerator::ID id) {
   if (this->root->id == id) {
     return this->root;
@@ -30,18 +49,3 @@ nlohmann::json Tileset::toJSON() {
 
   return result;
 };
-
-/*
-class Tileset {
-  public:
-    typedef std::function<void (Tile)> TileCallback;
-
-    TileAsset asset;
-    float geometricError = 0.0f;
-    std::shared_ptr<Tile> root = std::make_shared<Tile>();
-
-    void traverse(TileCallback fn);
-    std::shared_ptr<Tile> findTileById(IdGenerator::ID id);
-    nlohmann::json toJSON();
-};
-*/

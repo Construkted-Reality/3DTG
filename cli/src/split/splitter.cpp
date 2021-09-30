@@ -269,10 +269,6 @@ GroupObject splitter::splitUV(GroupObject baseObject) {
 
   meshMaterialMap.clear();
 
-  // baseObject->traverse([](MeshObject mesh) {
-  //   mesh->free();
-  // });
-
   return resultGroup;
 };
 
@@ -285,31 +281,14 @@ bool splitter::splitObject(GroupObject baseObject, GroupCallback fn, GroupCallba
 
   IdGenerator::ID nextParent = parent;
 
-  //std::cout << "Total polygons: " << polygonCount << std::endl;
-
-  // fn(baseObject);
-
   if (polygonCount <= 20000) {
     splitter::IDGen.next();
     nextParent = splitter::IDGen.id;
 
     GroupObject resultGroup = splitter::splitUV(baseObject);
     resultGroup->name = "Chunk_";
-    //fn(splitter::splitUV(baseObject));
+
     fn(resultGroup, splitter::IDGen.id, parent);
-
-    // GroupObject targetGroup = baseObject;
-    // for (unsigned int i = 2; i < 7; i++) {// 5 Levels
-    //     targetGroup = splitter::splitUV(targetGroup);
-    //     targetGroup = simplifier::modify(targetGroup, 0.5f);
-
-    //     targetGroup->name = std::string("Lod_") + std::to_string(i - 2) + std::string("_Chunk_");
-
-    //     lodFn(targetGroup);
-    // }
-
-    // resultGroup->name = "Lod_";
-    // lodFn(simplifier::modify(resultGroup, 0.5f));
 
     return false;
   } else {

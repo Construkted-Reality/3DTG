@@ -23,9 +23,63 @@ void Group::traverseGroup(TraverseGroupCallback fn) {
 };
 
 void Group::computeBoundingBox() {
-  this->traverse([&](MeshObject mesh){
-    this->boundingBox.extend(mesh->boundingBox);
-  });
+  unsigned int meshNumber = 0;
+  for (MeshObject &mesh : this->meshes) // access by reference to avoid copying
+  {
+    if (meshNumber == 0) { // Set first captured bbox as a base
+      this->boundingBox = mesh->boundingBox.clone();
+    } else {
+      this->boundingBox.extend(mesh->boundingBox);
+    }
+    
+    meshNumber++;
+  }
+
+  unsigned int groupNumber = 0;
+  for (GroupObject &group : this->children) // access by reference to avoid copying
+  {
+    group->computeBoundingBox();
+
+    if (groupNumber == 0 && meshNumber == 0) { // Set first captured bbox as a base
+      this->boundingBox = group->boundingBox.clone();
+    } else {
+      this->boundingBox.extend(group->boundingBox);
+    }
+  }
+};
+
+void Group::computeGeometricError() {
+  unsigned int meshNumber = 0;
+  for (MeshObject &mesh : this->meshes) // access by reference to avoid copying
+  {
+    if (meshNumber == 0) { // Set first captured bbox as a base
+      this->geometricError = mesh->geometricError;
+    } else {
+      this->geometricError += mesh->geometricError;
+    }
+    
+    meshNumber++;
+  }
+
+  if (meshNumber != 0) {
+    this->geometricError /= (float) meshNumber;
+  } else {
+    unsigned int groupNumber = 0;
+    for (GroupObject &group : this->children) // access by reference to avoid copying
+    {
+      group->computeGeometricError();
+
+      if (groupNumber == 0) { // Set first captured bbox as a base
+        this->geometricError = group->geometricError;
+      } else {
+        this->geometricError += group->geometricError;
+      }
+    }
+
+    if (groupNumber != 0) {
+      this->geometricError /= (float) groupNumber;
+    }
+  }
 };
 
 void Group::computeUVBox() {
@@ -157,11 +211,29 @@ void Mesh::remesh(std::vector<Vector3f> &position, std::vector<Vector3f> &normal
   this->finish();
 };
 
+void Mesh::computeBoundingBox() {
+  for (unsigned int i = 0; i < this->position.size(); i++) {
+    if (i == 0) {
+      this->boundingBox.fromPoint(this->position[i].x, this->position[i].y, this->position[i].z);
+    } else {
+      this->boundingBox.extend(this->position[i].x, this->position[i].y, this->position[i].z);
+    }
+  }
+};
+
 
 Loader::Loader() {
   this->object->name = "root";
 };
 
+BBoxf BBoxf::clone() {
+  BBoxf cloned;
+
+  cloned.min = this->min.clone();
+  cloned.max = this->max.clone();
+
+  return cloned;
+};
 
 void BBoxf::extend(Vector3f position) {
   this->min.x = utils::min(this->min.x, position.x);
@@ -314,7 +386,14 @@ void Vector3f::divideScalar(float value) {
 
 void Vector3f::normalize() {
   float length = this->length();
-  this->divideScalar(length);
+
+  if (length != 0.0f) {
+    this->divideScalar(length);
+  } else {
+    this->x = 0.0f;
+    this->y = 1.0f;
+    this->z = 0.0f;
+  }
 };
 
 void Vector3f::multiplyScalar(float value) {
