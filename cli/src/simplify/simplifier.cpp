@@ -17,7 +17,7 @@ GroupObject simplifier::modify(GroupObject &group, float verticesCountModifier) 
 };
 
 MeshObject simplifier::modify(MeshObject &mesh, float verticesCountModifier) {
-  if (mesh->position.size() < simplifier::lowerLimit * 3) {
+  if (mesh->position.size() < simplifier::lowerLimit) {
     // return mesh;
   }
 
@@ -74,15 +74,42 @@ MeshObject simplifier::modify(MeshObject &mesh, float verticesCountModifier) {
     simplifier::computeEdgeCostAtVertex(vertex);
   }
 
+  // std::cout << "Vertex sorting started" << std::endl;
+  std::sort(vertices.begin(), vertices.end(), [](VertexPtr &lx, VertexPtr &rx){
+    return lx->collapseCost < rx->collapseCost;
+  });
+
+  for (unsigned int i = 0; i < vertices.size(); i++) {
+    vertices[i]->positionId = i;
+  }
+  // std::cout << "Vertex sorting finished" << std::endl;
+
+  
+
   VertexPtr nextVertex;
 
   nextVertex = simplifier::minimumCostEdge(vertices);
 
-  while (nextVertex != NULL && nextVertex->collapseCost < 0.5f) { // 50.0f
+  // std::cout << "Mesh simplification started" << std::endl;
+
+  // unsigned int processed = 0;
+
+  while (nextVertex != NULL && nextVertex->collapseCost < 9999.f) { // 50.0f //  && nextVertex->collapseCost < verticesCountModifier
+    // std::cout << "Vertex cost: " << nextVertex->collapseCost << std::endl;
+    // std::cout << "Processing, target cost: " << nextVertex->collapseCost << std::endl;
+
     simplifier::collapse(vertices, faces, nextVertex, nextVertex->collapseNeighbor);
 
     nextVertex = simplifier::minimumCostEdge(vertices);
+    // processed++;
+
+    // if ((processed % 100) == 0)
+    // std::cout << "Vertices processed: " << processed << std::endl;
   }
+
+  // std::cout << "Mesh simplification has been finished" << std::endl;
+
+  resultMesh->geometricError = 0.0f;
 
   for (unsigned int i = 0; i < vertices.size(); i++) {
     resultMesh->position.push_back(vertices[i]->position);
@@ -95,12 +122,17 @@ MeshObject simplifier::modify(MeshObject &mesh, float verticesCountModifier) {
     }
 
     resultMesh->geometricError += vertices[i]->geometricError;
+    // resultMesh->geometricError = std::max(vertices[i]->geometricError, resultMesh->geometricError);
 
     //vertices[i].id = i;
     vertices[i]->positionId = i;
   }
 
-  resultMesh->geometricError /= float(vertices.size());
+  if (vertices.size() > 0) {
+    resultMesh->geometricError /= float(vertices.size());
+  } else {
+    resultMesh->geometricError = 0.0f;
+  }
 
   for (unsigned int i = 0; i < faces.size(); i++) {
     Face face;
@@ -127,6 +159,8 @@ MeshObject simplifier::modify(MeshObject &mesh, float verticesCountModifier) {
 
   vertices.clear();
   faces.clear();
+
+  resultMesh->computeBoundingBox();
 
   return resultMesh;
 };
@@ -297,6 +331,51 @@ void simplifier::removeFace(TrianglePtr f, std::vector<TrianglePtr> &faces) {
   */
 };
 
+void simplifier::resortVertex(std::vector<VertexPtr> &vertices, VertexPtr &v, float oldCost) {
+  // positionId
+  unsigned int i = v->positionId;
+
+  if (oldCost > v->collapseCost) {
+    // New cost is smaller, move closer to start
+    i -= 1;// Take prev
+    while (i >= 0) {
+      if (vertices[i]->collapseCost < v->collapseCost) {
+        if ((i + 1) != v->positionId) {
+          unsigned int index = v->positionId;
+
+          vertices[i + 1]->positionId = v->positionId;
+          v->positionId = i + 1;
+
+          std::swap(vertices[index], vertices[i + 1]);
+        }
+
+        break;
+      }
+
+      i--;
+    }
+  } else if (oldCost > v->collapseCost) {
+    // New cost is greater, move far from start
+    i += 1;// Take next
+    while (i < vertices.size()) {
+      if (vertices[i]->collapseCost > v->collapseCost) {
+        if ((i - 1) != v->positionId) {
+          unsigned int index = v->positionId;
+
+          vertices[i - 1]->positionId = v->positionId;
+          v->positionId = i - 1;
+
+          std::swap(vertices[index], vertices[i - 1]);
+        }
+
+        break;
+      }
+
+      i++;
+    }
+  }
+  // Else nothing changed 
+};
 
 void simplifier::collapse(std::vector<VertexPtr> &vertices, std::vector<TrianglePtr> &faces, VertexPtr u, VertexPtr v) {
   if (v == NULL) {
@@ -323,11 +402,17 @@ void simplifier::collapse(std::vector<VertexPtr> &vertices, std::vector<Triangle
       // }
     }
 
+    // float oldVCost = v->collapseCost;
+    // simplifier::resortVertex(vertices, v, oldVCost);
+
     simplifier::removeVertex(u, vertices);
+
 
     // recompute the edge collapse costs in neighborhood
     for (VertexPtr &vertex : tmpVertices) {
+      // float oldCost = vertex->collapseCost;
       simplifier::computeEdgeCostAtVertex(vertex); // HERE might be a bug of copying
+      // simplifier::resortVertex(vertices, vertex, oldCost);
     }
   }
 };

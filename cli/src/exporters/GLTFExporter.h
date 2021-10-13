@@ -23,6 +23,7 @@
 #include <string>
 #include <map>
 #include <algorithm>
+#include <functional>
 
 #include <rapidjson/document.h>
 #include <rapidjson/prettywriter.h>
@@ -45,8 +46,6 @@ class GLTFExporter : public Exporter {
     static const int HEADER_LENGTH = 12;
     static const int CHUNK_HEADER_LENGTH = 8;
 
-    static void exportGLTF(GLTF::Asset *asset, GLTF::Options *options, const char* outputPath);
-
     static void updateAccessorFace(std::map<std::string, GLTF::Accessor*> &accessors, MeshObject &mesh, Face &face);
     static void updateAccessorIndex(GLTF::Accessor* accessor, std::vector<unsigned int> &data);
 
@@ -56,13 +55,17 @@ class GLTFExporter : public Exporter {
     static void updateAccessorMin2f(GLTF::Accessor* accessor, Vector2f &vec);
     static void updateAccessorMax2f(GLTF::Accessor* accessor, Vector2f &vec);
 
+    void exportGLTF(GLTF::Asset *asset, GLTF::Options *options, const char* outputPath);
     void save(std::string directory, std::string fileName, GroupObject object);
-
+    
+    std::function<void(FILE* file, size_t binarySize)> beforeBinWrite;
     struct ImageData
     {
       std::stringstream data = std::stringstream(std::stringstream::binary | std::stringstream::in | std::stringstream::out);
       size_t size = 0;
     };
+
+    std::string format = "glb";
 };
 
 

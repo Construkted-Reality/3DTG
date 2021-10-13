@@ -4,7 +4,7 @@
 #include <string>
 
 struct TileAsset {
-  std::string version = "1.0.0";// Required
+  std::string version = "1.0";// Required
   std::string tilesetVersion;
 };
 

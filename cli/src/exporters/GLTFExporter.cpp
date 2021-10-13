@@ -49,12 +49,12 @@ void GLTFExporter::updateAccessorMax2f(GLTF::Accessor* accessor, Vector2f &vec) 
 };
 
 void GLTFExporter::save(std::string directory, std::string fileName, GroupObject object) {
-  std::string exportModelPath = utils::concatPath(directory, fileName + ".glb");
+  std::string exportModelPath = utils::concatPath(directory, fileName + "." + this->format);
 
   if (!utils::folder_exists(directory)) {
     utils::mkdir(directory.c_str());
   }
-  std::cout << "Export begin" << std::endl;
+  // std::cout << "Export begin" << std::endl;
 
   std::vector<GLTF::Node*> memNodes;
   std::vector<GLTF::Mesh*> memMeshes;
@@ -350,7 +350,7 @@ void GLTFExporter::save(std::string directory, std::string fileName, GroupObject
     memMaterialValues.push_back(values);
   });
 
-  std::cout << "Model data has been collected, generating gltf..." << std::endl;
+  // std::cout << "Model data has been collected, generating gltf..." << std::endl;
 
   asset->scenes.push_back(scene);
   asset->scene = 0;
@@ -361,15 +361,15 @@ void GLTFExporter::save(std::string directory, std::string fileName, GroupObject
   gltfOptions.embeddedTextures = true;
   // gltfOptions.materialsCommon = true;
 
-  std::cout << "GLTF has been generated, exporting..." << std::endl;
+  // std::cout << "GLTF has been generated, exporting..." << std::endl;
 
-  GLTFExporter::exportGLTF(asset, &gltfOptions, utils::normalize(exportModelPath).c_str());
+  this->exportGLTF(asset, &gltfOptions, utils::normalize(exportModelPath).c_str());
   
 
-  std::cout << "Exported, cleaning up..." << std::endl;
+  // std::cout << "Exported, cleaning up..." << std::endl;
 
   
-  delete asset;
+  // delete asset;
 
   /*
   delete scene;
@@ -436,30 +436,30 @@ void GLTFExporter::save(std::string directory, std::string fileName, GroupObject
 
 void GLTFExporter::exportGLTF(GLTF::Asset *asset, GLTF::Options *options, const char* outputPath) {
   
-  std::cout << "Removing unused nodes" << std::endl;
+  // std::cout << "Removing unused nodes" << std::endl;
   asset->removeUnusedNodes(options);
 
   if (!options->preserveUnusedSemantics) {
-    std::cout << "Removing unused semantics" << std::endl;
+    // std::cout << "Removing unused semantics" << std::endl;
     asset->removeUnusedSemantics();
   }
 
   if (options->dracoCompression) {
-    std::cout << "Draco compression" << std::endl;
+    // std::cout << "Draco compression" << std::endl;
     asset->removeUncompressedBufferViews();
     asset->compressPrimitives(options);
   }
 
-  std::cout << "Packing" << std::endl;
+  // std::cout << "Packing" << std::endl;
   GLTF::Buffer* buffer = asset->packAccessors();
   if (options->binary && options->version == "1.0") {
     buffer->stringId = "binary_glTF";
   }
 
-  std::cout << "Packing finished" << std::endl;
+  // std::cout << "Packing finished" << std::endl;
 
   // Create image bufferViews for binary glTF
-  std::cout << "Texture saving started" << std::endl;
+  // std::cout << "Texture saving started" << std::endl;
   
   if (options->binary && options->embeddedTextures) {
     size_t imageBufferLength = 0;
@@ -468,7 +468,7 @@ void GLTFExporter::exportGLTF(GLTF::Asset *asset, GLTF::Options *options, const 
       imageBufferLength += image->byteLength;
     }
 
-    std::cout << "Image buffer length: " << imageBufferLength << std::endl;
+    // std::cout << "Image buffer length: " << imageBufferLength << std::endl;
 
     unsigned char* bufferData = buffer->data;
     bufferData = (unsigned char*)realloc(
@@ -485,7 +485,7 @@ void GLTFExporter::exportGLTF(GLTF::Asset *asset, GLTF::Options *options, const 
     buffer->byteLength += imageBufferLength;
   }
 
-  std::cout << "Writing options to json" << std::endl; 
+  // std::cout << "Writing options to json" << std::endl; 
 
   rapidjson::StringBuffer s;
   rapidjson::Writer<rapidjson::StringBuffer> jsonWriter =
@@ -494,7 +494,7 @@ void GLTFExporter::exportGLTF(GLTF::Asset *asset, GLTF::Options *options, const 
   asset->writeJSON(&jsonWriter, options);
   jsonWriter.EndObject();
 
-  std::cout << "Options written" << std::endl;
+  // std::cout << "Options written" << std::endl;
 
   /*
   if (!options->embeddedTextures) {
@@ -551,7 +551,7 @@ void GLTFExporter::exportGLTF(GLTF::Asset *asset, GLTF::Options *options, const 
     }
   }
   */
-  std::cout << "Writing gltf" << std::endl;
+  // std::cout << "Writing gltf" << std::endl;
   std::string jsonString = s.GetString();
   if (!options->binary) {
     rapidjson::Document jsonDocument;
@@ -570,9 +570,29 @@ void GLTFExporter::exportGLTF(GLTF::Asset *asset, GLTF::Options *options, const 
                 << outputPath << "'" << std::endl;
     }
   } else {
-    std::cout << "Is binary" << std::endl;
+    // std::cout << "Is binary" << std::endl;
     FILE* file = fopen(outputPath, "wb");
     if (file != NULL) {
+      int jsonPadding = (4 - (jsonString.length() & 3)) & 3;
+      int binPadding = (4 - (buffer->byteLength & 3)) & 3;
+
+      size_t totalBinSize = 0;
+
+      totalBinSize += sizeof(char) * 4;// glTF magic
+      totalBinSize += sizeof(uint32_t) * 2;// GLB header
+      totalBinSize += sizeof(uint32_t) * 2;// JSON header
+      totalBinSize += sizeof(char) * jsonString.length();// JSON
+      totalBinSize += sizeof(char) * jsonPadding;// JSON padding
+      if (options->version != "1.0") {
+        totalBinSize += sizeof(uint32_t) * 2;// BIN chunk header
+      }
+      totalBinSize += sizeof(unsigned char) * buffer->byteLength;// BIN buffer
+      totalBinSize += sizeof(char) * binPadding;// BIN padding
+
+      if (this->beforeBinWrite) {
+        this->beforeBinWrite(file, totalBinSize);
+      }
+
       fwrite("glTF", sizeof(char), 4, file);  // magic
 
       uint32_t* writeHeader = new uint32_t[2];
@@ -582,9 +602,6 @@ void GLTFExporter::exportGLTF(GLTF::Asset *asset, GLTF::Options *options, const 
       } else {
         writeHeader[0] = 2;
       }
-
-      int jsonPadding = (4 - (jsonString.length() & 3)) & 3;
-      int binPadding = (4 - (buffer->byteLength & 3)) & 3;
 
       writeHeader[1] =
           GLTFExporter::HEADER_LENGTH +

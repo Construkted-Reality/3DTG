@@ -48,7 +48,11 @@ nlohmann::json Tile::toJSON() {
     }
   }
 
-  result["geometricError"] = this->geometricError;
+  result["geometricError"] = (this->geometricError > 0.0f) ? (double) this->geometricError : (double) 0.0;
+
+  if (this->refine != NULL) {
+    result["refine"] = this->refine;
+  }
 
   if (this->content != NULL) {
     result["content"] = nlohmann::json::object();

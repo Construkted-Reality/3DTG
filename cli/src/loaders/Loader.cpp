@@ -52,10 +52,11 @@ void Group::computeGeometricError() {
   unsigned int meshNumber = 0;
   for (MeshObject &mesh : this->meshes) // access by reference to avoid copying
   {
-    if (meshNumber == 0) { // Set first captured bbox as a base
+    if (meshNumber == 0) { // Set first captured error as a base
       this->geometricError = mesh->geometricError;
     } else {
       this->geometricError += mesh->geometricError;
+      // this->geometricError = std::max(mesh->geometricError, this->geometricError);
     }
     
     meshNumber++;
@@ -69,10 +70,11 @@ void Group::computeGeometricError() {
     {
       group->computeGeometricError();
 
-      if (groupNumber == 0) { // Set first captured bbox as a base
+      if (groupNumber == 0) { // Set first captured error as a base
         this->geometricError = group->geometricError;
       } else {
         this->geometricError += group->geometricError;
+        // this->geometricError = std::max(group->geometricError, this->geometricError);
       }
     }
 
@@ -95,6 +97,63 @@ void Group::free() {
 
   this->meshes.clear();
   this->children.clear();
+};
+
+GroupObject Group::clone() {
+  GroupObject cloned = GroupObject(new Group());
+
+  cloned->name = this->name;
+  cloned->geometricError = this->geometricError;
+
+  cloned->boundingBox = this->boundingBox.clone();
+  cloned->uvBox = this->uvBox.clone();
+
+  for (GroupObject &group : this->children) {
+    cloned->children.push_back(group->clone());
+  }
+
+  for (MeshObject &mesh : this->meshes) {
+    cloned->meshes.push_back(mesh->clone());
+  }
+
+  return cloned;
+};
+
+MeshObject Mesh::clone() {
+  MeshObject cloned = MeshObject(new Mesh());
+
+  cloned->name = this->name;
+  cloned->geometricError = this->geometricError;
+
+  cloned->boundingBox = this->boundingBox.clone();
+  cloned->uvBox = this->uvBox.clone();
+
+  cloned->hasNormals = this->hasNormals;
+  cloned->hasUVs = this->hasUVs;
+
+  cloned->material = this->material;
+  
+  cloned->position.reserve(this->position.size());
+  std::copy(this->position.begin(), this->position.end(), cloned->position.begin());
+
+  cloned->normal.reserve(this->normal.size());
+  std::copy(this->normal.begin(), this->normal.end(), cloned->normal.begin());
+
+  cloned->uv.reserve(this->uv.size());
+  std::copy(this->uv.begin(), this->uv.end(), cloned->uv.begin());
+
+  cloned->faces.reserve(this->faces.size());
+  std::copy(this->faces.begin(), this->faces.end(), cloned->faces.begin());
+
+  for (GroupObject &group : this->children) {
+    cloned->children.push_back(group->clone());
+  }
+
+  for (MeshObject &mesh : this->meshes) {
+    cloned->meshes.push_back(mesh->clone());
+  }
+
+  return cloned;
 };
 
 void Mesh::finish() {

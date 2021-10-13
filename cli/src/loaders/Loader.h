@@ -6,6 +6,7 @@
 #include <string>
 #include <variant>
 #include <functional>
+#include <algorithm>
 #include <memory>
 #include <cstdlib>
 #include <cmath>
@@ -98,6 +99,11 @@ class Vertex {
     void removeIfNonNeighbor(VertexPtr vertex);
     bool hasNeighbor(VertexPtr vertex);
     void removeTriangle(TrianglePtr triangle);
+
+    // bool operator < (const Vertex& str) const
+    // {
+    //   return (this->collapseCost < str.collapseCost);
+    // }
 };
 
 class Triangle : public std::enable_shared_from_this<Triangle> {
@@ -175,6 +181,8 @@ class Group {
     void computeGeometricError();
 
     void free();
+
+    GroupObject clone();
 };
 
 class Mesh : public Group {
@@ -189,11 +197,15 @@ class Mesh : public Group {
     bool hasNormals = false;
     bool hasUVs = false;
 
+    float geometricError = 0.0f;
+
     void finish();
 
     void remesh(std::vector<Vector3f> &position, std::vector<Vector3f> &normal, std::vector<Vector2f> &uv);
     void free();
     void computeBoundingBox();
+
+    MeshObject clone();
 };
 
 class Loader {

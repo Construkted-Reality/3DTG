@@ -6,10 +6,12 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
 
 #include "./loaders/ObjLoader.h"
 #include "./exporters/ObjExporter.h"
 #include "./exporters/GLTFExporter.h"
+#include "./exporters/B3DMExporter.h"
 #include "./split/splitter.h"
 #include "./utils.h"
 
@@ -155,7 +157,8 @@ int main(int argc, char** argv) {
     options.add_options()
     ("i,input", "Input model path", cxxopts::value<std::string>())
     ("o,output", "Output directory", cxxopts::value<std::string>()->default_value("./exported"))
-    ("f,format", "Model format to export", cxxopts::value<std::string>())
+    ("l,limit", "Polygons per chunk limit", cxxopts::value<unsigned int>()->default_value("2048"))
+    ("f,format", "Model format to export", cxxopts::value<std::string>()->default_value("b3dm"))
     ("h,help", "Help")
     ;
 
@@ -202,13 +205,13 @@ int main(int argc, char** argv) {
 
     std::cout << "Output directory: " << out.c_str() << std::endl;
 
-    GLTFExporter exporter;
+    B3DMExporter exporter;
 
  
     std::cout << "Splitting..." << std::endl;
 
-
     splitter::IDGen.reset(); // Reset id counter;
+
     Tileset tileset(splitter::IDGen.id);
 
     unsigned int chunk = 0;
@@ -216,21 +219,31 @@ int main(int argc, char** argv) {
 
     unsigned int processed = 0;
 
-    std::cout << "Splitting model " << (processed + 1) << " of " << 60 << std::endl;  
+    float totalError = 0.0f;
+
+    std::cout << "Splitting model " << (processed + 1) << std::endl;// " of " << 60 << std::endl;  
 
     splitter::splitObject(
         loader.object,
-        [&](GroupObject group, unsigned int targetId, unsigned int parentId){
+        result["limit"].as<unsigned int>(),
+        [&](GroupObject group, unsigned int targetId, unsigned int parentId, unsigned int level){
             group->computeBoundingBox();
             group->computeGeometricError();
 
+            // std::cout << "Geometric error: " << group->geometricError << std::endl;
+
+            /*
             std::string modelDir = utils::getFileName(group->name) + std::to_string(chunk);
             std::string modelName = utils::getFileName(inputFile) + "_" + std::to_string(chunk);
             std::string modelPath = utils::normalize(
-                utils::concatPath(
-                    "./",
-                    utils::concatPath(modelDir, modelName)
-                )
+                utils::concatPath("./", utils::concatPath(modelDir, modelName)) + std::string(".") + exporter.format
+            );
+            */
+
+            std::string modelDir = std::string("level_") + std::to_string(level);
+            std::string modelName = utils::getFileName(group->name) + "_" + std::to_string(chunk);
+            std::string modelPath = utils::normalize(
+                utils::concatPath("./", utils::concatPath(modelDir, modelName)) + std::string(".") + exporter.format
             );
 
             std::shared_ptr<Tile> parentTile = tileset.findTileById(parentId);
@@ -238,6 +251,9 @@ int main(int argc, char** argv) {
                 std::shared_ptr<Tile> targetTile = std::make_shared<Tile>();
                 targetTile->id = targetId;
                 targetTile->geometricError = group->geometricError;
+                // targetTile->refine = TileRefine::REPLASE;
+
+                totalError += (float) group->geometricError;
 
                 targetTile->content = std::make_shared<TileContent>();
                 targetTile->content->uri = modelPath;
@@ -270,23 +286,32 @@ int main(int argc, char** argv) {
             chunk++;
 
             processed++;
-            if (processed < 60) {
-                std::cout << "Splitting model " << (processed + 1) << " of " << 60 << std::endl;
-            }
+            // if (processed < 60) {
+            //     std::cout << "Splitting model " << (processed + 1) << " of " << 60 << std::endl;
+            // }
+
+            std::cout << "Splitting model " << (processed + 1) << std::endl;
 
             // std::cout << "---------------------------------------------" << std::endl;
         },
-        [&](GroupObject group, unsigned int targetId, unsigned int parentId){
+        [&](GroupObject group, unsigned int targetId, unsigned int parentId, unsigned int level){
             group->computeBoundingBox();
             group->computeGeometricError();
 
-            std::string modelDir = utils::getFileName(group->name) + std::to_string(lodChunk);
+            // std::cout << "Geometric error: " << group->geometricError << std::endl;
+
+            /*
+            std::string modelDir = utils::getFileName(group->name) + std::to_string(chunk);
             std::string modelName = utils::getFileName(inputFile) + "_" + std::to_string(lodChunk);
             std::string modelPath = utils::normalize(
-                utils::concatPath(
-                    "./",
-                    utils::concatPath(modelDir, modelName)
-                )
+                utils::concatPath("./", utils::concatPath(modelDir, modelName)) + std::string(".") + exporter.format
+            );
+            */
+
+            std::string modelDir = std::string("level_") + std::to_string(level);
+            std::string modelName = utils::getFileName(group->name) + "_" + std::to_string(lodChunk);
+            std::string modelPath = utils::normalize(
+                utils::concatPath("./", utils::concatPath(modelDir, modelName)) + std::string(".") + exporter.format
             );
             
             std::shared_ptr<Tile> parentTile = tileset.findTileById(parentId);
@@ -294,6 +319,9 @@ int main(int argc, char** argv) {
                 std::shared_ptr<Tile> targetTile = std::make_shared<Tile>();
                 targetTile->id = targetId;
                 targetTile->geometricError = group->geometricError;
+                // targetTile->refine = TileRefine::REPLASE;
+
+                totalError += (float) group->geometricError;
 
                 targetTile->content = std::make_shared<TileContent>();
                 targetTile->content->uri = modelPath;
@@ -332,7 +360,9 @@ int main(int argc, char** argv) {
     std::cout << "Exported" << std::endl;
 
     std::cout << "Saving JSON" << std::endl;
-    tileset.computeRootGeometricError();
+    // tileset.computeRootGeometricError();
+    tileset.setRootGeometricError(totalError);
+    tileset.computeRootBoundingVolume();
 
     std::fstream fs;
     fs.open(utils::concatPath(out, "tileset.json"), std::fstream::out);
