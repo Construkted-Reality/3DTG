@@ -4,15 +4,12 @@
 #include <string>
 #include <vector>
 
-#define STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#define STB_IMAGE_RESIZE_IMPLEMENTATION
-
 #include "./loaders/ObjLoader.h"
 #include "./exporters/ObjExporter.h"
 #include "./exporters/GLTFExporter.h"
 #include "./exporters/B3DMExporter.h"
 #include "./split/splitter.h"
+#include "./split/VoxelsSplitter.h"
 #include "./utils.h"
 
 #include "./tiles/Tileset.h"
@@ -26,6 +23,14 @@
 #include <GLTF/GLTFBufferView.h>
 #include <GLTF/GLTFAccessor.h>
 #include <GLTF/GLTFAsset.h>
+
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
+
+#include <stb/stb_image.h>
+#include <stb/stb_image_write.h>
+#include <stb/stb_image_resize.h>
 
 
 int main(int argc, char** argv) {
@@ -158,6 +163,7 @@ int main(int argc, char** argv) {
     ("i,input", "Input model path", cxxopts::value<std::string>())
     ("o,output", "Output directory", cxxopts::value<std::string>()->default_value("./exported"))
     ("l,limit", "Polygons per chunk limit", cxxopts::value<unsigned int>()->default_value("2048"))
+    ("iso", "Iso level", cxxopts::value<float>()->default_value("1.0"))
     ("f,format", "Model format to export", cxxopts::value<std::string>()->default_value("b3dm"))
     ("h,help", "Help")
     ;
@@ -205,11 +211,77 @@ int main(int argc, char** argv) {
 
     std::cout << "Output directory: " << out.c_str() << std::endl;
 
-    B3DMExporter exporter;
+    GLTFExporter exporter;
 
  
     std::cout << "Splitting..." << std::endl;
 
+    unsigned int chunk = 0;
+    unsigned int processed = 0;
+    float totalError = 0.0f;
+
+    Tileset tileset(0);
+
+    VoxelsSplitter currentSplitter;
+    currentSplitter.polygonsLimit = result["limit"].as<unsigned int>();
+    currentSplitter.grid.isoLevel = result["iso"].as<float>();
+
+    currentSplitter.onSave = [&](GroupObject object, IdGenerator::ID targetId, IdGenerator::ID parentId, unsigned int level){
+        object->computeBoundingBox();
+        object->computeGeometricError();
+
+        std::string modelDir = std::string("level_") + std::to_string(level);
+        std::string modelName = utils::getFileName(object->name) + "_" + std::to_string(chunk);
+        std::string modelPath = utils::normalize(
+            utils::concatPath("./", utils::concatPath(modelDir, modelName)) + std::string(".") + exporter.format
+        );
+
+        std::shared_ptr<Tile> parentTile = tileset.findTileById(parentId);
+        if (parentTile != NULL) {
+            std::shared_ptr<Tile> targetTile = std::make_shared<Tile>();
+            targetTile->id = targetId;
+            targetTile->geometricError = object->geometricError;
+            // targetTile->refine = TileRefine::REPLASE;
+
+            totalError += (float) object->geometricError;
+
+            targetTile->content = std::make_shared<TileContent>();
+            targetTile->content->uri = modelPath;
+
+            targetTile->boundingVolume = std::make_shared<TileBoundingVolume>();
+            targetTile->boundingVolume->box = std::make_shared<TileBoundingBox>();
+
+            targetTile->boundingVolume->box->center = object->boundingBox.getCenter();
+            targetTile->boundingVolume->box->xHalf = object->boundingBox.getSize();
+            targetTile->boundingVolume->box->xHalf /= 2.0;
+
+            targetTile->boundingVolume->box->yHalf = targetTile->boundingVolume->box->xHalf;
+            targetTile->boundingVolume->box->zHalf = targetTile->boundingVolume->box->xHalf;
+
+            targetTile->boundingVolume->box->xHalf.y = 0.0f;
+            targetTile->boundingVolume->box->xHalf.z = 0.0f;
+
+            targetTile->boundingVolume->box->yHalf.x = 0.0f;
+            targetTile->boundingVolume->box->yHalf.z = 0.0f;
+
+            targetTile->boundingVolume->box->zHalf.x = 0.0f;
+            targetTile->boundingVolume->box->zHalf.y = 0.0f;
+
+            parentTile->children.push_back(targetTile);
+        }
+        
+        exporter.save(utils::concatPath(out, modelDir), modelName, object);
+
+        chunk++;
+
+        processed++;
+        std::cout << "Splitting model " << (processed + 1) << std::endl;
+    };
+
+    currentSplitter.split(loader.object);
+
+
+    /*
     splitter::IDGen.reset(); // Reset id counter;
 
     Tileset tileset(splitter::IDGen.id);
@@ -232,13 +304,13 @@ int main(int argc, char** argv) {
 
             // std::cout << "Geometric error: " << group->geometricError << std::endl;
 
-            /*
-            std::string modelDir = utils::getFileName(group->name) + std::to_string(chunk);
-            std::string modelName = utils::getFileName(inputFile) + "_" + std::to_string(chunk);
-            std::string modelPath = utils::normalize(
-                utils::concatPath("./", utils::concatPath(modelDir, modelName)) + std::string(".") + exporter.format
-            );
-            */
+            
+            // std::string modelDir = utils::getFileName(group->name) + std::to_string(chunk);
+            // std::string modelName = utils::getFileName(inputFile) + "_" + std::to_string(chunk);
+            // std::string modelPath = utils::normalize(
+            //     utils::concatPath("./", utils::concatPath(modelDir, modelName)) + std::string(".") + exporter.format
+            // );
+            
 
             std::string modelDir = std::string("level_") + std::to_string(level);
             std::string modelName = utils::getFileName(group->name) + "_" + std::to_string(chunk);
@@ -300,13 +372,13 @@ int main(int argc, char** argv) {
 
             // std::cout << "Geometric error: " << group->geometricError << std::endl;
 
-            /*
-            std::string modelDir = utils::getFileName(group->name) + std::to_string(chunk);
-            std::string modelName = utils::getFileName(inputFile) + "_" + std::to_string(lodChunk);
-            std::string modelPath = utils::normalize(
-                utils::concatPath("./", utils::concatPath(modelDir, modelName)) + std::string(".") + exporter.format
-            );
-            */
+            
+            // std::string modelDir = utils::getFileName(group->name) + std::to_string(chunk);
+            // std::string modelName = utils::getFileName(inputFile) + "_" + std::to_string(lodChunk);
+            // std::string modelPath = utils::normalize(
+            //     utils::concatPath("./", utils::concatPath(modelDir, modelName)) + std::string(".") + exporter.format
+            // );
+            
 
             std::string modelDir = std::string("level_") + std::to_string(level);
             std::string modelName = utils::getFileName(group->name) + "_" + std::to_string(lodChunk);
@@ -356,6 +428,7 @@ int main(int argc, char** argv) {
             // std::cout << "---------------------------------------------" << std::endl;
         }
     );
+    */
     
     std::cout << "Exported" << std::endl;
 

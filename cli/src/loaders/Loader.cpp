@@ -1,7 +1,6 @@
 #include "./Loader.h"
 
 
-
 void Group::traverse(TraverseMeshCallback fn) {
   for (GroupObject &group : this->children) // access by reference to avoid copying
   {  
@@ -280,6 +279,73 @@ void Mesh::computeBoundingBox() {
   }
 };
 
+void Mesh::pushTriangle(Vector3f a, Vector3f b, Vector3f c, Vector3f n, Vector2f t1, Vector2f t2, Vector2f t3) {
+  unsigned int lastVertex = this->position.size();
+  unsigned int lastNormal = this->normal.size();
+  unsigned int lastUV = this->uv.size();
+
+  this->position.push_back(a);
+  this->position.push_back(b);
+  this->position.push_back(c);
+
+  if (this->hasNormals) {
+    this->normal.push_back(n);
+  }
+
+  if (this->hasUVs) {
+    this->uv.push_back(t1);
+    this->uv.push_back(t2);
+    this->uv.push_back(t3);
+  }
+  
+
+  Face f = {
+    lastVertex, lastVertex + 1, lastVertex + 2,
+    lastNormal, lastNormal, lastNormal,
+    lastUV, lastUV + 1, lastUV + 2
+  };
+
+  this->faces.push_back(f);
+};
+
+void Mesh::pushQuad(Vector3f a, Vector3f b, Vector3f c, Vector3f d, Vector3f n1, Vector3f n2, Vector2f t1, Vector2f t2, Vector2f t3, Vector2f t4) {
+  unsigned int lastVertex = this->position.size();
+  unsigned int lastNormal = this->normal.size();
+  unsigned int lastUV = this->uv.size();
+
+  this->position.push_back(a);
+  this->position.push_back(b);
+  this->position.push_back(c);
+  this->position.push_back(d);
+
+  if (this->hasNormals) {
+    this->normal.push_back(n1);
+    this->normal.push_back(n2);
+  }
+
+  if (this->hasUVs) {
+    this->uv.push_back(t1);
+    this->uv.push_back(t2);
+    this->uv.push_back(t3);
+    this->uv.push_back(t4);
+  }
+
+  Face f1 = {
+    lastVertex, lastVertex + 1, lastVertex + 3,
+    lastNormal, lastNormal, lastNormal,
+    lastUV, lastUV + 1, lastUV + 3
+  };
+
+  Face f2 = {
+    lastVertex + 1, lastVertex + 2, lastVertex + 3,
+    lastNormal + 1, lastNormal + 1, lastNormal + 1,
+    lastUV + 1, lastUV + 2, lastUV + 3
+  };
+
+  this->faces.push_back(f1);
+  this->faces.push_back(f2);
+};
+
 
 Loader::Loader() {
   this->object->name = "root";
@@ -535,6 +601,18 @@ void Vector3f::lerpToZ(Vector3f a, Vector3f b, float z) {
   this->lerp(a, b, Vector3f::deltaZ(a, b, z));
 };
 
+glm::vec3 Vector3f::toGLM() {
+  glm::vec3 result(this->x, this->y, this->z);
+
+  return result;
+};
+
+Vector3f Vector3f::fromGLM(glm::vec3 vec) {
+  Vector3f result = {vec.x, vec.y, vec.z};
+
+  return result;
+};
+
 Vector3f Vector3f::clone() {
   Vector3f cloned;
 
@@ -718,3 +796,106 @@ void Triangle::replaceVertex(VertexPtr oldVertex, VertexPtr newVertex) {
 };
 
 
+float math::triangleIntersection(glm::vec3 origin, glm::vec3 dir, glm::vec3 v0, glm::vec3 v1, glm::vec3 v2) {
+  /*
+  const float EPSILON = 0.0000001;
+  float a,f,u,v;
+  glm::vec3 edge1 = v1 - v0;
+  glm::vec3 edge2 = v2 - v0;
+  glm::vec3 h = glm::cross(dir, edge2);
+  a = glm::dot(edge1, h);
+  if (a > -EPSILON && a < EPSILON)
+      return 0.0f;    // This ray is parallel to this triangle.
+  f = 1.0f / a;
+  glm::vec3 s = origin - v0;
+  u = f * glm::dot(s, h);
+  if (u < 0.0 || u > 1.0)
+      return 0.0f;
+  glm::vec3 q = glm::cross(s, edge1);
+  v = f * glm::dot(dir, q);
+  if (v < 0.0 || u + v > 1.0)
+      return 0.0;
+  // At this stage we can compute t to find out where the intersection point is on the line.
+  float t = f * glm::dot(edge2, q);
+  if (t > EPSILON) // ray intersection
+  {
+    // outIntersectionPoint = rayOrigin + rayVector * t;
+    return t;
+  }
+  else // This means that there is a line intersection but not a ray intersection.
+      return 0.0f;
+  */
+
+  glm::vec3 _edge1 = v1 - v0;
+	glm::vec3 _edge2 = v2 - v0;
+	glm::vec3 _normal = glm::cross( _edge1, _edge2 );
+
+  float DdN = glm::dot( dir, _normal );
+	float sign;
+
+  if ( DdN > 0.0f ) {
+
+    sign = 1.0f;
+
+  } else if ( DdN < 0.0f ) {
+
+    sign = - 1.0f;
+    DdN = - DdN;
+
+  } else {
+
+    return 0.0f;
+
+  }
+
+  glm::vec3 _diff = origin - v0;
+
+  float DdQxE2 = sign * glm::dot( dir, glm::cross( _diff, _edge2 ) );
+
+  // b1 < 0, no intersection
+  if ( DdQxE2 < 0.0f ) {
+
+    return 0.0f;
+
+  }
+
+  float DdE1xQ = sign * glm::dot( dir, glm::cross( _edge1, _diff ) );
+
+  // b2 < 0, no intersection
+  if ( DdE1xQ < 0.0f ) {
+
+    return 0.0f;
+
+  }
+
+  // b1+b2 > 1, no intersection
+  if ( DdQxE2 + DdE1xQ > DdN ) {
+
+    return 0.0f;
+
+  }
+
+  // Line intersects triangle, check if ray does.
+  float QdN = - sign * glm::dot( _diff, _normal );
+
+  // t < 0, no intersection
+  if ( QdN < 0.0f ) {
+
+    return 0.0f;
+
+  }
+
+  // Ray intersects triangle.
+  return QdN / DdN;
+
+};
+
+float math::triangleIntersection(Vector3f origin, Vector3f dir, Vector3f v0, Vector3f v1, Vector3f v2) {
+  return math::triangleIntersection(
+    origin.toGLM(),
+    dir.toGLM(),
+    v0.toGLM(),
+    v1.toGLM(),
+    v2.toGLM()
+  );
+};

@@ -11,7 +11,7 @@
 #include <cstdlib>
 #include <cmath>
 
-#include <glm/vec3.hpp>
+#include <glm/glm.hpp>
 #include <stb/stb_image.h>
 
 
@@ -47,6 +47,8 @@ struct Vector3f {
   void lerpToX(Vector3f a, Vector3f b, float x);
   void lerpToY(Vector3f a, Vector3f b, float y);
   void lerpToZ(Vector3f a, Vector3f b, float z);
+  glm::vec3 toGLM();
+  static Vector3f fromGLM(glm::vec3 vec);
   static float deltaX(Vector3f a, Vector3f b, float x);
   static float deltaY(Vector3f a, Vector3f b, float y);
   static float deltaZ(Vector3f a, Vector3f b, float z);
@@ -127,6 +129,11 @@ class Triangle : public std::enable_shared_from_this<Triangle> {
     void replaceVertex(VertexPtr oldVertex, VertexPtr newVertex);
 };
 
+namespace math {
+  float triangleIntersection(glm::vec3 origin, glm::vec3 dir, glm::vec3 v0, glm::vec3 v1, glm::vec3 v2);
+  float triangleIntersection(Vector3f origin, Vector3f dir, Vector3f v0, Vector3f v1, Vector3f v2);
+};
+
 struct BBoxf {
   Vector3f min, max;
   void extend(Vector3f position);
@@ -204,6 +211,9 @@ class Mesh : public Group {
     void remesh(std::vector<Vector3f> &position, std::vector<Vector3f> &normal, std::vector<Vector2f> &uv);
     void free();
     void computeBoundingBox();
+
+    void pushTriangle(Vector3f a, Vector3f b, Vector3f c, Vector3f n, Vector2f t1, Vector2f t2, Vector2f t3);
+    void pushQuad(Vector3f a, Vector3f b, Vector3f c, Vector3f d, Vector3f n1, Vector3f n2, Vector2f t1, Vector2f t2, Vector2f t3, Vector2f t4);
 
     MeshObject clone();
 };

@@ -20,11 +20,10 @@ void ObjExporter::saveMaterial(std::string directory, std::string fileName, Mate
       fs << "newmtl " << it.first.c_str() << std::endl;
 
       fs << "Kd " << it.second.color.x << " " << it.second.color.y <<  " " << it.second.color.z << std::endl;
-      fs << "map_Kd " << it.second.diffuseMap << std::endl;
-
-      fs << std::endl;
       
       if (it.second.diffuseMapImage.data != NULL) {
+        fs << "map_Kd " << it.second.diffuseMap << std::endl;
+
         std::string outputImage = utils::concatPath(directory, it.second.name + ".jpg");
 
         stbi_write_jpg(
@@ -36,6 +35,8 @@ void ObjExporter::saveMaterial(std::string directory, std::string fileName, Mate
           80
         );
       }
+
+      fs << std::endl;
     }
   );
 

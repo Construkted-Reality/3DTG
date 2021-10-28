@@ -239,7 +239,7 @@ void GLTFExporter::save(std::string directory, std::string fileName, GroupObject
     if (targetMesh->material.diffuseMapImage.data == NULL) {
       float diffuse[4] = {1.0f, 1.0f, 1.0f, 1.0f};
       values->diffuse = diffuse;
-    } else {  
+    } else {
       GLTFExporter::ImageData ii;
 
       stbi_flip_vertically_on_write(1);
