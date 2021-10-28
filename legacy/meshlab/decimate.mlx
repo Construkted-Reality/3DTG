@@ -1,0 +1,17 @@
+<!DOCTYPE FilterScript>
+
+<FilterScript>
+ <filter name="Simplification: Quadric Edge Collapse Decimation (with texture)">
+  <Param value="50000" name="TargetFaceNum" description="Target number of faces" isxmlparam="0" tooltip="" type="RichInt"/>
+  <Param value="0" name="TargetPerc" description="Percentage reduction (0..1)" isxmlparam="0" tooltip="" type="RichFloat"/>
+  <Param value="0.3" name="QualityThr" description="Quality threshold" isxmlparam="0" tooltip="" type="RichFloat"/>
+  <Param value="1" name="Extratcoordw" description="Texture Weight" isxmlparam="0" tooltip="" type="RichFloat"/>
+  <Param value="true" name="PreserveBoundary" description="Preserve Boundary of the mesh" isxmlparam="0" tooltip="" type="RichBool"/>
+  <Param value="1" name="BoundaryWeight" description="Boundary Preserving Weight" isxmlparam="0" tooltip="" type="RichFloat"/>
+  <Param value="true" name="OptimalPlacement" description="Optimal position of simplified vertices" isxmlparam="0" tooltip="" type="RichBool"/>
+  <Param value="true" name="PreserveNormal" description="Preserve Normal" isxmlparam="0" tooltip="" type="RichBool"/>
+  <Param value="true" name="PlanarQuadric" description="Planar Simplification" isxmlparam="0" tooltip="" type="RichBool"/>
+  <Param value="false" name="Selected" description="Simplify only selected faces" isxmlparam="0" tooltip="" type="RichBool"/>
+ </filter>
+
+</FilterScript>

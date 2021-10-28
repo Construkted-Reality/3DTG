@@ -6,3 +6,5 @@
 /construkted-tiler/test/lod_test.01_tileset
 /3dtile-viewer/node_modules
 /.idea
+.vscode
+cli/out/**
