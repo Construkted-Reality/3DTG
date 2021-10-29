@@ -316,6 +316,21 @@ const int VoxelGrid::triTable[256][16] = {
 	{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}
 };
 
+bool VoxelGrid::isFirst(unsigned int x, unsigned int y, unsigned int z, glm::ivec3 n) {
+  int i = 1;
+  glm::ivec3 pos = glm::ivec3(x, y, z) + (n * i);
+
+  while (!this->isOutOfGrid(pos.x, pos.y, pos.z)) {
+    if (this->has(pos.x, pos.y, pos.z)) {
+      return false;
+    }
+
+    i++;
+    pos += (n * i);
+  }
+
+  return true;
+};
 
 bool VoxelGrid::isOutOfGrid(unsigned int x, unsigned int y, unsigned int z) {
   int dx = (int) x;
@@ -532,65 +547,70 @@ std::vector<VoxelFaceTriangle> VoxelGrid::getTopVertices(unsigned int x, unsigne
    * Determine the index into the edge table which
    * tells us which vertices are inside of the surface
    */
-   unsigned int cubeindex = 0;
-   if (this->hasNeighbor(x, y, z, 0)) cubeindex |= 1;
-   if (this->hasNeighbor(x, y, z, 1)) cubeindex |= 2;
-   if (this->hasNeighbor(x, y, z, 2)) cubeindex |= 4;
-   if (this->hasNeighbor(x, y, z, 3)) cubeindex |= 8;
-   if (this->hasNeighbor(x, y, z, 4)) cubeindex |= 16;
-   if (this->hasNeighbor(x, y, z, 5)) cubeindex |= 32;
-   if (this->hasNeighbor(x, y, z, 6)) cubeindex |= 64;
-   if (this->hasNeighbor(x, y, z, 7)) cubeindex |= 128;
+  unsigned int cubeindex = 0;
+  if (this->hasNeighbor(x, y, z, 0)) cubeindex |= 1;
+  if (this->hasNeighbor(x, y, z, 1)) cubeindex |= 2;
+  if (this->hasNeighbor(x, y, z, 2)) cubeindex |= 4;
+  if (this->hasNeighbor(x, y, z, 3)) cubeindex |= 8;
+  if (this->hasNeighbor(x, y, z, 4)) cubeindex |= 16;
+  if (this->hasNeighbor(x, y, z, 5)) cubeindex |= 32;
+  if (this->hasNeighbor(x, y, z, 6)) cubeindex |= 64;
+  if (this->hasNeighbor(x, y, z, 7)) cubeindex |= 128;
 
-   /* Cube is entirely in/out of the surface */
-   if (this->edgeTable[cubeindex] == 0) {
-     return result;
-   }
+  /* Cube is entirely in/out of the surface */
+  if (this->edgeTable[cubeindex] == 0) {
+    return result;
+  }
+  
+  // Do not need bottom 
+  // if (this->isFirst(x, y, z, glm::ivec3(0, -1, 0))) {
+  //   return result;
+  // }
 
-   glm::vec3 vertices[12];
-   VoxelPtr voxel = this->get(x, y, z);
+  glm::vec3 vertices[12];
+  VoxelPtr voxel = this->get(x, y, z);
 
-   /* Find the vertices where the surface intersects the cube */
-   if (this->edgeTable[cubeindex] & 1) {
-      vertices[0] = this->intLinear(voxel->voxelVertices[0], voxel->voxelVertices[1], this->getIntValue(x, y, z, 0), this->getIntValue(x, y, z, 1));
-   }
-   if (this->edgeTable[cubeindex] & 2) {
-      vertices[1] = this->intLinear(voxel->voxelVertices[1], voxel->voxelVertices[2], this->getIntValue(x, y, z, 1), this->getIntValue(x, y, z, 2));
-   }
-   if (this->edgeTable[cubeindex] & 4) {
-      vertices[2] = this->intLinear(voxel->voxelVertices[2], voxel->voxelVertices[3], this->getIntValue(x, y, z, 2), this->getIntValue(x, y, z, 3));
-   }
-   if (this->edgeTable[cubeindex] & 8) {
-      vertices[3] = this->intLinear(voxel->voxelVertices[3], voxel->voxelVertices[0], this->getIntValue(x, y, z, 3), this->getIntValue(x, y, z, 0));
-   }
-   if (this->edgeTable[cubeindex] & 16) {
-      vertices[4] = this->intLinear(voxel->voxelVertices[4], voxel->voxelVertices[5], this->getIntValue(x, y, z, 4), this->getIntValue(x, y, z, 5));
-   }
-   if (this->edgeTable[cubeindex] & 32) {
-      vertices[5] = this->intLinear(voxel->voxelVertices[5], voxel->voxelVertices[6], this->getIntValue(x, y, z, 5), this->getIntValue(x, y, z, 6));
-   }
-   if (this->edgeTable[cubeindex] & 64) {
-      vertices[6] = this->intLinear(voxel->voxelVertices[6], voxel->voxelVertices[7], this->getIntValue(x, y, z, 6), this->getIntValue(x, y, z, 7));
-   }
-   if (this->edgeTable[cubeindex] & 128) {
-      vertices[7] = this->intLinear(voxel->voxelVertices[7], voxel->voxelVertices[4], this->getIntValue(x, y, z, 7), this->getIntValue(x, y, z, 4));
-   }
-   if (this->edgeTable[cubeindex] & 256) {
-      vertices[8] = this->intLinear(voxel->voxelVertices[0], voxel->voxelVertices[4], this->getIntValue(x, y, z, 0), this->getIntValue(x, y, z, 4));
-   }
-   if (this->edgeTable[cubeindex] & 512) {
-      vertices[9] = this->intLinear(voxel->voxelVertices[1], voxel->voxelVertices[5], this->getIntValue(x, y, z, 1), this->getIntValue(x, y, z, 5));
-   }
-   if (this->edgeTable[cubeindex] & 1024) {
-      vertices[10] = this->intLinear(voxel->voxelVertices[2], voxel->voxelVertices[6], this->getIntValue(x, y, z, 2), this->getIntValue(x, y, z, 6));
-   }
-   if (this->edgeTable[cubeindex] & 2048) {
-      vertices[11] = this->intLinear(voxel->voxelVertices[3], voxel->voxelVertices[7], this->getIntValue(x, y, z, 3), this->getIntValue(x, y, z, 7));
-   }
+  /* Find the vertices where the surface intersects the cube */
+  if (this->edgeTable[cubeindex] & 1) {
+    vertices[0] = this->intLinear(voxel->voxelVertices[0], voxel->voxelVertices[1], this->getIntValue(x, y, z, 0), this->getIntValue(x, y, z, 1));
+  }
+  if (this->edgeTable[cubeindex] & 2) {
+    vertices[1] = this->intLinear(voxel->voxelVertices[1], voxel->voxelVertices[2], this->getIntValue(x, y, z, 1), this->getIntValue(x, y, z, 2));
+  }
+  if (this->edgeTable[cubeindex] & 4) {
+    vertices[2] = this->intLinear(voxel->voxelVertices[2], voxel->voxelVertices[3], this->getIntValue(x, y, z, 2), this->getIntValue(x, y, z, 3));
+  }
+  if (this->edgeTable[cubeindex] & 8) {
+    vertices[3] = this->intLinear(voxel->voxelVertices[3], voxel->voxelVertices[0], this->getIntValue(x, y, z, 3), this->getIntValue(x, y, z, 0));
+  }
+  if (this->edgeTable[cubeindex] & 16) {
+    vertices[4] = this->intLinear(voxel->voxelVertices[4], voxel->voxelVertices[5], this->getIntValue(x, y, z, 4), this->getIntValue(x, y, z, 5));
+  }
+  if (this->edgeTable[cubeindex] & 32) {
+    vertices[5] = this->intLinear(voxel->voxelVertices[5], voxel->voxelVertices[6], this->getIntValue(x, y, z, 5), this->getIntValue(x, y, z, 6));
+  }
+  if (this->edgeTable[cubeindex] & 64) {
+    vertices[6] = this->intLinear(voxel->voxelVertices[6], voxel->voxelVertices[7], this->getIntValue(x, y, z, 6), this->getIntValue(x, y, z, 7));
+  }
+  if (this->edgeTable[cubeindex] & 128) {
+    vertices[7] = this->intLinear(voxel->voxelVertices[7], voxel->voxelVertices[4], this->getIntValue(x, y, z, 7), this->getIntValue(x, y, z, 4));
+  }
+  if (this->edgeTable[cubeindex] & 256) {
+    vertices[8] = this->intLinear(voxel->voxelVertices[0], voxel->voxelVertices[4], this->getIntValue(x, y, z, 0), this->getIntValue(x, y, z, 4));
+  }
+  if (this->edgeTable[cubeindex] & 512) {
+    vertices[9] = this->intLinear(voxel->voxelVertices[1], voxel->voxelVertices[5], this->getIntValue(x, y, z, 1), this->getIntValue(x, y, z, 5));
+  }
+  if (this->edgeTable[cubeindex] & 1024) {
+    vertices[10] = this->intLinear(voxel->voxelVertices[2], voxel->voxelVertices[6], this->getIntValue(x, y, z, 2), this->getIntValue(x, y, z, 6));
+  }
+  if (this->edgeTable[cubeindex] & 2048) {
+    vertices[11] = this->intLinear(voxel->voxelVertices[3], voxel->voxelVertices[7], this->getIntValue(x, y, z, 3), this->getIntValue(x, y, z, 7));
+  }
 
-   /* Create the triangle */
+  /* Create the triangle */
   //  unsigned int ntriang = 0;
-   for (unsigned int i = 0; triTable[cubeindex][i] != -1; i += 3) {
+  for (unsigned int i = 0; triTable[cubeindex][i] != -1; i += 3) {
     VoxelFaceTriangle triangle;
 
     glm::vec3 a = vertices[this->triTable[cubeindex][i    ]];
@@ -607,6 +627,7 @@ std::vector<VoxelFaceTriangle> VoxelGrid::getTopVertices(unsigned int x, unsigne
     triangle.b.normal = triangle.normal;
     triangle.c.normal = triangle.normal;
 
+    voxel->resultTriangles.push_back(triangle);
     result.push_back(triangle);
    }
 
@@ -757,24 +778,27 @@ void VoxelGrid::rasterize(GroupObject &src, GroupObject &dest) {
     mesh->hasNormals = target->hasNormals;
     mesh->hasUVs = target->hasUVs;
 
-    for (unsigned int x = 0; x < (unsigned int) this->gridResolution.x; x++) {
-      for (unsigned int y = 0; y < (unsigned int) this->gridResolution.y; y++) {
-        for (unsigned int z = 0; z < (unsigned int) this->gridResolution.z; z++) {
-          float faces = this->get(x, y, z)->faces.size();
-          this->facesBox.x = std::min(faces, this->facesBox.x);
-          this->facesBox.y = std::max(faces, this->facesBox.y);
-        }
-      }
-    }
+    // for (unsigned int x = 0; x < (unsigned int) this->gridResolution.x; x++) {
+    //   for (unsigned int y = 0; y < (unsigned int) this->gridResolution.y; y++) {
+    //     for (unsigned int z = 0; z < (unsigned int) this->gridResolution.z; z++) {
+    //       float faces = this->get(x, y, z)->faces.size();
+    //       this->facesBox.x = std::min(faces, this->facesBox.x);
+    //       this->facesBox.y = std::max(faces, this->facesBox.y);
+    //     }
+    //   }
+    // }
 
     // std::cout << "Rasterize" << std::endl;
     for (unsigned int x = 0; x < (unsigned int) this->gridResolution.x; x++) {
       for (unsigned int y = 0; y < (unsigned int) this->gridResolution.y; y++) {
         for (unsigned int z = 0; z < (unsigned int) this->gridResolution.z; z++) {
-          this->createVoxel(mesh, x, y, z); // if (this->has(x, y, z)) 
+          // this->createVoxel(mesh, x, y, z); // if (this->has(x, y, z))
+          this->getTopVertices(x, y, z);
         }
       }
     }
+
+    this->build(mesh);
 
     // std::cout << "Finish mesh" << std::endl;
 
@@ -784,6 +808,121 @@ void VoxelGrid::rasterize(GroupObject &src, GroupObject &dest) {
 
     this->clear();
   });
+};
+
+void VoxelGrid::build(VoxelFaceTriangle &triangle, VoxelFaceVertex &vertex, std::vector<LinkedPosition> &list, unsigned int x, unsigned int y, unsigned int z) {
+  VoxelFaceVertex resultVertex;
+  resultVertex.position = vertex.position;
+  resultVertex.normal = vertex.normal;
+
+  LinkedPosition linked;
+  linked.linkedTriangles.push_back(triangle);
+  linked.vertex = resultVertex;
+
+  int index = list.size();
+  resultVertex.index = index;
+  vertex.index = index;
+
+  // Look for the same vertex in adjacent cells
+  for (int i = -1; i <= 1; i++) {
+    for (int k = -1; k <= 1; k++) {
+      for (int m = -1; m <= 1; m++) {
+        if (this->has(x + i, y + k, z + m)) {
+          VoxelPtr voxel = this->get(x + i, y + k, z + m);
+
+          // Go for each triangle in target
+          for (VoxelFaceTriangle &vTriangle : voxel->resultTriangles) {// Access by ref to modify origin
+            // Go for each position and compare
+            bool exists = false;
+
+            if (vTriangle.a.index == -1) {// Not calculated vertex A
+              if (resultVertex.position.equals(vTriangle.a.position)) {
+                vTriangle.a.index = index;
+                exists = true;
+              }
+            }
+            
+            if (vTriangle.b.index == -1) {// Not calculated vertex B
+              if (resultVertex.position.equals(vTriangle.b.position)) {
+                vTriangle.b.index = index;
+                exists = true;
+              }
+            }
+
+            if (vTriangle.c.index == -1) {// Not calculated vertex C
+              if (resultVertex.position.equals(vTriangle.c.position)) {
+                vTriangle.c.index = index;
+                exists = true;
+              }
+            }
+
+            if (exists) {
+              linked.linkedTriangles.push_back(vTriangle);
+            }
+          }
+
+        }
+      }
+    }
+  }
+
+  list.push_back(linked);
+};
+
+void VoxelGrid::build(MeshObject &mesh) {
+  std::vector<LinkedPosition> linkedList;
+  std::vector<VoxelFaceTriangle> triangles;
+
+  for (unsigned int x = 0; x < (unsigned int) this->gridResolution.x; x++) {
+    for (unsigned int y = 0; y < (unsigned int) this->gridResolution.y; y++) {
+      for (unsigned int z = 0; z < (unsigned int) this->gridResolution.z; z++) {
+        VoxelPtr target = this->get(x, y, z);
+        // Go for each triangle in target
+        for (VoxelFaceTriangle &triangle : target->resultTriangles) {// Access by ref to modify origin
+          // Go for each position, build and save into linked list
+          if (triangle.a.index == -1) {// Not calculated
+            this->build(triangle, triangle.a, linkedList, x, y, z);
+          }
+          
+          if (triangle.b.index == -1) {// Not calculated
+            this->build(triangle, triangle.b, linkedList, x, y, z);
+          }
+
+          if (triangle.c.index == -1) {// Not calculated
+            this->build(triangle, triangle.c, linkedList, x, y, z);
+          }
+
+          triangles.push_back(triangle);
+        }
+      }
+    }
+  }
+
+  for (LinkedPosition &linked : linkedList) {
+    mesh->position.push_back(linked.vertex.position);
+    mesh->normal.push_back(linked.vertex.normal);
+    // mesh->uv.push_back(linked.vertex.uv);
+  }
+
+  for (VoxelFaceTriangle &triangle : triangles) {
+    Face face;
+
+    face.positionIndices[0] = (unsigned int) triangle.a.index;
+    face.positionIndices[1] = (unsigned int) triangle.b.index;
+    face.positionIndices[2] = (unsigned int) triangle.c.index;
+
+    face.normalIndices[0] = face.positionIndices[0];
+    face.normalIndices[1] = face.positionIndices[1];
+    face.normalIndices[2] = face.positionIndices[2];
+
+    face.uvIndices[0] = face.positionIndices[0];
+    face.uvIndices[1] = face.positionIndices[1];
+    face.uvIndices[2] = face.positionIndices[2];
+
+    mesh->faces.push_back(face);
+  }
+
+  mesh->finish();
 };
 
 void VoxelGrid::createVoxel(MeshObject &mesh, unsigned int x, unsigned int y, unsigned int z) {
@@ -798,98 +937,6 @@ void VoxelGrid::createVoxel(MeshObject &mesh, unsigned int x, unsigned int y, un
       triangle.c.uv
     );
   }
-  // glm::vec3 w = this->gridToVec(x, y, z);
-
-  // glm::vec3 p0(w.x,                 w.y + this->units.y, w.z);
-  // glm::vec3 p1(w.x + this->units.x, w.y + this->units.y, w.z);
-  // glm::vec3 p2(w.x + this->units.x, w.y + this->units.y, w.z + this->units.z);
-  // glm::vec3 p3(w.x,                 w.y + this->units.y, w.z + this->units.z);
-
-  // Vector3f a = {p0.x, p0.y, p0.z};// 00
-  // Vector3f b = {p1.x, p1.y, p1.z};// 10
-  // Vector3f c = {p2.x, p2.y, p2.z};// 11
-  // Vector3f d = {p3.x, p3.y, p3.z};// 01
-
-  // Vector3f n1 = {0.0f, 1.0f, 0.0f};
-  // Vector3f n2 = {0.0f, 1.0f, 0.0f};
-
-  // Vector2f t1 = {0.0f, 0.0f};
-  // Vector2f t2 = {1.0f, 0.0f};
-  // Vector2f t3 = {1.0f, 1.0f};
-  // Vector2f t4 = {0.0f, 1.0f};
-
-
-  // float p0d = 0.0f;
-  // float p1d = 0.0f;
-  // float p2d = 0.0f;
-  // float p3d = 0.0f;
-
-  // glm::vec3 v0(p0.x, p0.y - this->units.y * 1.0, p0.z);
-  // glm::vec3 v1(p1.x, p1.y - this->units.y * 1.0, p1.z);
-  // glm::vec3 v2(p2.x, p2.y - this->units.y * 1.0, p2.z);
-  // glm::vec3 v3(p3.x, p3.y - this->units.y * 1.0, p3.z);
-
-
-  // Vector3f direction = {0.0f, 1.0f, 0.0f};
-
-
-  // VoxelPtr voxel = this->get(x, y, z);
-
-  // Vector3f f0 = voxel->faces[0]->vertices[0].position;
-  // Vector3f f1 = voxel->faces[0]->vertices[1].position;
-  // Vector3f f2 = voxel->faces[0]->vertices[2].position;
-
-  // std::cout << "Voxel range x: " << a.x << " - " << b.x << ", z: " << a.z << " - " << d.z << ", y: " << a.y << std::endl;
-  // std::cout << "First triangle: " 
-  // << "{" << f0.x << "," << f0.y << "," << f0.z << "}"
-  // << "{" << f1.x << "," << f1.y << "," << f1.z << "}" 
-  // << "{" << f2.x << "," << f2.y << "," << f2.z << "}" << std::endl;
-  // std::cout << "Faces: " << voxel->faces.size() << std::endl;
-  /*
-  for (VoxelFacePtr &voxelFacePtr : voxel->faces) {
-    p0d = std::max(
-      p0d,
-      math::triangleIntersection(v0, direction.toGLM(), voxelFacePtr->vertices[0].position.toGLM(), voxelFacePtr->vertices[1].position.toGLM(), voxelFacePtr->vertices[2].position.toGLM())
-    );
-
-    p1d = std::max(
-      p1d,
-      math::triangleIntersection(v1, direction.toGLM(), voxelFacePtr->vertices[0].position.toGLM(), voxelFacePtr->vertices[1].position.toGLM(), voxelFacePtr->vertices[2].position.toGLM())
-    );
-
-    p2d = std::max(
-      p2d,
-      math::triangleIntersection(v2, direction.toGLM(), voxelFacePtr->vertices[0].position.toGLM(), voxelFacePtr->vertices[1].position.toGLM(), voxelFacePtr->vertices[2].position.toGLM())
-    );
-
-    p3d = std::max(
-      p3d,
-      math::triangleIntersection(v3, direction.toGLM(), voxelFacePtr->vertices[0].position.toGLM(), voxelFacePtr->vertices[1].position.toGLM(), voxelFacePtr->vertices[2].position.toGLM())
-    );
-  }
-
-  if (p0d != 0.0f) {
-    a.y = v0.y + p0d;
-  }
-
-  if (p1d != 0.0f) {
-    b.y = v1.y + p0d;
-  }
-
-  if (p2d != 0.0f) {  
-    c.y = v2.y + p0d;
-  }
-
-  if (p3d != 0.0f) {
-    d.y = v3.y + p0d;
-  }
-  */
-  // a.y += direction.y * p0d;
-  // b.y += direction.y * p1d;
-  // c.y += direction.y * p2d;
-  // d.y += direction.y * p3d;
-
-  
 };
 
 void VoxelGrid::init() {
@@ -1202,7 +1249,11 @@ bool VoxelsSplitter::split(GroupObject target, IdGenerator::ID parentId, unsigne
     nextParent = this->IDGen.id;
 
     GroupObject voxelized = this->decimate(target);
+    // GroupObject simplified = simplifier::modify(voxelized, 500.0f);
+    // simplified->name = "Lod";
+
     voxelized->name = "Lod";
+
     this->onSave(voxelized, nextParent, parentId, decimationLevel);
 
     // voxelized->free();

@@ -26,6 +26,7 @@ struct VoxelFaceVertex {
   Vector3f position;
   Vector3f normal;
   Vector2f uv;
+  int index = -1;// Assume that we have a constant grid with less than (MAX_INT / 36) cells count
 };
 
 struct VoxelFaceTriangle {
@@ -35,9 +36,14 @@ struct VoxelFaceTriangle {
   Vector3f normal;
 };
 
-struct VoxelFaceQuad {
+struct VoxelFaceQuad { 
   VoxelFaceTriangle t1;
   VoxelFaceTriangle t2;
+};
+
+struct LinkedPosition {
+  VoxelFaceVertex vertex;
+  std::vector<VoxelFaceTriangle> linkedTriangles;
 };
 
 struct VoxelFace {
@@ -57,6 +63,8 @@ struct VoxelBox {
 class Voxel {
   public:
     std::vector<VoxelFacePtr> faces;
+
+    std::vector<VoxelFaceTriangle> resultTriangles;
 
     glm::vec3 voxelVertices[8];
 
@@ -96,11 +104,16 @@ class VoxelGrid {
     void rasterize(GroupObject &src, GroupObject &dest);
     void voxelize(MeshObject &mesh);
     void createVoxel(MeshObject &mesh, unsigned int x, unsigned int y, unsigned int z);
+    void build(MeshObject &mesh);
+    void build(VoxelFaceTriangle &triangle, VoxelFaceVertex &vertex, std::vector<LinkedPosition> &list, unsigned int x, unsigned int y, unsigned int z);
+
     glm::ivec3 vecToGrid(float x, float y, float z);
     glm::vec3 gridToVec(unsigned int x, unsigned int y, unsigned int z);
 
     float getIntValue(unsigned int x, unsigned int y, unsigned int z);
     float getIntValue(unsigned int x, unsigned int y, unsigned int z, unsigned int index);
+
+    bool isFirst(unsigned int x, unsigned int y, unsigned int z, glm::ivec3 n);
 
     bool isOutOfGrid(unsigned int x, unsigned int y, unsigned int z);
     bool hasNeighbor(unsigned int x, unsigned int y, unsigned int z, unsigned int index);

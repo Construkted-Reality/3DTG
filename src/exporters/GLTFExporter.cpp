@@ -190,44 +190,6 @@ void GLTFExporter::save(std::string directory, std::string fileName, GroupObject
     // DATA BUFFERS END
 
 
-    // INDEX BUFFERS
-    // std::cout << "Generating index buffers" << std::endl;
-
-    
-    /*
-    if (positionIndexBuffer.size()) {
-      GLTF::Accessor *accessor = new GLTF::Accessor(
-        GLTF::Accessor::Type::SCALAR, GLTF::Constants::WebGL::UNSIGNED_INT,
-        (unsigned char*)&positionIndexBuffer[0], positionIndexBuffer.size(),
-        GLTF::Constants::WebGL::ELEMENT_ARRAY_BUFFER
-      );
-
-      accessors[GLTF_BUFFER::INDEX_POSITION_BUFFER] = accessor;
-    }
-
-    if (normalIndexBuffer.size()) {
-      GLTF::Accessor *accessor = new GLTF::Accessor(
-        GLTF::Accessor::Type::SCALAR, GLTF::Constants::WebGL::UNSIGNED_INT,
-        (unsigned char*)&normalIndexBuffer[0], normalIndexBuffer.size(),
-        GLTF::Constants::WebGL::ELEMENT_ARRAY_BUFFER
-      );
-
-      accessors[GLTF_BUFFER::INDEX_NORMAL_BUFFER] = accessor;
-    }
-
-    if (uvIndexBuffer.size()) {
-      GLTF::Accessor *accessor = new GLTF::Accessor(
-        GLTF::Accessor::Type::SCALAR, GLTF::Constants::WebGL::UNSIGNED_INT,
-        (unsigned char*)&uvIndexBuffer[0], uvIndexBuffer.size(),
-        GLTF::Constants::WebGL::ELEMENT_ARRAY_BUFFER
-      );
-
-      accessors[GLTF_BUFFER::INDEX_UV_BUFFER] = accessor;
-    }
-    */
-
-    // INDEX BUFFERS END
-
     // MATERIAL START
     GLTF::MaterialCommon *material = new GLTF::MaterialCommon();
     material->type = GLTF::Material::Type::MATERIAL_COMMON;
@@ -237,7 +199,7 @@ void GLTFExporter::save(std::string directory, std::string fileName, GroupObject
     GLTF::Material::Values *values = new GLTF::Material::Values();
 
     if (targetMesh->material.diffuseMapImage.data == NULL) {
-      float diffuse[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+      float* diffuse = new float[4]{1.0f, 1.0f, 1.0f, 1.0f};
       values->diffuse = diffuse;
     } else {
       GLTFExporter::ImageData ii;
@@ -261,7 +223,7 @@ void GLTFExporter::save(std::string directory, std::string fileName, GroupObject
       // std::cout << "Image generating finished, size: " << ii.size << std::endl;
 
       if (!writeSuccess) {
-        float diffuse[4] = {0.0f, 0.5f, 1.0f, 1.0f};
+        float* diffuse = new float[4]{1.0f, 1.0f, 1.0f, 1.0f};
         values->diffuse = diffuse;
       } else {
 

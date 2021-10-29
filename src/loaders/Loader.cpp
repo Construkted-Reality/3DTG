@@ -503,6 +503,10 @@ float Vector3f::distanceTo(Vector3f vector) {
   return sqrt((dx*dx) + (dy*dy) + (dz*dz));
 };
 
+bool Vector3f::equals(Vector3f vector) {
+  return this->distanceTo(vector) < 0.0001f;
+};
+
 void Vector3f::divideScalar(float value) {
   this->x /= value;
   this->y /= value;

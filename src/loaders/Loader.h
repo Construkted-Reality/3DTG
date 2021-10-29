@@ -34,6 +34,7 @@ struct Vector3f {
   float dot(Vector3f vector);
   float length();
   float distanceTo(Vector3f vector);
+  bool equals(Vector3f vector);
   void normalize();
   void divideScalar(float value);
   void multiplyScalar(float value);
