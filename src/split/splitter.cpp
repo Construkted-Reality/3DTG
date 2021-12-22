@@ -47,7 +47,7 @@ void splitter::initBVH(GroupObject &group, int level = 0, int maxLevel = 8, bool
       std::to_string(group->boundingBox.min.x) + std::string(",") + std::to_string(group->boundingBox.min.y) +
       std::string("_") +
       std::to_string(group->boundingBox.max.x) + std::string(",") + std::to_string(group->boundingBox.max.y);
-    mesh->material.name = mesh->name;
+    mesh->material->name = mesh->name;
     group->meshes.push_back(mesh);
   } else {// No BVH
     GroupObject selfGroup = GroupObject(new Group());
@@ -61,12 +61,41 @@ void splitter::initBVH(GroupObject &group, int level = 0, int maxLevel = 8, bool
       std::to_string(group->boundingBox.min.x) + std::string(",") + std::to_string(group->boundingBox.min.y) +
       std::string("_") +
       std::to_string(group->boundingBox.max.x) + std::string(",") + std::to_string(group->boundingBox.max.y);
-    mesh->material.name = mesh->name;
+    mesh->material->name = mesh->name;
 
 
     selfGroup->meshes.push_back(mesh);
     group->children.push_back(selfGroup);
   }
+};
+
+void splitter::textureLOD(GroupObject &baseObject, int level = 0) {
+  baseObject->traverse([&](MeshObject mesh){
+    if (mesh->material->name != "") {
+      if (level > 0) {
+        MaterialObject nextMaterial = mesh->material->clone(true);
+        Image diffuse;
+
+        diffuse.channels = mesh->material->diffuseMapImage.channels;
+
+        int textureWidth = mesh->material->diffuseMapImage.width;
+        int textureHeight = mesh->material->diffuseMapImage.height;
+        
+        int simplifiedTextureWidth = std::max(textureWidth / (level * 2), 1);
+        int simplifiedTextureHeight = std::max(textureHeight / (level * 2), 1);
+
+        diffuse.data = new unsigned char[simplifiedTextureWidth * simplifiedTextureHeight * 3];
+        diffuse.width = simplifiedTextureWidth;
+        diffuse.height = simplifiedTextureHeight;
+
+        stbir_resize_uint8( mesh->material->diffuseMapImage.data, textureWidth, textureHeight, 0, diffuse.data, simplifiedTextureWidth, simplifiedTextureHeight, 0, 3);
+        // delete [] data;
+
+        nextMaterial->diffuseMapImage = diffuse;
+        mesh->material = nextMaterial;
+      }
+    }
+  });
 };
 
 GroupObject splitter::splitUV(GroupObject baseObject, int level = 0) {
@@ -81,25 +110,26 @@ GroupObject splitter::splitUV(GroupObject baseObject, int level = 0) {
 
   bool ix, iy, iz;
 
-  std::cout << "UV split has been started" << std::endl;
+  // std::cout << "UV split has been started" << std::endl;
 
   baseObject->traverse([&](MeshObject mesh){
     // std::cout << "Mesh material name: " << mesh->material.name << std::endl;
-    if (mesh->material.name != "") {
+    if (mesh->material->name != "") {
       GroupObject group;
 
       // Create group if doesn't exist
-      if (meshMaterialMap.find(mesh->material.name) == meshMaterialMap.end()) {
+      if (meshMaterialMap.find(mesh->material->name) == meshMaterialMap.end()) {
         group = GroupObject(new Group());
         group->meshes.push_back(MeshObject(new Mesh()));
 
-        group->meshes[0]->material = mesh->material;
-        group->meshes[0]->material.diffuseMapImage = mesh->material.diffuseMapImage;
+        // std::cout << "Cloning a material" << std::endl;
+        group->meshes[0]->material = mesh->material;//->clone(true);
+        //group->meshes[0]->material.diffuseMapImage = mesh->material.diffuseMapImage;
 
         group->boundingBox.min.set(0.0f, 0.0f, 0.0f);
         group->boundingBox.max.set(1.0f, 1.0f, 0.0f);
 
-        meshMaterialMap[mesh->material.name] = group;
+        meshMaterialMap[mesh->material->name] = group;
         //materialMap[mesh->material.name] = mesh->material;
 
         // Init full BVH tree with 3 inherite subtrees
@@ -107,7 +137,7 @@ GroupObject splitter::splitUV(GroupObject baseObject, int level = 0) {
         splitter::initBVH( group, 0, 8);//(int) (8 - std::floor(level / 4))
         // std::cout << "BVH generation has been finished" << std::endl;
       } else {
-        group = meshMaterialMap[mesh->material.name];
+        group = meshMaterialMap[mesh->material->name];
       }
 
       group->meshes[0]->position.insert(
@@ -161,6 +191,7 @@ GroupObject splitter::splitUV(GroupObject baseObject, int level = 0) {
   resultGroup->name = baseObject->name;
 
   // std::cout << "Texture split has been staretd" << std::endl;
+  // std::cout << "Splitting" << std::endl;
 
   int meshIndex = 0;
   for (std::map<std::string, GroupObject>::iterator it = meshMaterialMap.begin(); it != meshMaterialMap.end(); ++it) {
@@ -177,9 +208,11 @@ GroupObject splitter::splitUV(GroupObject baseObject, int level = 0) {
       mesh->remesh(it->second->meshes[0]->position, it->second->meshes[0]->normal, it->second->meshes[0]->uv);
 
       // std::cout << "Material info assign" << std::endl;
-      mesh->material = it->second->meshes[0]->material;
-      mesh->material.name += std::to_string(meshIndex);
-      mesh->material.diffuseMap = mesh->material.name + ".jpg";
+      // std::cout << "Defining a material name" << std::endl;
+      mesh->material = it->second->meshes[0]->material;//->clone(false);
+      std::string nextName = mesh->material->name + std::to_string(meshIndex);
+      // mesh->material->name += std::to_string(meshIndex);
+      // mesh->material->diffuseMap = mesh->material->name + ".jpg";
       //mesh->material.diffuseMapImage = it->second->meshes[0]->material.diffuseMapImage;
 
       // std::cout << "Info assigning has been finished" << std::endl;
@@ -201,19 +234,19 @@ GroupObject splitter::splitUV(GroupObject baseObject, int level = 0) {
 
         //Material meshMaterial = materialMap[it->first];
 
-        minX = floor(uvBox.min.x * it->second->meshes[0]->material.diffuseMapImage.width);
-        minY = floor(uvBox.min.y * it->second->meshes[0]->material.diffuseMapImage.height);
-        maxX = ceil(uvBox.max.x * it->second->meshes[0]->material.diffuseMapImage.width);
-        maxY = ceil(uvBox.max.y * it->second->meshes[0]->material.diffuseMapImage.height);
+        minX = floor(uvBox.min.x * it->second->meshes[0]->material->diffuseMapImage.width);
+        minY = floor(uvBox.min.y * it->second->meshes[0]->material->diffuseMapImage.height);
+        maxX = ceil(uvBox.max.x * it->second->meshes[0]->material->diffuseMapImage.width);
+        maxY = ceil(uvBox.max.y * it->second->meshes[0]->material->diffuseMapImage.height);
 
         //std::cout << "Calculated Box min x/y: " << minX << "/" << minY << " max x/y: " << maxX << "/" << maxY << std::endl;
         //std::cout << "Real Box min x/y: " << uvBox.min.x << "/" << uvBox.min.y << " max x/y: " << uvBox.max.x << "/" << uvBox.max.y << std::endl;
 
-        float offsetX1 = (float) minX / (float) it->second->meshes[0]->material.diffuseMapImage.width;
-        float offsetX2 = (float) maxX / (float) it->second->meshes[0]->material.diffuseMapImage.width;
+        float offsetX1 = (float) minX / (float) it->second->meshes[0]->material->diffuseMapImage.width;
+        float offsetX2 = (float) maxX / (float) it->second->meshes[0]->material->diffuseMapImage.width;
 
-        float offsetY1 = (float) minY / (float) it->second->meshes[0]->material.diffuseMapImage.height;
-        float offsetY2 = (float) maxY / (float) it->second->meshes[0]->material.diffuseMapImage.height;
+        float offsetY1 = (float) minY / (float) it->second->meshes[0]->material->diffuseMapImage.height;
+        float offsetY2 = (float) maxY / (float) it->second->meshes[0]->material->diffuseMapImage.height;
 
         float UVWidth = offsetX2 - offsetX1;
         float UVHeight = offsetY2 - offsetY1;
@@ -247,16 +280,17 @@ GroupObject splitter::splitUV(GroupObject baseObject, int level = 0) {
         {
           for (int i = 0; i < textureHeight; i++)
           {
-            int originPointer = ((it->second->meshes[0]->material.diffuseMapImage.height - 1 - i - minY) * it->second->meshes[0]->material.diffuseMapImage.width * diffuse.channels) + ((j + minX) * diffuse.channels);
+            int originPointer = ((it->second->meshes[0]->material->diffuseMapImage.height - 1 - i - minY) * it->second->meshes[0]->material->diffuseMapImage.width * diffuse.channels) + ((j + minX) * diffuse.channels);
             int targetPointer = ((textureHeight - 1 - i) * diffuse.width * diffuse.channels) + (j * diffuse.channels);
 
-            data[targetPointer] = it->second->meshes[0]->material.diffuseMapImage.data[originPointer];
-            data[targetPointer + 1] = it->second->meshes[0]->material.diffuseMapImage.data[originPointer + 1];
-            data[targetPointer + 2] = it->second->meshes[0]->material.diffuseMapImage.data[originPointer + 2];
+            data[targetPointer] = it->second->meshes[0]->material->diffuseMapImage.data[originPointer];
+            data[targetPointer + 1] = it->second->meshes[0]->material->diffuseMapImage.data[originPointer + 1];
+            data[targetPointer + 2] = it->second->meshes[0]->material->diffuseMapImage.data[originPointer + 2];
           }
         }
 
         if (level > 0) {
+          // std::cout << "Texture lod generation has been started" << std::endl;
           int simplifiedTextureWidth = std::max(textureWidth / (level * 2), 1);
           int simplifiedTextureHeight = std::max(textureHeight / (level * 2), 1);
 
@@ -266,15 +300,22 @@ GroupObject splitter::splitUV(GroupObject baseObject, int level = 0) {
 
           stbir_resize_uint8( data, textureWidth, textureHeight, 0, diffuse.data, simplifiedTextureWidth, simplifiedTextureHeight, 0, 3);
           delete [] data;
+
+          // std::cout << "Texture lod generation has been finished" << std::endl;
         } else {
+          // std::cout << "No texture lods" << std::endl;
           diffuse.data = data;
         }
 
         // std::cout << "Texture clipping has been finished" << std::endl;
 
-        mesh->material.diffuseMapImage = diffuse;
+        mesh->material = mesh->material->clone(true);
+        mesh->material->name = nextName;
+        mesh->material->diffuseMap = mesh->material->name + ".jpg";
+        mesh->material->diffuseMapImage = diffuse;
       } else {
-        std::cout << "Can not be split" << std::endl;
+        // std::cout << "Can not be split" << std::endl;
+        mesh->material = it->second->meshes[0]->material;
       }
 
       // std::cout << "Mesh \"" << mesh->name << "\" has: " << mesh->faces.size() << " faces, " << mesh->position.size() << " vertices" << std::endl;
@@ -292,7 +333,7 @@ GroupObject splitter::splitUV(GroupObject baseObject, int level = 0) {
   }
 
   // std::cout << "All groups are finished" << std::endl;
-
+  // std::cout << "Cleaning the cached data" << std::endl;
   for (std::map<std::string, GroupObject>::iterator it = meshMaterialMap.begin(); it != meshMaterialMap.end(); ++it) {
     it->second->meshes[0]->free();
     it->second->meshes.clear();
@@ -300,7 +341,7 @@ GroupObject splitter::splitUV(GroupObject baseObject, int level = 0) {
 
   meshMaterialMap.clear();
 
-  std::cout << "UV split has been finished" << std::endl;
+  // std::cout << "UV split has been finished" << std::endl;
 
   return resultGroup;
 };
@@ -788,7 +829,7 @@ void splitter::straightLineZ(MeshObject &mesh, Face &face, bool isLeft, float zV
       if (pos1.z > zValue) aInside = false;
       if (pos2.z > zValue) bInside = false;
       if (pos3.z > zValue) cInside = false;
-    } else {
+    } else {  
       if (pos1.z < zValue) aInside = false;
       if (pos2.z < zValue) bInside = false;
       if (pos3.z < zValue) cInside = false;

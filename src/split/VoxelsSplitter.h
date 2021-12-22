@@ -19,6 +19,9 @@
 #include "./../loaders/Loader.h"
 #include "./../simplify/simplifier.h"
 #include "./../helpers/IdGenerator.h"
+#include "./../helpers/triangleBox.h"
+
+#include "./splitter.h"
 
 typedef std::function<void (GroupObject object, IdGenerator::ID targetId, IdGenerator::ID parentId, unsigned int level)> ResultCallback;
 
@@ -36,7 +39,7 @@ struct VoxelFaceTriangle {
   Vector3f normal;
 };
 
-struct VoxelFaceQuad { 
+struct VoxelFaceQuad {
   VoxelFaceTriangle t1;
   VoxelFaceTriangle t2;
 };
@@ -48,6 +51,7 @@ struct LinkedPosition {
 
 struct VoxelFace {
   VoxelFaceVertex vertices[3];
+  std::string materialName;
 
   bool hasNormals = false;
   bool hasUVs = false;
@@ -71,9 +75,17 @@ class Voxel {
     glm::ivec3 position;
     glm::vec3 units;
 
+    glm::vec3 averageNormal;// Used to delete wrong triangles
+    //void filterTriangles();
+
     Voxel(glm::ivec3 position, glm::vec3 units);
 
+    glm::vec2 getClosestUV(glm::vec3 p);
+
     bool has(VoxelFacePtr &face);
+    bool intersects(glm::vec3 from, glm::vec3 to);
+
+    virtual ~Voxel();
 };
 
 typedef std::shared_ptr<Voxel> VoxelPtr;
@@ -100,12 +112,20 @@ class VoxelGrid {
 
     VoxelPtr get(unsigned int x, unsigned int y, unsigned int z);
     bool has(unsigned int x, unsigned int y, unsigned int z);
+    bool hasTriangles(unsigned int x, unsigned int y, unsigned int z);
+    bool triangleIntersectsCell(glm::vec3 a, glm::vec3 b, glm::vec3 c, glm::ivec3 cell);
+    bool pointInCell(glm::vec3 p, glm::ivec3 cell);
     void set(VoxelPtr &ptr, unsigned int x, unsigned int y, unsigned int z);
     void rasterize(GroupObject &src, GroupObject &dest);
     void voxelize(MeshObject &mesh);
-    void createVoxel(MeshObject &mesh, unsigned int x, unsigned int y, unsigned int z);
-    void build(MeshObject &mesh);
+    void build(MeshObject &mesh, std::map<std::string, MeshObject> &materialMeshMap);
     void build(VoxelFaceTriangle &triangle, VoxelFaceVertex &vertex, std::vector<LinkedPosition> &list, unsigned int x, unsigned int y, unsigned int z);
+
+    bool firstOfX(int cellX, int cellY, int cellZ);
+    bool firstOfZ(int cellX, int cellY, int cellZ);
+
+    bool lastOfX(int cellX, int cellY, int cellZ);
+    bool lastOfZ(int cellX, int cellY, int cellZ);
 
     glm::ivec3 vecToGrid(float x, float y, float z);
     glm::vec3 gridToVec(unsigned int x, unsigned int y, unsigned int z);
@@ -120,18 +140,11 @@ class VoxelGrid {
     VoxelPtr getNeighbor(unsigned int x, unsigned int y, unsigned int z, unsigned int index);
 
     glm::vec3 getVoxelVertex(unsigned int x, unsigned int y, unsigned int z, unsigned int index);
+    glm::vec2 getClosestUV(glm::ivec3 voxelPos, glm::vec3 pos);
 
     glm::vec3 intLinear(glm::vec3 p1, glm::vec3 p2, float valp1, float valp2);
 
-    std::vector<VoxelFaceQuad> getLeftVertices(unsigned int x, unsigned int y, unsigned int z);
-    std::vector<VoxelFaceQuad> getRightVertices(unsigned int x, unsigned int y, unsigned int z);
-    std::vector<VoxelFaceQuad> getFrontVertices(unsigned int x, unsigned int y, unsigned int z);
-    std::vector<VoxelFaceQuad> getBackVertices(unsigned int x, unsigned int y, unsigned int z);
-    std::vector<VoxelFaceQuad> getBottomVertices(unsigned int x, unsigned int y, unsigned int z);
-
-    std::vector<VoxelFaceTriangle> getTopVertices(unsigned int x, unsigned int y, unsigned int z);
-
-    std::vector<VoxelFaceQuad> getTopVerticesOld(unsigned int x, unsigned int y, unsigned int z);
+    std::vector<VoxelFaceTriangle> getVertices(unsigned int x, unsigned int y, unsigned int z);
 
     VoxelFaceQuad getQuad(
       Vector3f a, Vector3f b, Vector3f c, Vector3f d,

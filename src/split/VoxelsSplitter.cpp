@@ -13,12 +13,40 @@ Voxel::Voxel(glm::ivec3 position, glm::vec3 units) {
   this->voxelVertices[5] = glm::vec3(this->position.x + 1, this->position.y,     this->position.z + 1) * this->units;
   this->voxelVertices[6] = glm::vec3(this->position.x + 1, this->position.y + 1, this->position.z + 1) * this->units;
   this->voxelVertices[7] = glm::vec3(this->position.x,     this->position.y + 1, this->position.z + 1) * this->units;
+
+  for (unsigned int i = 0; i < 8; i++) {
+    this->voxelVertices[i] = glm::vec3((float) this->voxelVertices[i].x, (float) this->voxelVertices[i].y, (float) this->voxelVertices[i].z);
+  }
 };
 
 bool Voxel::has(VoxelFacePtr &face) {
   std::vector<VoxelFacePtr>::iterator it = std::find(std::begin(this->faces), std::end(this->faces), face);
 
   return (it != this->faces.end());
+};
+
+Voxel::~Voxel() {
+  this->faces.clear();
+  this->resultTriangles.clear();
+};
+
+glm::vec2 Voxel::getClosestUV(glm::vec3 p) {
+  glm::vec2 result;
+  float dist = 999999.0f;
+
+  for (VoxelFacePtr &facePtr : this->faces) {
+    for (unsigned int i = 0; i < 3; i++) {
+      VoxelFaceVertex &voxelFaceVertex = facePtr->vertices[i];
+
+      float dt = voxelFaceVertex.position.distanceTo(Vector3f::fromGLM(p));
+      if (dt <= dist) {
+        dist = dt;
+        result = voxelFaceVertex.uv.toGLM();
+      }
+    }
+  }
+
+  return result;
 };
 
 
@@ -388,6 +416,37 @@ VoxelPtr VoxelGrid::getNeighbor(unsigned int x, unsigned int y, unsigned int z, 
   return this->get(x, y, z);
 };
 
+glm::vec2 VoxelGrid::getClosestUV(glm::ivec3 voxelPos, glm::vec3 pos) {
+  glm::vec2 result;
+  float dist = 999999.0f;
+
+  int maxStep = 1;
+  int minStep = -maxStep;
+
+  for (int i = minStep; i <= maxStep; i++) {
+    for (int k = minStep; k <= maxStep; k++) {
+      for (int m = minStep; m <= maxStep; m++) {
+        if (this->has(voxelPos.x + i, voxelPos.y + k, voxelPos.z + m)) {
+          VoxelPtr voxel = this->get(voxelPos.x + i, voxelPos.y + k, voxelPos.z + m);
+          for (VoxelFacePtr &facePtr : voxel->faces) {
+            for (unsigned int t = 0; t < 3; t++) {
+              VoxelFaceVertex &voxelFaceVertex = facePtr->vertices[t];
+
+              float dt = voxelFaceVertex.position.distanceTo(Vector3f::fromGLM(pos));
+              if (dt <= dist) {
+                dist = dt;
+                result = voxelFaceVertex.uv.toGLM();
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return result;
+};
+
 glm::vec3 VoxelGrid::getVoxelVertex(unsigned int x, unsigned int y, unsigned int z, unsigned int index) {
   return this->get(x, y, z)->voxelVertices[index];
 };
@@ -409,16 +468,31 @@ glm::vec3 VoxelGrid::intLinear(glm::vec3 p1, glm::vec3 p2, float valp1, float va
 
 
   float mu = valp2 / (valp1 + valp2);
+  // mu = 0.0f;
 
   return glm::vec3(
-    p1.x + mu * (p2.x - p1.x),
-    p1.y + mu * (p2.y - p1.y),
-    p1.z + mu * (p2.z - p1.z)
+    (float) (p1.x + mu * (p2.x - p1.x)),
+    (float) (p1.y + mu * (p2.y - p1.y)),
+    (float) (p1.z + mu * (p2.z - p1.z))
   );
 };
 
 VoxelPtr VoxelGrid::get(unsigned int x, unsigned int y, unsigned int z) {
   return this->data[x][y][z];
+};
+
+bool VoxelGrid::hasTriangles(unsigned int x, unsigned int y, unsigned int z) {
+  if (this->isOutOfGrid(x, y, z)) {
+    return false;
+  }
+
+  VoxelPtr voxel = this->data[x][y][z];
+
+  if (voxel == NULL) {
+    return false;
+  }
+
+  return (voxel->resultTriangles.size() > 0);
 };
 
 bool VoxelGrid::has(unsigned int x, unsigned int y, unsigned int z) {
@@ -461,14 +535,85 @@ glm::vec3 VoxelGrid::gridToVec(unsigned int x, unsigned int y, unsigned int z) {
   );
 };
 
+
+bool VoxelGrid::firstOfX(int cellX, int cellY, int cellZ) {
+  if (cellX == 0) {
+    return true;
+  }
+
+  for (int dx = cellX - 1; dx >= 0; dx--) {
+    if (this->has(dx, cellY, cellZ)) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+bool VoxelGrid::firstOfZ(int cellX, int cellY, int cellZ) {
+  if (cellZ == 0) {
+    return true;
+  }
+
+  for (int dz = cellZ - 1; dz >= 0; dz--) {
+    if (this->has(cellX, cellY, dz)) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+bool VoxelGrid::lastOfX(int cellX, int cellY, int cellZ) {
+  if (cellX == this->gridResolution.x) {
+    return true;
+  }
+
+  for (int dx = cellX + 1; dx <= this->gridResolution.x; dx++) {
+    if (this->has(dx, cellY, cellZ)) {
+      return false;
+    }
+  }
+  
+  return true;
+};
+
+bool VoxelGrid::lastOfZ(int cellX, int cellY, int cellZ) {
+  if (cellZ == this->gridResolution.z) {
+    return true;
+  }
+
+  for (int dz = cellZ + 1; dz <= this->gridResolution.z; dz++) {
+    if (this->has(cellX, cellY, dz)) {
+      return false;
+    }
+  }
+  
+  return true;
+};
+
+
 float VoxelGrid::getIntValue(unsigned int x, unsigned int y, unsigned int z) {
   unsigned int faces = std::min((unsigned int) 32, (unsigned int) this->get(x, y, z)->faces.size());
 
-  return ((float) faces) / 32.0f;
+  return 0.5f;
+
+  // return ((float) faces) / 32.0f;
 };
 
 float VoxelGrid::getIntValue(unsigned int x, unsigned int y, unsigned int z, unsigned int index) {
-  return (float) y / float (this->gridResolution.y);
+  /*
+  if (this->firstOfX(x, y, z) || this->firstOfZ(x, y, z)) {
+    return 1.0;
+  }
+
+  if (this->lastOfX(x, y, z) || this->lastOfZ(x, y, z)) {
+    return 1.0;
+  }
+  */
+  return 0.5f;
+
+  //return (float) y / float (this->gridResolution.y);
   // VoxelPtr n = this->hasNeighbor(x, y, z, index) ? this->getNeighbor(x, y, z, index) : this->getNeighbor(x, y, z, 0);
 
   // unsigned int faces = (unsigned int) n->faces.size();
@@ -516,31 +661,7 @@ VoxelFaceQuad VoxelGrid::getQuad(
   return quad;
 };
 
-std::vector<VoxelFaceQuad> VoxelGrid::getLeftVertices(unsigned int x, unsigned int y, unsigned int z) {
-  std::vector<VoxelFaceQuad> result;
-
-  return result;
-};
-
-std::vector<VoxelFaceQuad> VoxelGrid::getRightVertices(unsigned int x, unsigned int y, unsigned int z) {
-  std::vector<VoxelFaceQuad> result;
-
-  return result;
-};
-
-std::vector<VoxelFaceQuad> VoxelGrid::getFrontVertices(unsigned int x, unsigned int y, unsigned int z) {
-  std::vector<VoxelFaceQuad> result;
-
-  return result;
-};
-
-std::vector<VoxelFaceQuad> VoxelGrid::getBackVertices(unsigned int x, unsigned int y, unsigned int z) {
-  std::vector<VoxelFaceQuad> result;
-
-  return result;
-};
-
-std::vector<VoxelFaceTriangle> VoxelGrid::getTopVertices(unsigned int x, unsigned int y, unsigned int z) {
+std::vector<VoxelFaceTriangle> VoxelGrid::getVertices(unsigned int x, unsigned int y, unsigned int z) {
   std::vector<VoxelFaceTriangle> result;
 
   /*
@@ -568,7 +689,12 @@ std::vector<VoxelFaceTriangle> VoxelGrid::getTopVertices(unsigned int x, unsigne
   // }
 
   glm::vec3 vertices[12];
+  for (int i = 0; i < 12; i++) {
+    vertices[i] = glm::vec3(0.0f);
+  }
+
   VoxelPtr voxel = this->get(x, y, z);
+  glm::ivec3 voxelPos(x, y, z);
 
   /* Find the vertices where the surface intersects the cube */
   if (this->edgeTable[cubeindex] & 1) {
@@ -617,94 +743,114 @@ std::vector<VoxelFaceTriangle> VoxelGrid::getTopVertices(unsigned int x, unsigne
     glm::vec3 b = vertices[this->triTable[cubeindex][i + 1]];
     glm::vec3 c = vertices[this->triTable[cubeindex][i + 2]];
 
-    triangle.a.position = Vector3f::fromGLM(a);
-    triangle.b.position = Vector3f::fromGLM(b);
-    triangle.c.position = Vector3f::fromGLM(c);
+    glm::vec3 n = glm::cross(a - b, c - b);
+    float length = glm::length(n);
 
-    triangle.normal = Vector3f::fromGLM(glm::normalize(glm::cross(c - a, b - a)));
+    if (length == 0.0f && n.x == 0.0f) {
+      // std::cout << "Length is zero " 
+      // << "(" << a.x << ", " << a.y << ", " << a.z << ")"
+      // << "(" << b.x << ", " << b.y << ", " << b.z << ")"
+      // << "(" << c.x << ", " << c.y << ", " << c.z << ")"
+      // << std::endl;
+    }
 
-    triangle.a.normal = triangle.normal;
-    triangle.b.normal = triangle.normal;
-    triangle.c.normal = triangle.normal;
+    if (length == 0.0f) {
+      n = glm::vec3(0.0f, 1.0f, 0.0f);
+    }
 
-    voxel->resultTriangles.push_back(triangle);
-    result.push_back(triangle);
-   }
+    triangle.normal = Vector3f::fromGLM(glm::normalize(n));
+    // triangle.normal.x *= -1.0f;
+    // triangle.normal.y *= -1.0f;
+    // triangle.normal.z *= -1.0f;
+    // Vector3f voxelAvgNormal = Vector3f::fromGLM(voxel->averageNormal);
+
+    // if (isnan(triangle.normal.x)) {
+    //   std::cout << "Is nan (" << triangle.normal.x << ")" << std::endl;
+    // }
+
+    //float angle = voxelAvgNormal.angleTo(triangle.normal);
+
+    //if (true) {// voxelAvgNormal.angleLess90(triangle.normal)
+      triangle.a.position = Vector3f::fromGLM(a);
+      triangle.b.position = Vector3f::fromGLM(b);
+      triangle.c.position = Vector3f::fromGLM(c);
+    
+      triangle.a.normal = triangle.normal;
+      triangle.b.normal = triangle.normal;
+      triangle.c.normal = triangle.normal;
+
+      if (voxel->faces.size() > 0) {
+        // triangle.a.uv = Vector2f::fromGLM(this->getClosestUV(voxelPos, triangle.a.position.toGLM()));
+        // triangle.b.uv = Vector2f::fromGLM(this->getClosestUV(voxelPos, triangle.b.position.toGLM()));
+        // triangle.c.uv = Vector2f::fromGLM(this->getClosestUV(voxelPos, triangle.c.position.toGLM()));
+      }
+
+      voxel->resultTriangles.push_back(triangle);
+      result.push_back(triangle);
+    //}
+  }
 
   return result;
 };
 
-std::vector<VoxelFaceQuad> VoxelGrid::getTopVerticesOld(unsigned int x, unsigned int y, unsigned int z) {
-  std::vector<VoxelFaceQuad> result;
+bool VoxelGrid::pointInCell(glm::vec3 p, glm::ivec3 cell) {
+  // glm::vec3 t = this->gridToVec(cell.x, cell.y, cell.z);//(glm::vec3(cell.x, cell.y, cell.z) * this->units);
 
-  glm::vec3 w = this->gridToVec(x, y, z);
+  // return (p.x >= t.x && p.x <= (t.x + this->units.x)) || (p.y >= t.y && p.y <= (t.y + this->units.y)) || (p.z >= t.z && p.z <= (t.z + this->units.z));
 
-  glm::vec3 t00, t10, t11, t01, r11, r01, f01, l01;
-
-  if (this->has(x, y, z + 1) || this->has(x, y + 1, z + 1)) {
-    // Has back or backY + 1
-    t00 = glm::vec3(w.x,                 w.y + this->units.y, w.z);
-    t01 = glm::vec3(w.x + this->units.x, w.y + this->units.y, w.z);
-  } else {
-    t00 = glm::vec3(w.x,                 w.y + this->units.y, w.z);
-    t01 = glm::vec3(w.x + this->units.x, w.y + this->units.y, w.z);
-  }
-  
-  bool hasRight = this->has(x + 1, y, z);
-  // bool hasLeft = this->has(x - 1, y, z);
-  // bool hasFront = this->has(x, y, z - 1);
-  // bool hasBack = this->has(x, y, z + 1);
-
-  if (!hasRight && this->has(x + 1, y - 1, z) && !this->has(x + 1, y + 1, z)) {
-    // Has bottom right, but not top right
-    glm::vec3 p0(w.x + this->units.x, w.y + this->units.y, w.z);
-    glm::vec3 p1(w.x + this->units.x, w.y + this->units.y, w.z + this->units.z);
-    glm::vec3 p2(w.x + this->units.x, w.y,                 w.z + this->units.z);
-    glm::vec3 p3(w.x + this->units.x, w.y,                 w.z);
-
-    Vector3f a = {p0.x, p0.y, p0.z};// 00
-    Vector3f b = {p1.x, p1.y, p1.z};// 10
-    Vector3f c = {p2.x, p2.y, p2.z};// 11
-    Vector3f d = {p3.x, p3.y, p3.z};// 01
-
-    Vector3f n1 = {1.0f, 0.0f, 0.0f};
-    Vector3f n2 = {1.0f, 0.0f, 0.0f};
-
-    Vector2f t1 = {0.0f, 0.0f};
-    Vector2f t2 = {1.0f, 0.0f};
-    Vector2f t3 = {1.0f, 1.0f};
-    Vector2f t4 = {0.0f, 1.0f};
-
-    result.push_back(this->getQuad(a, b, c, d, n1, n2, t1, t2, t3, t4));
-  }
-
-  glm::vec3 p0(w.x,                 w.y + this->units.y, w.z);
-  glm::vec3 p1(w.x + this->units.x, w.y + this->units.y, w.z);
-  glm::vec3 p2(w.x + this->units.x, w.y + this->units.y, w.z + this->units.z);
-  glm::vec3 p3(w.x,                 w.y + this->units.y, w.z + this->units.z);
-
-  Vector3f a = {p0.x, p0.y, p0.z};// 00
-  Vector3f b = {p1.x, p1.y, p1.z};// 10
-  Vector3f c = {p2.x, p2.y, p2.z};// 11
-  Vector3f d = {p3.x, p3.y, p3.z};// 01
-
-  Vector3f n1 = {0.0f, 1.0f, 0.0f};
-  Vector3f n2 = {0.0f, 1.0f, 0.0f};
-
-  Vector2f t1 = {0.0f, 0.0f};
-  Vector2f t2 = {1.0f, 0.0f};
-  Vector2f t3 = {1.0f, 1.0f};
-  Vector2f t4 = {0.0f, 1.0f};
-
-  result.push_back(this->getQuad(a, b, c, d, n1, n2, t1, t2, t3, t4));
-
-  return result;
+  glm::ivec3 t = this->vecToGrid(p.x, p.y, p.z);
+  return (t.x == cell.x) && (t.y == cell.y) && (t.z == cell.z);
 };
 
-std::vector<VoxelFaceQuad> VoxelGrid::getBottomVertices(unsigned int x, unsigned int y, unsigned int z) {
-  std::vector<VoxelFaceQuad> result;
+bool Voxel::intersects(glm::vec3 from, glm::vec3 to) {
+  return true;
+};
 
-  return result;
+bool VoxelGrid::triangleIntersectsCell(glm::vec3 a, glm::vec3 b, glm::vec3 c, glm::ivec3 cell) {
+  //glm::vec3 cellCenter = (glm::vec3(cell.x, cell.y, cell.z) * this->units) + (this->units * 0.5f);
+  glm::ivec3 xp = this->vecToGrid(a.x, a.y, a.z);
+  glm::ivec3 yp = this->vecToGrid(b.x, b.y, b.z);
+  glm::ivec3 zp = this->vecToGrid(c.x, c.y, c.z);
+
+  glm::ivec3 minValues(999, 999, 999);
+  glm::ivec3 maxValues(0, 0, 0);
+
+  minValues.x = std::min(xp.x, std::min(yp.x, zp.x));
+  minValues.y = std::min(xp.y, std::min(yp.y, zp.y));
+  minValues.z = std::min(xp.z, std::min(yp.z, zp.z));
+
+  maxValues.x = std::max(xp.x, std::max(yp.x, zp.x));
+  maxValues.y = std::max(xp.y, std::max(yp.y, zp.y));
+  maxValues.z = std::max(xp.z, std::max(yp.z, zp.z));
+
+  glm::vec3 boxCenter(0.0f, 0.0f, 0.0f);
+  glm::vec3 halfSize = this->units * 0.5f;
+
+  for (unsigned int dx = minValues.x; dx <= maxValues.x; dx++) {
+    for (unsigned int dy = minValues.y; dy <= maxValues.y; dy++) {
+      for (unsigned int dz = minValues.z; dz <= maxValues.z; dz++) {
+        boxCenter = this->gridToVec(dx, dy, dz) + (this->units * 0.5f);
+
+        if (TriangleBox::test(boxCenter, halfSize, a, b, c)) {
+          return true;
+        }
+      }
+    }
+  }
+
+  // if (this->pointInCell(a, cell)) {
+  //   return true;
+  // }
+
+  // if (this->pointInCell(b, cell)) {
+  //   return true;
+  // }
+
+  // if (this->pointInCell(c, cell)) {
+  //   return true;
+  // }
+
+  return false;
 };
 
 void VoxelGrid::voxelize(MeshObject &mesh) {
@@ -728,21 +874,75 @@ void VoxelGrid::voxelize(MeshObject &mesh) {
       voxelFace->vertices[i] = voxelFaceVertex;
     }
 
-    for (unsigned int i = 0; i < 3; i++) {
-      VoxelFaceVertex v = voxelFace->vertices[i];
+    voxelFace->materialName = mesh->material->name;
+
+    glm::vec3 a = voxelFace->vertices[0].normal.toGLM();
+    glm::vec3 b = voxelFace->vertices[1].normal.toGLM();
+    glm::vec3 c = voxelFace->vertices[2].normal.toGLM();
+
+    glm::vec3 normal = glm::normalize(glm::cross(c - a, b - a));
+
+
+    /** Get Min/Max cells of the target triangle */
+    glm::ivec3 minGridCell(999, 999, 999);
+    glm::ivec3 maxGridCell(-999, -999, -999);
+
+    glm::ivec3 cellA = this->vecToGrid(voxelFace->vertices[0].position.x, voxelFace->vertices[0].position.y, voxelFace->vertices[0].position.z);
+    glm::ivec3 cellB = this->vecToGrid(voxelFace->vertices[1].position.x, voxelFace->vertices[1].position.y, voxelFace->vertices[1].position.z);
+    glm::ivec3 cellC = this->vecToGrid(voxelFace->vertices[2].position.x, voxelFace->vertices[2].position.y, voxelFace->vertices[2].position.z);
+
+    minGridCell.x = std::min(std::min(cellA.x, cellB.x), cellC.x);
+    minGridCell.y = std::min(std::min(cellA.y, cellB.y), cellC.y);
+    minGridCell.z = std::min(std::min(cellA.z, cellB.z), cellC.z);
+
+    maxGridCell.x = std::max(std::max(cellA.x, cellB.x), cellC.x);
+    maxGridCell.y = std::max(std::max(cellA.y, cellB.y), cellC.y);
+    maxGridCell.z = std::max(std::max(cellA.z, cellB.z), cellC.z);
+
+    // Add face to all cells that intersects with it
+    for (int dx = minGridCell.x; dx <= maxGridCell.x; dx++) {
+      for (int dy = minGridCell.y; dy <= maxGridCell.y; dy++) { 
+        for (int dz = minGridCell.z; dz <= maxGridCell.z; dz++) {
+          bool intersects = this->triangleIntersectsCell(
+            voxelFace->vertices[0].position.toGLM(),
+            voxelFace->vertices[1].position.toGLM(),
+            voxelFace->vertices[2].position.toGLM(),
+            glm::ivec3(dx, dy, dz)
+          );
+
+          if (intersects) {
+            VoxelPtr ptr = this->get(dx, dy, dz);
+
+            if (ptr->faces.size() == 0) {
+              ptr->averageNormal = normal;
+            } else {
+              ptr->averageNormal += normal;
+              ptr->averageNormal = glm::normalize(ptr->averageNormal * 0.5f);
+            }
+            
+            ptr->faces.push_back(voxelFace);
+          }
+        }
+      }
+    }
+
+    /*
+    for (unsigned int k = 0; k < 3; k++) {
+      VoxelFaceVertex v = voxelFace->vertices[k];
       glm::ivec3 cell = this->vecToGrid(v.position.x, v.position.y, v.position.z);
 
       VoxelPtr ptr = this->get(cell.x, cell.y, cell.z);
 
-      // if (ptr == NULL) {
-      //   ptr = std::make_shared<Voxel>(cell, units);
-      //   this->set(ptr, cell.x, cell.y, cell.z);
-      // }
-
-      // if (!ptr->has(voxelFace)) {
-        ptr->faces.push_back(voxelFace);
-      // }
-    } 
+      if (ptr->faces.size() == 0) {
+        ptr->averageNormal = normal;
+      } else {
+        ptr->averageNormal += normal;
+        ptr->averageNormal = glm::normalize(ptr->averageNormal * 0.5f);
+      }
+      
+      ptr->faces.push_back(voxelFace);
+    }
+    */
   }
 };
 
@@ -763,71 +963,107 @@ void VoxelGrid::rasterize(GroupObject &src, GroupObject &dest) {
 
   this->gridOffset = glm::vec3(dimensionsBox.min.x, dimensionsBox.min.y, dimensionsBox.min.z);
   this->units = glm::vec3(maxUnit, maxUnit, maxUnit);// Temporary (probably)
-  this->init();
+  //this->init();
 
-  unsigned int meshIndex = 0;
+  this->clear();
+
+  std::map<std::string, MeshObject> materialMeshMap;
+
+  // unsigned int meshIndex = 0;
   src->traverse([&](MeshObject target){
     // std::cout << "Voxelize" << std::endl;
     this->voxelize(target);
 
     MeshObject mesh = MeshObject(new Mesh());
-    mesh->name = std::string("Voxels_") + std::to_string(meshIndex);
-    mesh->material.name = "VoxelMeshMaterial";
-    mesh->material.color.set(0.5f, 0.5f, 0.5f);
+    // mesh->name = std::string("Voxels_") + target->name + std::string("_") + std::to_string(meshIndex);
+    // mesh->material.name = "VoxelMeshMaterial";
+    // mesh->material.color.set(0.5f, 0.5f, 0.5f);
+
+    mesh->name = target->name;
+    //mesh->material = target->material;//->clone(true);
+    mesh->material = target->material;//->clone(true);
+    //mesh->material->diffuseMapImage = target->material->diffuseMapImage;
+
+    // mesh->material->name = target->material.name;
+    // mesh->material->color.set(0.5f, 1.0f, 0.0f);
 
     mesh->hasNormals = target->hasNormals;
     mesh->hasUVs = target->hasUVs;
 
-    // for (unsigned int x = 0; x < (unsigned int) this->gridResolution.x; x++) {
-    //   for (unsigned int y = 0; y < (unsigned int) this->gridResolution.y; y++) {
-    //     for (unsigned int z = 0; z < (unsigned int) this->gridResolution.z; z++) {
-    //       float faces = this->get(x, y, z)->faces.size();
-    //       this->facesBox.x = std::min(faces, this->facesBox.x);
-    //       this->facesBox.y = std::max(faces, this->facesBox.y);
-    //     }
-    //   }
-    // }
+    if (materialMeshMap.count(mesh->material->name) == 0) {
+      materialMeshMap[mesh->material->name] = mesh;
+    }
 
     // std::cout << "Rasterize" << std::endl;
     for (unsigned int x = 0; x < (unsigned int) this->gridResolution.x; x++) {
       for (unsigned int y = 0; y < (unsigned int) this->gridResolution.y; y++) {
         for (unsigned int z = 0; z < (unsigned int) this->gridResolution.z; z++) {
-          // this->createVoxel(mesh, x, y, z); // if (this->has(x, y, z))
-          this->getTopVertices(x, y, z);
+          this->getVertices(x, y, z);
         }
       }
     }
 
-    this->build(mesh);
+    for (unsigned int x = 0; x < (unsigned int) this->gridResolution.x; x++) {
+      for (unsigned int y = 0; y < (unsigned int) this->gridResolution.y; y++) {
+        for (unsigned int z = 0; z < (unsigned int) this->gridResolution.z; z++) {
+          VoxelPtr voxel = this->get(x, y, z);
+          glm::ivec3 voxelPos(x, y, z);
+
+          for (VoxelFaceTriangle &triangle : voxel->resultTriangles) {
+            triangle.a.uv = Vector2f::fromGLM(this->getClosestUV(voxelPos, triangle.a.position.toGLM()));
+            triangle.b.uv = Vector2f::fromGLM(this->getClosestUV(voxelPos, triangle.b.position.toGLM()));
+            triangle.c.uv = Vector2f::fromGLM(this->getClosestUV(voxelPos, triangle.c.position.toGLM()));
+          }
+        }
+      }
+    }
+
+    
 
     // std::cout << "Finish mesh" << std::endl;
-
+    this->build(mesh, materialMeshMap);
+    mesh->computeUVBox();
     mesh->finish();
-    dest->meshes.push_back(mesh);
-    meshIndex++;
 
+    mesh->triangulate();
+    
+    dest->meshes.push_back(mesh);
+    // meshIndex++;
     this->clear();
   });
+
+  /*
+  this->build(dest->meshes[0], materialMeshMap);
+  dest->meshes[0]->finish();
+  */
+
+  // dest->traverse([&](MeshObject target){
+  //   this->build(target, materialMeshMap);
+  //   target->finish();
+  // });
+
+  //this->clear();
 };
 
 void VoxelGrid::build(VoxelFaceTriangle &triangle, VoxelFaceVertex &vertex, std::vector<LinkedPosition> &list, unsigned int x, unsigned int y, unsigned int z) {
   VoxelFaceVertex resultVertex;
   resultVertex.position = vertex.position;
   resultVertex.normal = vertex.normal;
-
-  LinkedPosition linked;
-  linked.linkedTriangles.push_back(triangle);
-  linked.vertex = resultVertex;
+  resultVertex.uv = vertex.uv;
 
   int index = list.size();
   resultVertex.index = index;
   vertex.index = index;
 
+  LinkedPosition linked;
+  linked.linkedTriangles.push_back(triangle);
+  linked.vertex = resultVertex;
+
   // Look for the same vertex in adjacent cells
   for (int i = -1; i <= 1; i++) {
     for (int k = -1; k <= 1; k++) {
       for (int m = -1; m <= 1; m++) {
-        if (this->has(x + i, y + k, z + m)) {
+        if (this->hasTriangles(x + i, y + k, z + m)) {
           VoxelPtr voxel = this->get(x + i, y + k, z + m);
 
           // Go for each triangle in target
@@ -835,26 +1071,32 @@ void VoxelGrid::build(VoxelFaceTriangle &triangle, VoxelFaceVertex &vertex, std:
             // Go for each position and compare
             bool exists = false;
 
-            if (vTriangle.a.index == -1) {// Not calculated vertex A
-              if (resultVertex.position.equals(vTriangle.a.position)) {
+            // if (vTriangle.a.index == -1) {// Not calculated vertex A
+              if (vertex.position.equals(vTriangle.a.position)) {
                 vTriangle.a.index = index;
                 exists = true;
               }
-            }
+            // } else {
+            //   // std::cout << "Vertex already assigned: (" << i << ", " << k << ", " << m << ")" << std::endl;
+            // }
             
-            if (vTriangle.b.index == -1) {// Not calculated vertex B
-              if (resultVertex.position.equals(vTriangle.b.position)) {
+            // if (vTriangle.b.index == -1) {// Not calculated vertex B
+              if (vertex.position.equals(vTriangle.b.position)) {
                 vTriangle.b.index = index;
-                exists = true;
+                exists = true;  
               }
-            }
+            // } else {
+            //   // std::cout << "Vertex already assigned: (" << i << ", " << k << ", " << m << ")" << std::endl;
+            // }
 
-            if (vTriangle.c.index == -1) {// Not calculated vertex C
-              if (resultVertex.position.equals(vTriangle.c.position)) {
+            //if (vTriangle.c.index == -1) {// Not calculated vertex C
+              if (vertex.position.equals(vTriangle.c.position)) {
                 vTriangle.c.index = index;
                 exists = true;
               }
-            }
+            // } else {
+            //  // std::cout << "Vertex already assigned: (" << i << ", " << k << ", " << m << ")" << std::endl;
+            // }
 
             if (exists) {
               linked.linkedTriangles.push_back(vTriangle);
@@ -869,7 +1111,7 @@ void VoxelGrid::build(VoxelFaceTriangle &triangle, VoxelFaceVertex &vertex, std:
   list.push_back(linked);
 };
 
-void VoxelGrid::build(MeshObject &mesh) {
+void VoxelGrid::build(MeshObject &mesh, std::map<std::string, MeshObject> &materialMeshMap) {
   std::vector<LinkedPosition> linkedList;
   std::vector<VoxelFaceTriangle> triangles;
 
@@ -891,17 +1133,48 @@ void VoxelGrid::build(MeshObject &mesh) {
           if (triangle.c.index == -1) {// Not calculated
             this->build(triangle, triangle.c, linkedList, x, y, z);
           }
-
-          triangles.push_back(triangle);
         }
       }
     }
   }
 
+  for (unsigned int x = 0; x < (unsigned int) this->gridResolution.x; x++) {
+    for (unsigned int y = 0; y < (unsigned int) this->gridResolution.y; y++) {
+      for (unsigned int z = 0; z < (unsigned int) this->gridResolution.z; z++) {
+        //if (this->has(x, y, z)) {
+          VoxelPtr target = this->get(x, y, z);
+          // Go for each triangle in target
+          for (VoxelFaceTriangle &triangle : target->resultTriangles) {// Access by ref to modify origin
+            // Go for each position and save into linked list   
+            triangles.push_back(triangle);
+          }
+        //}
+      }
+    }
+  }
+  
+  //MeshObject targetMesh = mesh;//materialMeshMap.begin()->second;
+
   for (LinkedPosition &linked : linkedList) {
     mesh->position.push_back(linked.vertex.position);
-    mesh->normal.push_back(linked.vertex.normal);
+
+    if (linked.linkedTriangles.size() > 0 && false) {
+      glm::vec3 normal = glm::vec3(0.0f, 0.0f, 0.0f);
+      
+      for (VoxelFaceTriangle &tr : linked.linkedTriangles) {
+        normal += tr.normal.toGLM();
+      }
+
+      normal /= (float) linked.linkedTriangles.size();
+      mesh->normal.push_back(Vector3f::fromGLM(glm::normalize(normal)));
+    } else {
+      mesh->normal.push_back(linked.vertex.normal);
+    }
     // mesh->uv.push_back(linked.vertex.uv);
+
+    //if (mesh->uv.size() > 0) {
+      mesh->uv.push_back(linked.vertex.uv);
+    //}
   }
 
   for (VoxelFaceTriangle &triangle : triangles) {
@@ -921,28 +1194,12 @@ void VoxelGrid::build(MeshObject &mesh) {
 
     mesh->faces.push_back(face);
   }
-
-  mesh->finish();
-};
-
-void VoxelGrid::createVoxel(MeshObject &mesh, unsigned int x, unsigned int y, unsigned int z) {
-  for (VoxelFaceTriangle &triangle : this->getTopVertices(x, y, z)) {
-    mesh->pushTriangle(
-      triangle.a.position,
-      triangle.b.position,
-      triangle.c.position,
-      triangle.normal,
-      triangle.a.uv,
-      triangle.b.uv,
-      triangle.c.uv
-    );
-  }
 };
 
 void VoxelGrid::init() {
   this->data = new VoxelPtr**[this->gridResolution.x];
 
-  for (unsigned int x = 0; x < (unsigned int) this->gridResolution.x; x++) {
+  for (unsigned int x = 0; x < (unsigned int) this->gridResolution.x; x++) { 
     this->data[x] = new VoxelPtr*[this->gridResolution.y];
 
     for (unsigned int y = 0; y < (unsigned int) this->gridResolution.y; y++) {
@@ -959,14 +1216,15 @@ void VoxelGrid::clear() {
   for (unsigned int x = 0; x < (unsigned int) this->gridResolution.x; x++) {
     for (unsigned int y = 0; y < (unsigned int) this->gridResolution.y; y++) {
       for (unsigned int z = 0; z < (unsigned int) this->gridResolution.z; z++) {
-        this->data[x][y][z] = std::make_shared<Voxel>(glm::ivec3(x, y, z), this->units);
+        this->data[x][y][z].reset(new Voxel(glm::ivec3(x, y, z), this->units));
+        //this->data[x][y][z] = std::make_shared<Voxel>(glm::ivec3(x, y, z), this->units);
       }
     }
   }
 };
 
 void VoxelGrid::free() {
-  // Delete each sublevel
+  // Delete each sublevel 
   for (unsigned int x = 0; x < (unsigned int) this->gridResolution.x; x++) {
     for (unsigned int y = 0; y < (unsigned int) this->gridResolution.y; y++) {
       for (unsigned int z = 0; z < (unsigned int) this->gridResolution.z; z++) {
@@ -983,7 +1241,7 @@ void VoxelGrid::free() {
 };
 
 VoxelsSplitter::VoxelsSplitter() {
-  // this->grid.init();
+  //this->grid.init();
 };
 
 bool VoxelsSplitter::split(GroupObject target) {
@@ -1067,10 +1325,10 @@ GroupObject VoxelsSplitter::halfMesh(GroupObject target, bool divideVertical) {
       leftMesh->hasUVs = mesh->hasUVs;
 
       leftMesh->remesh(mesh->position, mesh->normal, mesh->uv);
+      leftMesh->finish();
+      leftMesh->triangulate();
 
       left->meshes.push_back(leftMesh);
-
-      base->children.push_back(left);
     }
 
     if (rightMesh->faces.size() != 0) {
@@ -1080,13 +1338,21 @@ GroupObject VoxelsSplitter::halfMesh(GroupObject target, bool divideVertical) {
       rightMesh->hasUVs = mesh->hasUVs;
 
       rightMesh->remesh(mesh->position, mesh->normal, mesh->uv);
+      rightMesh->finish();
+      rightMesh->triangulate();
 
       right->meshes.push_back(rightMesh);
-
-      base->children.push_back(right);
     }
   });
 
+  if (left->meshes.size() != 0) { 
+    base->children.push_back(left);
+  }
+
+  if (right->meshes.size() != 0) {
+    base->children.push_back(right);
+  }
+  
   return base;
 };
 
@@ -1094,6 +1360,8 @@ GroupObject VoxelsSplitter::decimate(GroupObject target) {
   GroupObject result = GroupObject(new Group());
 
   this->grid.rasterize(target, result);
+
+  // result->computeUVBox();
 
   return result;
 };
@@ -1195,7 +1463,7 @@ void VoxelsSplitter::createVoxelPlane(MeshObject &mesh, glm::ivec3 cell, glm::ve
   Vector3f x11 = {p2.x, p2.y, p2.z};
   Vector3f x01 = {p3.x, p3.y, p3.z};
 
-  Vector3f n = {normal.x, normal.y, normal.z};
+  Vector3f n = {normal.x, normal.y, normal.z} ;
 
   mesh->position.push_back(x00);
   mesh->position.push_back(x10);
@@ -1234,32 +1502,39 @@ bool VoxelsSplitter::split(GroupObject target, IdGenerator::ID parentId, unsigne
     if (this->onSave) {
       this->IDGen.next();
       nextParent = this->IDGen.id;
-      
-      target->name = "Chunk";
-      this->onSave(target, nextParent, parentId, decimationLevel);
 
-      // target->free();
+      GroupObject resultGroup = splitter::splitUV(target, 0);
+      resultGroup->name = "Chunk";
+      
+      //target->name = "Chunk";
+      this->onSave(resultGroup, nextParent, parentId, decimationLevel);
+
+      resultGroup->free();
     }
 
     return true;
   }
 
+  
   if (this->onSave) {
     this->IDGen.next();
     nextParent = this->IDGen.id;
 
     GroupObject voxelized = this->decimate(target);
-    // GroupObject simplified = simplifier::modify(voxelized, 500.0f);
+    // GroupObject voxelized = splitter::splitUV(this->decimate(target), 8);
+    // GroupObject simplified = simplifier::modify(voxelized, 0.5f);
     // simplified->name = "Lod";
-
+    splitter::textureLOD(voxelized, 8);
     voxelized->name = "Lod";
 
     this->onSave(voxelized, nextParent, parentId, decimationLevel);
 
-    // voxelized->free();
+    voxelized->free(false);
   }
+  
 
   GroupObject halfs = this->halfMesh(target, divideVertical);
+  //target->free();
 
   for (GroupObject &half : halfs->children) {
     this->split(half, nextParent, decimationLevel + 1, !divideVertical);

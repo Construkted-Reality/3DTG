@@ -17,15 +17,20 @@
 
 #include "./../utils.h"
 
+#define M_PI 3.14159265358979323846  /* pi */
+
 
 class Mesh;
 class Group;
 class Vertex;
 class Triangle;
+class Material;
+
 typedef std::shared_ptr<Vertex> VertexPtr;
 typedef std::shared_ptr<Triangle> TrianglePtr;
 typedef std::shared_ptr<Mesh> MeshObject;
 typedef std::shared_ptr<Group> GroupObject;
+typedef std::shared_ptr<Material> MaterialObject;
 typedef std::function<void (MeshObject)> TraverseMeshCallback;
 typedef std::function<void (GroupObject)> TraverseGroupCallback;
 
@@ -33,7 +38,10 @@ struct Vector3f {
   float x = 0.0f, y = 0.0f, z = 0.0f;
   float dot(Vector3f vector);
   float length();
+  float lengthSq();
+  float angleTo(Vector3f vector);
   float distanceTo(Vector3f vector);
+  bool angleLess90(Vector3f vector);
   bool equals(Vector3f vector);
   void normalize();
   void divideScalar(float value);
@@ -65,6 +73,8 @@ struct Vector2f {
   float x = 0.0f, y = 0.0f;
   void set(float x, float y);
   void set(Vector2f vector);
+  glm::vec2 toGLM();
+  static Vector2f fromGLM(glm::vec2 vec);
 };
 
 struct Face {
@@ -144,11 +154,14 @@ struct BBoxf {
   bool intersect(Vector3f point);
   bool intersect(Vector2f point);
   bool intersect(BBoxf box);
+  bool intersectTriangle(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3);
   BBoxf clone();
   void translate(float x, float y, float z);
   void fromPoint(float x, float y, float z);
   glm::vec3 getCenter();
   glm::vec3 getSize();
+  void setCenter(glm::vec3 point);
+  void setSize(glm::vec3 size);
 };
 
 struct Image {
@@ -160,16 +173,20 @@ struct Image {
   void free();
 };
 
-struct Material {
-  std::string name = "";
+class Material {
+  public:
+    std::string name = "";
+    std::string baseName = "";
 
-  std::string diffuseMap = "";
-  Image diffuseMapImage;
+    std::string diffuseMap = "";
+    Image diffuseMapImage;
 
-  Vector3f color;
+    Vector3f color;
+
+    MaterialObject clone(bool deep);
 };
 
-typedef std::map<std::string, Material> MaterialMap;
+typedef std::map<std::string, MaterialObject> MaterialMap;
 
 class Group {
   public:
@@ -188,14 +205,14 @@ class Group {
     void computeUVBox();
     void computeGeometricError();
 
-    void free();
+    void free(bool deep = true);
 
     GroupObject clone();
 };
 
 class Mesh : public Group {
   public:
-    Material material;
+    MaterialObject material;
     std::vector<Vector3f> position;
     std::vector<Vector3f> normal;
     std::vector<Vector2f> uv;
@@ -210,13 +227,16 @@ class Mesh : public Group {
     void finish();
 
     void remesh(std::vector<Vector3f> &position, std::vector<Vector3f> &normal, std::vector<Vector2f> &uv);
-    void free();
+    void triangulate();
+    void free(bool deep = true);
     void computeBoundingBox();
+    void computeUVBox();
 
     void pushTriangle(Vector3f a, Vector3f b, Vector3f c, Vector3f n, Vector2f t1, Vector2f t2, Vector2f t3);
     void pushQuad(Vector3f a, Vector3f b, Vector3f c, Vector3f d, Vector3f n1, Vector3f n2, Vector2f t1, Vector2f t2, Vector2f t3, Vector2f t4);
 
     MeshObject clone();
+    Mesh();
 };
 
 class Loader {

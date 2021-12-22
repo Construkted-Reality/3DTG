@@ -24,7 +24,7 @@ MeshObject simplifier::modify(MeshObject &mesh, float verticesCountModifier) {
   MeshObject resultMesh = MeshObject(new Mesh());
   resultMesh->material = mesh->material;
   resultMesh->name = mesh->name;
-  resultMesh->material.diffuseMapImage = mesh->material.diffuseMapImage;
+  // resultMesh->material->diffuseMapImage = mesh->material->diffuseMapImage;
 
   // unsigned int count = floor(float(mesh->position.size()) * verticesCountModifier);
   // count = count + (3 - (count % 3));
@@ -94,7 +94,7 @@ MeshObject simplifier::modify(MeshObject &mesh, float verticesCountModifier) {
 
   // unsigned int processed = 0;
 
-  while (nextVertex != NULL && nextVertex->collapseCost < 9999.f) { // 50.0f //  && nextVertex->collapseCost < verticesCountModifier
+  while (nextVertex != NULL && nextVertex->collapseCost < verticesCountModifier) { // 50.0f //  && nextVertex->collapseCost < verticesCountModifier
     // std::cout << "Vertex cost: " << nextVertex->collapseCost << std::endl;
     // std::cout << "Processing, target cost: " << nextVertex->collapseCost << std::endl;
 
@@ -264,7 +264,7 @@ void simplifier::removeVertex(VertexPtr v, std::vector<VertexPtr> &vertices) {
 void simplifier::removeFace(TrianglePtr f, std::vector<TrianglePtr> &faces) {
   faces.erase(
     std::remove_if(
-      faces.begin(), 
+      faces.begin(),
       faces.end(),
       [&](TrianglePtr triangle){return triangle->id == f->id;}
     ),
@@ -296,7 +296,7 @@ void simplifier::removeFace(TrianglePtr f, std::vector<TrianglePtr> &faces) {
   if (f->v3 != NULL) {
     f->v3->faces.erase(
       std::remove_if(
-        f->v3->faces.begin(), 
+        f->v3->faces.begin(),
         f->v3->faces.end(),
         [&](TrianglePtr triangle){return triangle->id == f->id;}
       ),

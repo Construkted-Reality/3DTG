@@ -97,6 +97,7 @@ void GLTFExporter::save(std::string directory, std::string fileName, GroupObject
     std::vector<unsigned int> normalIndexBuffer;
     std::vector<unsigned int> uvIndexBuffer;
 
+    /*
     for (Face &face : targetMesh->faces) // access by reference to avoid copying
     {
       // positionIndexBuffer.insert(positionIndexBuffer.end(), face.positionIndices, face.positionIndices + 3);
@@ -150,15 +151,15 @@ void GLTFExporter::save(std::string directory, std::string fileName, GroupObject
         uvs.push_back(targetMesh->uv[face.uvIndices[2]].y);
       }
     }
-
+    */
 
     // DATA BUFFERS
     // std::cout << "Generating data buffers" << std::endl;
     if (targetMesh->position.size()) {
       GLTF::Accessor* accessor = new GLTF::Accessor(
         GLTF::Accessor::Type::VEC3, GLTF::Constants::WebGL::FLOAT,
-        (unsigned char*)&vertices[0],
-        vertices.size() / 3,// targetMesh->position.size(),
+        (unsigned char*)&targetMesh->position[0],
+        targetMesh->position.size(),// targetMesh->position.size(),//  / 3
         GLTF::Constants::WebGL::ARRAY_BUFFER
       );
 
@@ -168,8 +169,8 @@ void GLTFExporter::save(std::string directory, std::string fileName, GroupObject
     if (targetMesh->hasNormals) {
       GLTF::Accessor* accessor = new GLTF::Accessor(
         GLTF::Accessor::Type::VEC3, GLTF::Constants::WebGL::FLOAT,
-        (unsigned char*)&normals[0],
-        normals.size() / 3,// targetMesh->normal.size(),
+        (unsigned char*)&targetMesh->normal[0],
+        targetMesh->normal.size(),// targetMesh->normal.size(),
         GLTF::Constants::WebGL::ARRAY_BUFFER
       );
 
@@ -179,13 +180,29 @@ void GLTFExporter::save(std::string directory, std::string fileName, GroupObject
     if (targetMesh->hasUVs) {
       GLTF::Accessor* accessor = new GLTF::Accessor(
         GLTF::Accessor::Type::VEC2, GLTF::Constants::WebGL::FLOAT,
-        (unsigned char*)&uvs[0],
-        uvs.size() / 2,// targetMesh->uv.size(),
+        (unsigned char*)&targetMesh->uv[0],
+        targetMesh->uv.size(),// targetMesh->uv.size(),
         GLTF::Constants::WebGL::ARRAY_BUFFER
       );
 
       accessors[GLTF_BUFFER::UV_BUFFER] = accessor;
     }
+
+    std::vector<unsigned int> indices;
+    for (Face &face : targetMesh->faces) {
+      indices.push_back(face.positionIndices[0]);
+      indices.push_back(face.positionIndices[1]);
+      indices.push_back(face.positionIndices[2]);
+    }
+
+    GLTF::Accessor* accessor = new GLTF::Accessor(
+      GLTF::Accessor::Type::SCALAR, GLTF::Constants::WebGL::UNSIGNED_INT,
+      (unsigned char*)&indices[0],
+      indices.size(),// targetMesh->uv.size(),
+      GLTF::Constants::WebGL::ELEMENT_ARRAY_BUFFER
+    );
+
+    accessors[GLTF_BUFFER::INDEX_POSITION_BUFFER] = accessor;
 
     // DATA BUFFERS END
 
@@ -194,11 +211,11 @@ void GLTFExporter::save(std::string directory, std::string fileName, GroupObject
     GLTF::MaterialCommon *material = new GLTF::MaterialCommon();
     material->type = GLTF::Material::Type::MATERIAL_COMMON;
     material->technique = GLTF::MaterialCommon::Technique::CONSTANT;
-    material->doubleSided = false;
+    material->doubleSided = true;
 
     GLTF::Material::Values *values = new GLTF::Material::Values();
 
-    if (targetMesh->material.diffuseMapImage.data == NULL) {
+    if (targetMesh->material->diffuseMapImage.data == NULL) {
       float* diffuse = new float[4]{1.0f, 1.0f, 1.0f, 1.0f};
       values->diffuse = diffuse;
     } else {
@@ -212,10 +229,10 @@ void GLTFExporter::save(std::string directory, std::string fileName, GroupObject
           ((ImageData*)context)->size += size;
         }
         ,&ii,
-        targetMesh->material.diffuseMapImage.width,
-        targetMesh->material.diffuseMapImage.height,
-        targetMesh->material.diffuseMapImage.channels,
-        targetMesh->material.diffuseMapImage.data,
+        targetMesh->material->diffuseMapImage.width,
+        targetMesh->material->diffuseMapImage.height,
+        targetMesh->material->diffuseMapImage.channels,
+        targetMesh->material->diffuseMapImage.data,
         80
       );
       
@@ -247,7 +264,7 @@ void GLTFExporter::save(std::string directory, std::string fileName, GroupObject
         // values->diffuseTexture->sampler->minFilter = GLTF::Constants::WebGL::LINEAR;
 
         values->diffuseTexture->source = new GLTF::Image(
-          targetMesh->material.name,
+          targetMesh->material->name,
           (unsigned char *) imageData,
           ii.size,
           "jpeg"

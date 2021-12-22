@@ -25,6 +25,7 @@ namespace splitter {
   void straightLineX(MeshObject &mesh, Face &face, bool isLeft, float xValue, std::vector<Vector3f> &position, std::vector<Vector3f> &normal, std::vector<Vector2f> &uv, std::vector<Face> &faces);
   void straightLineZ(MeshObject &mesh, Face &face, bool isLeft, float zValue, std::vector<Vector3f> &position, std::vector<Vector3f> &normal, std::vector<Vector2f> &uv, std::vector<Face> &faces);
   GroupObject splitUV(GroupObject baseObject, int level);
+  void textureLOD(GroupObject &baseObject, int level);
   void initBVH(GroupObject &group, int level, int maxLevel, bool shouldDivideVertical);
 };
 

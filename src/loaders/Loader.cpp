@@ -1,6 +1,20 @@
 #include "./Loader.h"
 
 
+MaterialObject Material::clone(bool deep) {
+  MaterialObject next = std::make_shared<Material>();
+
+  next->name = this->name;
+  // next->baseName = this->baseName;
+  next->color = this->color;
+
+  if (deep) {
+    next->diffuseMap = this->diffuseMap;
+  }
+
+  return next;
+};
+
 void Group::traverse(TraverseMeshCallback fn) {
   for (GroupObject &group : this->children) // access by reference to avoid copying
   {  
@@ -84,15 +98,43 @@ void Group::computeGeometricError() {
 };
 
 void Group::computeUVBox() {
-  this->traverse([&](MeshObject mesh){
-    this->uvBox.extend(mesh->uvBox);
-  });
+  // this->traverse([&](MeshObject mesh){
+  //   this->uvBox.extend(mesh->uvBox);
+  // });
+
+  unsigned int meshNumber = 0;
+  for (MeshObject &mesh : this->meshes) // access by reference to avoid copying
+  {
+    if (meshNumber == 0) { // Set first captured bbox as a base
+      this->uvBox = mesh->uvBox.clone();
+    } else {
+      this->uvBox.extend(mesh->uvBox);
+    }
+    
+    meshNumber++;
+  }
+
+  unsigned int groupNumber = 0;
+  for (GroupObject &group : this->children) // access by reference to avoid copying
+  {
+    group->computeUVBox();
+
+    if (groupNumber == 0 && meshNumber == 0) { // Set first captured bbox as a base
+      this->uvBox = group->uvBox.clone();
+    } else {
+      this->uvBox.extend(group->uvBox);
+    }
+  }
 };
 
-void Group::free() {
+void Group::free(bool deep) {
   this->traverse([&](MeshObject mesh){
-    mesh->free();
+    mesh->free(deep);
   });
+
+  for (GroupObject &child : this->children) {
+    child->free(deep);
+  }
 
   this->meshes.clear();
   this->children.clear();
@@ -116,6 +158,10 @@ GroupObject Group::clone() {
   }
 
   return cloned;
+};
+
+Mesh::Mesh() {
+  this->material = std::make_shared<Material>();
 };
 
 MeshObject Mesh::clone() {
@@ -159,21 +205,68 @@ void Mesh::finish() {
   this->hasNormals = this->normal.size() > 0;
   this->hasUVs = this->uv.size() > 0;
 
-  // std::cout << "Normals length: " << this->normal.size() << std::endl;
+  // std::cout << "Vertices count: " << this->position.size() << std::endl;
+  // std::cout << "Normals count: " << this->normal.size() << std::endl;
 
   // std::cout << "Loading finished: " << this->name << std::endl;
 };
 
-void Mesh::free() {
+void Mesh::free(bool deep) {
   this->uv.clear();
   this->position.clear();
   this->normal.clear();
   this->faces.clear();
-  this->material.name = "";
-
-  if (this->material.diffuseMapImage.data != NULL) {
-    this->material.diffuseMapImage.free();
+  
+  /*
+  this->material->name = "";
+  */
+  if (deep) {
+    if (this->material->diffuseMapImage.data != NULL) {
+      this->material->diffuseMapImage.free();
+    }
+    
   }
+
+  this->material.reset();
+};
+
+void Mesh::triangulate() {
+  std::vector<Vector3f> positions;
+  std::vector<Vector3f> normals;
+  std::vector<Vector2f> uvs;
+
+  std::vector<Face> faces;
+
+  unsigned int index = 0;
+  for (Face &face : this->faces) {
+    Face nextFace;
+
+    for (unsigned int i = 0; i < 3; i++) {
+      positions.push_back(this->position[face.positionIndices[i]]);
+
+      if (this->hasNormals) {
+        normals.push_back(this->normal[face.normalIndices[i]]);
+      }
+
+      if (this->hasUVs) {
+        uvs.push_back(this->uv[face.uvIndices[i]]);
+      }
+
+      nextFace.positionIndices[i] = index;
+      nextFace.normalIndices[i] = index;
+      nextFace.uvIndices[i] = index;
+
+      index++;
+    }
+
+    faces.push_back(nextFace);
+  }
+
+  this->position.swap(positions);
+  this->normal.swap(normals);
+  this->uv.swap(uvs);
+
+  this->faces.swap(faces);
 };
 
 void Mesh::remesh(std::vector<Vector3f> &position, std::vector<Vector3f> &normal, std::vector<Vector2f> &uv) {
@@ -187,20 +280,28 @@ void Mesh::remesh(std::vector<Vector3f> &position, std::vector<Vector3f> &normal
 
   for (Face &face : this->faces) // access by reference to avoid copying
   {
-    positionMap[face.positionIndices[0]] = position[face.positionIndices[0]];
-    positionMap[face.positionIndices[1]] = position[face.positionIndices[1]];
-    positionMap[face.positionIndices[2]] = position[face.positionIndices[2]];
+    for (unsigned int i = 0; i < 3; i++) {
+      if (positionMap.count(face.positionIndices[i]) == 0) {
+        positionMap[face.positionIndices[i]] = position[face.positionIndices[i]];
+      }
+      // positionMap[face.positionIndices[1]] = position[face.positionIndices[1]];
+      // positionMap[face.positionIndices[2]] = position[face.positionIndices[2]];
 
-    if (this->hasNormals) {
-      normalMap[face.normalIndices[0]] = normal[face.normalIndices[0]];
-      normalMap[face.normalIndices[1]] = normal[face.normalIndices[1]];
-      normalMap[face.normalIndices[2]] = normal[face.normalIndices[2]];
-    }
+      if (this->hasNormals) {
+        if (normalMap.count(face.normalIndices[i]) == 0) {
+          normalMap[face.normalIndices[i]] = normal[face.normalIndices[i]];
+        }
+        // normalMap[face.normalIndices[1]] = normal[face.normalIndices[1]];
+        // normalMap[face.normalIndices[2]] = normal[face.normalIndices[2]];
+      }
 
-    if (this->hasUVs) {
-      uvMap[face.uvIndices[0]] = uv[face.uvIndices[0]];
-      uvMap[face.uvIndices[1]] = uv[face.uvIndices[1]];
-      uvMap[face.uvIndices[2]] = uv[face.uvIndices[2]];
+      if (this->hasUVs) {
+        if (uvMap.count(face.uvIndices[i]) == 0) {
+          uvMap[face.uvIndices[i]] = uv[face.uvIndices[i]];
+        }
+        // uvMap[face.uvIndices[1]] = uv[face.uvIndices[1]];
+        // uvMap[face.uvIndices[2]] = uv[face.uvIndices[2]];
+      }
     }
   }
 
@@ -275,6 +376,16 @@ void Mesh::computeBoundingBox() {
       this->boundingBox.fromPoint(this->position[i].x, this->position[i].y, this->position[i].z);
     } else {
       this->boundingBox.extend(this->position[i].x, this->position[i].y, this->position[i].z);
+    }
+  }
+};
+
+void Mesh::computeUVBox() {
+  for (unsigned int i = 0; i < this->uv.size(); i++) {
+    if (i == 0) {
+      this->uvBox.fromPoint(this->uv[i].x, this->uv[i].y, 0.0f);
+    } else {
+      this->uvBox.extend(this->uv[i].x, this->uv[i].y, 0.0f);
     }
   }
 };
@@ -434,6 +545,24 @@ bool BBoxf::intersect(BBoxf box) {
   return intersectX && intersectY && intersectZ;
 };
 
+bool BBoxf::intersectTriangle(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3) {
+  if (this->intersect(Vector3f::fromGLM(p1))) {// P1 is in box
+    return true;
+  }
+
+  if (this->intersect(Vector3f::fromGLM(p2))) {// P2 is in box
+    return true;
+  }
+
+  if (this->intersect(Vector3f::fromGLM(p3))) {// P3 is in box
+    return true;
+  }
+
+  
+
+  return false;
+};
+
 void BBoxf::translate(float x, float y, float z) {
   Vector3f size = this->size();
 
@@ -476,6 +605,26 @@ glm::vec3 BBoxf::getSize() {
   return res;
 };
 
+void BBoxf::setCenter(glm::vec3 point) {
+  glm::vec3 halfSize = this->getSize() * 0.5f;
+
+  glm::vec3 min = point - halfSize;
+  glm::vec3 max = point + halfSize;
+
+  this->min = Vector3f::fromGLM(min);
+  this->max = Vector3f::fromGLM(max);
+};
+void BBoxf::setSize(glm::vec3 size) {
+  glm::vec3 center = this->getCenter();
+  glm::vec3 halfSize = size * 0.5f;
+
+  glm::vec3 min = center - halfSize;
+  glm::vec3 max = center + halfSize;
+
+  this->min = Vector3f::fromGLM(min);
+  this->max = Vector3f::fromGLM(max);
+};
+
 void Vector2f::set(float x, float y) {
   this->x = x;
   this->y = y;
@@ -486,13 +635,44 @@ void Vector2f::set(Vector2f vector) {
   this->y = vector.y;
 };
 
+glm::vec2 Vector2f::toGLM() {
+  glm::vec2 result(this->x, this->y);
+
+  return result;
+};
+
+Vector2f Vector2f::fromGLM(glm::vec2 vec) {
+  Vector2f result = {vec.x, vec.y};
+
+  return result;
+};
+
 
 float Vector3f::dot(Vector3f vector) {
   return (this->x * vector.x) + (this->y * vector.y) + (this->z * vector.z);
 };
 
 float Vector3f::length() {
-  return sqrt((this->x * this->x) + (this->y * this->y) + (this->z * this->z));
+  return sqrt(this->lengthSq());
+};
+
+float Vector3f::lengthSq() {
+  return (this->x * this->x) + (this->y * this->y) + (this->z * this->z);
+};
+
+float Vector3f::angleTo(Vector3f vector) {
+  float denominator = sqrt(this->lengthSq() * vector.lengthSq());
+  if (denominator == 0.0f) {
+    return M_PI * 0.5f;
+  }
+
+  float theta = this->dot(vector) / denominator;
+
+  return acos(std::min(std::max(theta, -1.0f), 1.0f));
+};
+
+bool Vector3f::angleLess90(Vector3f vector) { 
+  return (this->dot(vector) >= 0.0);
 };
 
 float Vector3f::distanceTo(Vector3f vector) {
@@ -504,6 +684,7 @@ float Vector3f::distanceTo(Vector3f vector) {
 };
 
 bool Vector3f::equals(Vector3f vector) {
+  //return ( ( vector.x == this->x ) && ( vector.y == this->y ) && ( vector.z == this->z ) );
   return this->distanceTo(vector) < 0.0001f;
 };
 
@@ -606,13 +787,13 @@ void Vector3f::lerpToZ(Vector3f a, Vector3f b, float z) {
 };
 
 glm::vec3 Vector3f::toGLM() {
-  glm::vec3 result(this->x, this->y, this->z);
+  glm::vec3 result((float) this->x, (float) this->y, (float) this->z);
 
   return result;
 };
 
 Vector3f Vector3f::fromGLM(glm::vec3 vec) {
-  Vector3f result = {vec.x, vec.y, vec.z};
+  Vector3f result = {(float) vec.x, (float) vec.y, (float) vec.z};
 
   return result;
 };
@@ -649,7 +830,7 @@ void Image::free() {
 void Loader::free() {
   std::cout << "Cleaning up the memory..." << std::endl; 
   this->object->traverse([&](MeshObject mesh){
-    mesh->material.diffuseMapImage.free();
+    mesh->material->diffuseMapImage.free();
   });
 
   std::cout << "Memory has been cleaned" << std::endl;

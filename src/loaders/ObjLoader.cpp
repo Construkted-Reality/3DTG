@@ -34,24 +34,25 @@ MaterialMap ObjLoader::loadMaterials(const char* path) {
     if (token == "newmtl") {
       ss >> lastMaterialName;
 
-      Material currentMaterial;
-      currentMaterial.name = lastMaterialName;
+      MaterialObject currentMaterial = std::make_shared<Material>();
+      currentMaterial->name = lastMaterialName;
+      currentMaterial->baseName = lastMaterialName;
 
       materialMap[lastMaterialName] = currentMaterial;
     } else if (lastMaterialName != "") {
       if (token == "map_Kd") {
-        ss >> materialMap[lastMaterialName].diffuseMap;
+        ss >> materialMap[lastMaterialName]->diffuseMap;
 
         std::string imagePath = utils::concatPath(
             utils::getDirectory(path),
-            materialMap[lastMaterialName].diffuseMap
+            materialMap[lastMaterialName]->diffuseMap
           ).c_str();
 
 
-        Image &diffuseMapImage = materialMap[lastMaterialName].diffuseMapImage;
+        Image &diffuseMapImage = materialMap[lastMaterialName]->diffuseMapImage;
 
         if ( imageList.find(imagePath) == imageList.end() ) {
-          std::cout << "Found an image:" << materialMap[lastMaterialName].diffuseMap.c_str() << std::endl;
+          std::cout << "Found an image:" << materialMap[lastMaterialName]->diffuseMap.c_str() << std::endl;
 
           std::cout << "Image path: " << imagePath.c_str() << std::endl;
           std::cout << "Loading..." << std::endl;
@@ -73,7 +74,7 @@ MaterialMap ObjLoader::loadMaterials(const char* path) {
         //   if (stbi_failure_reason()) std::cerr << stbi_failure_reason() << std::endl;
         // }
       } else if (token == "Kd") {
-        ss >> materialMap[lastMaterialName].color.x >> materialMap[lastMaterialName].color.y >> materialMap[lastMaterialName].color.z;
+        ss >> materialMap[lastMaterialName]->color.x >> materialMap[lastMaterialName]->color.y >> materialMap[lastMaterialName]->color.z;
       }
     }
   }

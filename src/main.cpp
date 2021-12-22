@@ -107,6 +107,8 @@ int main(int argc, char** argv) {
   unsigned int gr = result["grid"].as<unsigned int>();
   currentSplitter.grid.gridResolution = glm::ivec3(gr, gr, gr);
 
+  currentSplitter.grid.init();
+
   currentSplitter.onSave = [&](GroupObject object, IdGenerator::ID targetId, IdGenerator::ID parentId, unsigned int level){
       object->computeBoundingBox();
       object->computeGeometricError();

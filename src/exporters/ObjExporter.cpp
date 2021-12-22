@@ -13,25 +13,25 @@ void ObjExporter::saveMaterial(std::string directory, std::string fileName, Mate
   std::for_each(
     materialMap.begin(),
     materialMap.end(),
-    [&](std::pair<std::string, Material> it) {
+    [&](std::pair<std::string, MaterialObject> it) {
       // std::cout << "Material name: " << it.first << std::endl;//  + it.second
       // std::cout << "Saving..." << std::endl;
 
       fs << "newmtl " << it.first.c_str() << std::endl;
 
-      fs << "Kd " << it.second.color.x << " " << it.second.color.y <<  " " << it.second.color.z << std::endl;
+      fs << "Kd " << it.second->color.x << " " << it.second->color.y <<  " " << it.second->color.z << std::endl;
       
-      if (it.second.diffuseMapImage.data != NULL) {
-        fs << "map_Kd " << it.second.diffuseMap << std::endl;
+      if (it.second->diffuseMapImage.data != NULL) {
+        fs << "map_Kd " << it.second->diffuseMap << std::endl;
 
-        std::string outputImage = utils::concatPath(directory, it.second.name + ".jpg");
+        std::string outputImage = utils::concatPath(directory, it.second->name + ".jpg");
 
         stbi_write_jpg(
           outputImage.c_str(),
-          it.second.diffuseMapImage.width,
-          it.second.diffuseMapImage.height,
-          it.second.diffuseMapImage.channels,
-          it.second.diffuseMapImage.data,
+          it.second->diffuseMapImage.width,
+          it.second->diffuseMapImage.height,
+          it.second->diffuseMapImage.channels,
+          it.second->diffuseMapImage.data,
           80
         );
       }
@@ -66,9 +66,9 @@ void ObjExporter::save(std::string directory, std::string fileName, GroupObject 
   fs << "mtllib " << materialFileName.c_str() << std::endl;
 
   object->traverse([&](MeshObject object){
-    if (object->material.name != "") {
-      materialMap[object->material.name] = object->material;
-      fs << "usemtl " << object->material.name.c_str() << std::endl;
+    if (object->material->name != "") {
+      materialMap[object->material->name] = object->material;
+      fs << "usemtl " << object->material->name.c_str() << std::endl;
     }
 
     fs << "o " << object->name.c_str() << std::endl;
