@@ -81,7 +81,7 @@ class Voxel {
     glm::vec3 averageNormal;// Used to delete wrong triangles
     //void filterTriangles();
 
-    Voxel(glm::ivec3 position, glm::vec3 units);
+    Voxel(glm::ivec3 position, glm::vec3 units, glm::vec3 offset);
 
     glm::vec2 getClosestUV(glm::vec3 p);
 

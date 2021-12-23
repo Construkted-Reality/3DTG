@@ -30,12 +30,12 @@ void Voxel::computeError() {
 
           if (trPoint.hasData) {
             dist += trPoint.data - triangle[i].position.toGLM();
-            // triangleError += glm::length(trPoint.data - triangle[i].position.toGLM());
+            //triangleError += glm::length(trPoint.data - triangle[i].position.toGLM());
           }
         }
 
         
-        triangleError += glm::length(dist);// / std::max(1.0f, (float) this->faces.size());
+        triangleError += glm::length(dist) / std::max(1.0f, (float) this->faces.size());
       }
 
       this->geometricError += triangleError / 3.0f;
@@ -47,7 +47,7 @@ void Voxel::computeError() {
   }
 };
 
-Voxel::Voxel(glm::ivec3 position, glm::vec3 units) {
+Voxel::Voxel(glm::ivec3 position, glm::vec3 units, glm::vec3 offset) {
   this->position = position;
   this->units = units;
 
@@ -62,6 +62,7 @@ Voxel::Voxel(glm::ivec3 position, glm::vec3 units) {
 
   for (unsigned int i = 0; i < 8; i++) {
     this->voxelVertices[i] = glm::vec3((float) this->voxelVertices[i].x, (float) this->voxelVertices[i].y, (float) this->voxelVertices[i].z);
+    this->voxelVertices[i] += offset;
   }
 };
 
@@ -1060,9 +1061,9 @@ void VoxelGrid::rasterize(GroupObject &src, GroupObject &dest) {
           VoxelPtr voxel = this->get(x, y, z);
           voxel->computeError();
           geometricError += voxel->geometricError;
-          // if (voxel->geometricError != 0.0f) {
+          if (voxel->geometricError != 0.0f) {
             voxelsUsed++;
-          // }
+          }
 
           glm::ivec3 voxelPos(x, y, z);
 
@@ -1272,7 +1273,7 @@ void VoxelGrid::init() {
       this->data[x][y] = new VoxelPtr[this->gridResolution.z];
 
       for (unsigned int z = 0; z < (unsigned int) this->gridResolution.z; z++) {
-        this->data[x][y][z] = std::make_shared<Voxel>(glm::ivec3(x, y, z), this->units);
+        this->data[x][y][z] = std::make_shared<Voxel>(glm::ivec3(x, y, z), this->units, this->gridOffset);
       }
     }
   }
@@ -1282,7 +1283,7 @@ void VoxelGrid::clear() {
   for (unsigned int x = 0; x < (unsigned int) this->gridResolution.x; x++) {
     for (unsigned int y = 0; y < (unsigned int) this->gridResolution.y; y++) {
       for (unsigned int z = 0; z < (unsigned int) this->gridResolution.z; z++) {
-        this->data[x][y][z].reset(new Voxel(glm::ivec3(x, y, z), this->units));
+        this->data[x][y][z].reset(new Voxel(glm::ivec3(x, y, z), this->units, this->gridOffset));
         //this->data[x][y][z] = std::make_shared<Voxel>(glm::ivec3(x, y, z), this->units);
       }
     }
