@@ -12,6 +12,7 @@
 #include <cmath>
 
 #include <glm/glm.hpp>
+#include <glm/gtx/closest_point.hpp>
 #include <stb/stb_image.h>
 
 
@@ -140,9 +141,16 @@ class Triangle : public std::enable_shared_from_this<Triangle> {
     void replaceVertex(VertexPtr oldVertex, VertexPtr newVertex);
 };
 
+struct Vec3Result {
+  glm::vec3 data;
+  bool hasData = true;
+};
+
 namespace math {
   float triangleIntersection(glm::vec3 origin, glm::vec3 dir, glm::vec3 v0, glm::vec3 v1, glm::vec3 v2);
   float triangleIntersection(Vector3f origin, Vector3f dir, Vector3f v0, Vector3f v1, Vector3f v2);
+  Vec3Result clothestTrianglePointOld(glm::vec3 p, glm::vec3 a, glm::vec3 b, glm::vec3 c);
+  Vec3Result clothestTrianglePoint(glm::vec3 p, glm::vec3 a, glm::vec3 b, glm::vec3 c);
 };
 
 struct BBoxf {
@@ -180,6 +188,7 @@ class Material {
 
     std::string diffuseMap = "";
     Image diffuseMapImage;
+    std::map<int, Image> mipMaps;
 
     Vector3f color;
 

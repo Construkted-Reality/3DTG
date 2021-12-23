@@ -225,6 +225,9 @@ void Mesh::free(bool deep) {
       this->material->diffuseMapImage.free();
     }
     
+    for (std::map<int, Image>::iterator it = this->material->mipMaps.begin(); it != this->material->mipMaps.end(); ++it) {
+      it->second.free();
+    }
   }
 
   this->material.reset();
@@ -980,6 +983,127 @@ void Triangle::replaceVertex(VertexPtr oldVertex, VertexPtr newVertex) {
   this->computeNormal();
 };
 
+Vec3Result math::clothestTrianglePoint(glm::vec3 p, glm::vec3 a, glm::vec3 b, glm::vec3 c) {
+  Vec3Result result;
+  result.data = glm::vec3(0.0f);
+
+  glm::vec3 diff1 = p - a;
+  glm::vec3 diff2 = p - b;
+  glm::vec3 diff3 = p - c;
+
+  float distSq1 = glm::length(diff1);
+  float distSq2 = glm::length(diff2);
+  float distSq3 = glm::length(diff3);
+
+  float min = std::min(distSq1, distSq2);
+  min = std::min(min, distSq3);
+
+  if (min == distSq1) {
+    result.data = a;
+  } else if (min == distSq2) {
+    result.data = b;
+  } else {
+    result.data = c;
+  }
+
+  return result;
+};
+
+/**
+ * Find the closest orthogonal projection of a point p onto a triangle given by three vertices
+ * a, b and c. Returns either the projection point, or null if the projection is not within
+ * the triangle.
+ */
+Vec3Result math::clothestTrianglePointOld(glm::vec3 p, glm::vec3 a, glm::vec3 b, glm::vec3 c) {
+  Vec3Result result;
+  result.data = glm::vec3(0.0f);
+  // Find the normal to the plane: n = (b - a) x (c - a)
+  // Vector3d n = b.sub(a, new Vector3d()).cross(c.sub(a, new Vector3d()));
+  glm::vec3 n = glm::cross(b - a, c - a);
+
+  // Normalize normal vector
+  double nLen = glm::length(n);
+  if (nLen < 1.0e-30) {
+    result.hasData = false;
+    return result;  // Triangle is degenerate
+  } else {
+    //n.mul(1.0f / nLen);
+    n *= 1.0f / nLen;
+  }
+
+  //    Project point p onto the plane spanned by a->b and a->c.
+  //
+  //    Given a plane
+  //
+  //        a : point on plane
+  //        n : *unit* normal to plane
+  //
+  //    Then the *signed* distance from point p to the plane
+  //    (in the direction of the normal) is
+  //
+  //        dist = p . n - a . n
+  //
+  // double dist = p.dot(n) - a.dot(n);
+  float dist = glm::dot(p, n) - glm::dot(a, n);
+
+  // Project p onto the plane by stepping the distance from p to the plane
+  // in the direction opposite the normal: proj = p - dist * n
+  // Vector3d proj = p.add(n.mul(-dist, new Vector3d()), new Vector3d());
+  glm::vec3 proj = p + (dist * n);// Negate normal
+
+  // Find out if the projected point falls within the triangle -- see:
+  // http://blackpawn.com/texts/pointinpoly/default.html
+
+  // Compute edge vectors        
+  double v0x = c.x - a.x;
+  double v0y = c.y - a.y;
+  double v0z = c.z - a.z;
+  double v1x = b.x - a.x;
+  double v1y = b.y - a.y;
+  double v1z = b.z - a.z;
+  double v2x = proj.x - a.x;
+  double v2y = proj.y - a.y;
+  double v2z = proj.z - a.z;
+
+  // Compute dot products
+  double dot00 = v0x * v0x + v0y * v0y + v0z * v0z;
+  double dot01 = v0x * v1x + v0y * v1y + v0z * v1z;
+  double dot02 = v0x * v2x + v0y * v2y + v0z * v2z;
+  double dot11 = v1x * v1x + v1y * v1y + v1z * v1z;
+  double dot12 = v1x * v2x + v1y * v2y + v1z * v2z;
+
+  // Compute barycentric coordinates (u, v) of projection point
+  double denom = (dot00 * dot11 - dot01 * dot01);
+  if (std::abs(denom) < 1.0e-30) {
+    result.hasData = false;
+    return result; // Triangle is degenerate
+  }
+  double invDenom = 1.0 / denom;
+  double u = (dot11 * dot02 - dot01 * dot12) * invDenom;
+  double v = (dot00 * dot12 - dot01 * dot02) * invDenom;
+
+  // Check barycentric coordinates
+  bool inTriangle = (u >= 0.0) && (v >= 0.0) && (u + v < 1.0);
+  /*
+  if ((u >= 0) && (v >= 0) && (u + v < 1)) {
+      // Nearest orthogonal projection point is in triangle
+      return proj;
+  } else {
+      // Nearest orthogonal projection point is outside triangle
+      result.hasData = false;
+      return result;
+  }
+  */
+  if (!inTriangle) {
+    // Nearest orthogonal projection point is outside triangle
+    result.hasData = false;
+    return result;
+  }
+
+  // Nearest orthogonal projection point is in triangle
+  result.data = proj;
+  return result;
+}
 
 float math::triangleIntersection(glm::vec3 origin, glm::vec3 dir, glm::vec3 v0, glm::vec3 v1, glm::vec3 v2) {
   /*

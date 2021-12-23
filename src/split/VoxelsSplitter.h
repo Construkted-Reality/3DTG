@@ -37,6 +37,8 @@ struct VoxelFaceTriangle {
   VoxelFaceVertex b;
   VoxelFaceVertex c;
   Vector3f normal;
+
+  VoxelFaceVertex& operator[] (size_t i);
 };
 
 struct VoxelFaceQuad {
@@ -74,6 +76,7 @@ class Voxel {
 
     glm::ivec3 position;
     glm::vec3 units;
+    float geometricError = 0.0f;
 
     glm::vec3 averageNormal;// Used to delete wrong triangles
     //void filterTriangles();
@@ -84,6 +87,7 @@ class Voxel {
 
     bool has(VoxelFacePtr &face);
     bool intersects(glm::vec3 from, glm::vec3 to);
+    void computeError();
 
     virtual ~Voxel();
 };

@@ -1,6 +1,52 @@
 #include "VoxelsSplitter.h"
 
 
+
+VoxelFaceVertex& VoxelFaceTriangle::operator[] (size_t i)
+{
+  switch (i) {
+    case 0: return this->a;
+    case 1: return this->b;
+    case 2: return this->c;
+    default: throw "Index out of range";
+  }
+};
+
+void Voxel::computeError() {
+  this->geometricError = 0.0f;
+  if (this->faces.size() > 0) {
+    for (VoxelFaceTriangle &triangle : this->resultTriangles) {
+      float triangleError = 0.0f;
+      for(unsigned int i = 0; i < 3; i++) {
+
+        glm::vec3 dist(0.0f);
+        for (VoxelFacePtr &face : this->faces) {
+          Vec3Result trPoint = math::clothestTrianglePoint(
+            triangle[i].position.toGLM(), 
+            face->vertices[0].position.toGLM(),
+            face->vertices[1].position.toGLM(),
+            face->vertices[2].position.toGLM()
+          );
+
+          if (trPoint.hasData) {
+            dist += trPoint.data - triangle[i].position.toGLM();
+            // triangleError += glm::length(trPoint.data - triangle[i].position.toGLM());
+          }
+        }
+
+        
+        triangleError += glm::length(dist);// / std::max(1.0f, (float) this->faces.size());
+      }
+
+      this->geometricError += triangleError / 3.0f;
+    }
+
+    if (this->resultTriangles.size() > 0) {
+      this->geometricError /= (float) this->resultTriangles.size();
+    }
+  }
+};
+
 Voxel::Voxel(glm::ivec3 position, glm::vec3 units) {
   this->position = position;
   this->units = units;
@@ -420,6 +466,8 @@ glm::vec2 VoxelGrid::getClosestUV(glm::ivec3 voxelPos, glm::vec3 pos) {
   glm::vec2 result;
   float dist = 999999.0f;
 
+  Vector3f tpos = Vector3f::fromGLM(pos);
+
   int maxStep = 1;
   int minStep = -maxStep;
 
@@ -432,7 +480,7 @@ glm::vec2 VoxelGrid::getClosestUV(glm::ivec3 voxelPos, glm::vec3 pos) {
             for (unsigned int t = 0; t < 3; t++) {
               VoxelFaceVertex &voxelFaceVertex = facePtr->vertices[t];
 
-              float dt = voxelFaceVertex.position.distanceTo(Vector3f::fromGLM(pos));
+              float dt = voxelFaceVertex.position.distanceTo(tpos);
               if (dt <= dist) {
                 dist = dt;
                 result = voxelFaceVertex.uv.toGLM();
@@ -1003,10 +1051,19 @@ void VoxelGrid::rasterize(GroupObject &src, GroupObject &dest) {
       }
     }
 
+    float geometricError = 0.0f;
+    unsigned int voxelsUsed = 0;
+
     for (unsigned int x = 0; x < (unsigned int) this->gridResolution.x; x++) {
       for (unsigned int y = 0; y < (unsigned int) this->gridResolution.y; y++) {
         for (unsigned int z = 0; z < (unsigned int) this->gridResolution.z; z++) {
           VoxelPtr voxel = this->get(x, y, z);
+          voxel->computeError();
+          geometricError += voxel->geometricError;
+          // if (voxel->geometricError != 0.0f) {
+            voxelsUsed++;
+          // }
+
           glm::ivec3 voxelPos(x, y, z);
 
           for (VoxelFaceTriangle &triangle : voxel->resultTriangles) {
@@ -1018,19 +1075,28 @@ void VoxelGrid::rasterize(GroupObject &src, GroupObject &dest) {
       }
     }
 
-    
+    if (voxelsUsed > 0) {
+      geometricError /= (float) voxelsUsed;
+    }
 
     // std::cout << "Finish mesh" << std::endl;
     this->build(mesh, materialMeshMap);
     mesh->computeUVBox();
+    mesh->computeBoundingBox();
     mesh->finish();
 
+    // MeshObject simplified = simplifier::modify(mesh, 0.1f);
+
     mesh->triangulate();
+    mesh->geometricError = geometricError;
     
     dest->meshes.push_back(mesh);
     // meshIndex++;
     this->clear();
+    // mesh->free(false);
   });
+
+  // dest->computeGeometricError();
 
   /*
   this->build(dest->meshes[0], materialMeshMap);
@@ -1362,6 +1428,7 @@ GroupObject VoxelsSplitter::decimate(GroupObject target) {
   this->grid.rasterize(target, result);
 
   // result->computeUVBox();
+  result->computeBoundingBox();
 
   return result;
 };

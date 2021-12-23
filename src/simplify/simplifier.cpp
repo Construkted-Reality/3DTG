@@ -75,9 +75,9 @@ MeshObject simplifier::modify(MeshObject &mesh, float verticesCountModifier) {
   }
 
   // std::cout << "Vertex sorting started" << std::endl;
-  std::sort(vertices.begin(), vertices.end(), [](VertexPtr &lx, VertexPtr &rx){
-    return lx->collapseCost < rx->collapseCost;
-  });
+  // std::sort(vertices.begin(), vertices.end(), [](VertexPtr &lx, VertexPtr &rx){
+  //   return lx->collapseCost < rx->collapseCost;
+  // });
 
   for (unsigned int i = 0; i < vertices.size(); i++) {
     vertices[i]->positionId = i;

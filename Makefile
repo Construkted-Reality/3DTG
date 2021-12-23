@@ -1,7 +1,8 @@
 CC = g++
 INCLUDE = -I ./include
 LIBF = -L ./lib
-CXXFLAGS = -Werror -O1 -DDEBUG -g --std=c++17 -g $(INCLUDE) $(LIBF)
+CXXFLAGS = -Werror -O3 --std=c++17 $(INCLUDE) $(LIBF)
+# -DDEBUG -g
 LFLAGS = 
 LIBS = -lGLTF -ldraco -ldracoenc -ldracodec
 

@@ -74,25 +74,32 @@ void splitter::textureLOD(GroupObject &baseObject, int level = 0) {
     if (mesh->material->name != "") {
       if (level > 0) {
         MaterialObject nextMaterial = mesh->material->clone(true);
-        Image diffuse;
+        if (mesh->material->mipMaps.count(level) > 0) {
+          nextMaterial->diffuseMapImage = mesh->material->mipMaps[level];
+          mesh->material = nextMaterial;
+        } else {
+          Image diffuse;
 
-        diffuse.channels = mesh->material->diffuseMapImage.channels;
+          diffuse.channels = mesh->material->diffuseMapImage.channels;
 
-        int textureWidth = mesh->material->diffuseMapImage.width;
-        int textureHeight = mesh->material->diffuseMapImage.height;
-        
-        int simplifiedTextureWidth = std::max(textureWidth / (level * 2), 1);
-        int simplifiedTextureHeight = std::max(textureHeight / (level * 2), 1);
+          int textureWidth = mesh->material->diffuseMapImage.width;
+          int textureHeight = mesh->material->diffuseMapImage.height;
+          
+          int simplifiedTextureWidth = std::max(textureWidth / (level * 2), 1);
+          int simplifiedTextureHeight = std::max(textureHeight / (level * 2), 1);
 
-        diffuse.data = new unsigned char[simplifiedTextureWidth * simplifiedTextureHeight * 3];
-        diffuse.width = simplifiedTextureWidth;
-        diffuse.height = simplifiedTextureHeight;
+          diffuse.data = new unsigned char[simplifiedTextureWidth * simplifiedTextureHeight * 3];
+          diffuse.width = simplifiedTextureWidth;
+          diffuse.height = simplifiedTextureHeight;
 
-        stbir_resize_uint8( mesh->material->diffuseMapImage.data, textureWidth, textureHeight, 0, diffuse.data, simplifiedTextureWidth, simplifiedTextureHeight, 0, 3);
-        // delete [] data;
+          stbir_resize_uint8( mesh->material->diffuseMapImage.data, textureWidth, textureHeight, 0, diffuse.data, simplifiedTextureWidth, simplifiedTextureHeight, 0, 3);
+          // delete [] data;
 
-        nextMaterial->diffuseMapImage = diffuse;
-        mesh->material = nextMaterial;
+          mesh->material->mipMaps[level] = diffuse;// Save to the old ref
+
+          nextMaterial->diffuseMapImage = diffuse;
+          mesh->material = nextMaterial;
+        }
       }
     }
   });

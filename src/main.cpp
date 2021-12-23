@@ -43,6 +43,7 @@ int main(int argc, char** argv) {
   ("g,grid", "Grid resolution", cxxopts::value<unsigned int>()->default_value("64"))
   ("iso", "Iso level", cxxopts::value<float>()->default_value("1.0"))
   ("f,format", "Model format to export", cxxopts::value<std::string>()->default_value("b3dm"))
+  ("a,algorithm", "Algorithm to use to split", cxxopts::value<std::string>()->default_value("grid"))
   ("h,help", "Help")
   ;
 
@@ -51,20 +52,30 @@ int main(int argc, char** argv) {
   cxxopts::ParseResult result;
 
   try {
-      result = options.parse(argc, argv);
+    result = options.parse(argc, argv);
   } catch (cxxopts::missing_argument_exception const &exeption) {
-      std::cout << exeption.what() << std::endl;
-      return 0;
+    std::cout << exeption.what() << std::endl;
+    return 0;
   }
 
   if (result.count("help")) {
-      std::cout << options.help() << std::endl;
-      exit(0);
+    std::cout << options.help() << std::endl;
+    exit(0);
   }
 
   if (!result.count("input")) {
-      std::cout << "Input isn't specified" << std::endl;
-      exit(0);
+    std::cout << "Input isn't specified" << std::endl;
+    exit(0);
+  }
+
+  std::string algorithm = result["algorithm"].as<std::string>();
+  
+  std::string gridAl = std::string("grid");
+  std::string splitAl = std::string("split");
+
+  if (algorithm != gridAl && algorithm != splitAl) {
+    std::cout << "Algorithm \"" << algorithm << "\" wasn't found, available algoritms: " << gridAl << ", " << splitAl << std::endl;
+    exit(0);
   }
 
   std::string inputFile = utils::normalize(result["input"].as<std::string>());
@@ -89,229 +100,207 @@ int main(int argc, char** argv) {
 
   std::cout << "Output directory: " << out.c_str() << std::endl;
 
-  GLTFExporter exporter;
+  B3DMExporter exporter;
 
 
   std::cout << "Splitting..." << std::endl;
+  
 
-  unsigned int chunk = 0;
-  unsigned int processed = 0;
   float totalError = 0.0f;
-
   Tileset tileset(0);
 
-  VoxelsSplitter currentSplitter;
-  currentSplitter.polygonsLimit = result["limit"].as<unsigned int>();
-  currentSplitter.grid.isoLevel = result["iso"].as<float>();
+  
+  if (algorithm == gridAl) {
 
-  unsigned int gr = result["grid"].as<unsigned int>();
-  currentSplitter.grid.gridResolution = glm::ivec3(gr, gr, gr);
-
-  currentSplitter.grid.init();
-
-  currentSplitter.onSave = [&](GroupObject object, IdGenerator::ID targetId, IdGenerator::ID parentId, unsigned int level){
-      object->computeBoundingBox();
-      object->computeGeometricError();
-
-      std::string modelDir = std::string("level_") + std::to_string(level);
-      std::string modelName = utils::getFileName(object->name) + "_" + std::to_string(chunk);
-      std::string modelPath = utils::normalize(
-          utils::concatPath("./", utils::concatPath(modelDir, modelName)) + std::string(".") + exporter.format
-      );
-
-      std::shared_ptr<Tile> parentTile = tileset.findTileById(parentId);
-      if (parentTile != NULL) {
-          std::shared_ptr<Tile> targetTile = std::make_shared<Tile>();
-          targetTile->id = targetId;
-          targetTile->geometricError = object->geometricError;
-          // targetTile->refine = TileRefine::REPLASE;
-
-          totalError += (float) object->geometricError;
-
-          targetTile->content = std::make_shared<TileContent>();
-          targetTile->content->uri = modelPath;
-
-          targetTile->boundingVolume = std::make_shared<TileBoundingVolume>();
-          targetTile->boundingVolume->box = std::make_shared<TileBoundingBox>();
-
-          targetTile->boundingVolume->box->center = object->boundingBox.getCenter();
-          targetTile->boundingVolume->box->xHalf = object->boundingBox.getSize();
-          targetTile->boundingVolume->box->xHalf /= 2.0;
-
-          targetTile->boundingVolume->box->yHalf = targetTile->boundingVolume->box->xHalf;
-          targetTile->boundingVolume->box->zHalf = targetTile->boundingVolume->box->xHalf;
-
-          targetTile->boundingVolume->box->xHalf.y = 0.0f;
-          targetTile->boundingVolume->box->xHalf.z = 0.0f;
-
-          targetTile->boundingVolume->box->yHalf.x = 0.0f;
-          targetTile->boundingVolume->box->yHalf.z = 0.0f;
-
-          targetTile->boundingVolume->box->zHalf.x = 0.0f;
-          targetTile->boundingVolume->box->zHalf.y = 0.0f;
-
-          parentTile->children.push_back(targetTile);
-      }
-      
-      exporter.save(utils::concatPath(out, modelDir), modelName, object);
-
-      chunk++;
-
-      processed++;
-      std::cout << "Splitting model " << (processed + 1) << std::endl;
-  };
-
-  currentSplitter.split(loader.object);
+    unsigned int chunk = 0;
+    unsigned int processed = 0;
 
 
-  /*
-  splitter::IDGen.reset(); // Reset id counter;
+    VoxelsSplitter currentSplitter;
+    currentSplitter.polygonsLimit = result["limit"].as<unsigned int>();
+    currentSplitter.grid.isoLevel = result["iso"].as<float>();
 
-  Tileset tileset(splitter::IDGen.id);
+    unsigned int gr = result["grid"].as<unsigned int>();
+    currentSplitter.grid.gridResolution = glm::ivec3(gr, gr, gr);
 
-  unsigned int chunk = 0;
-  unsigned int lodChunk = 0;
+    currentSplitter.grid.init();
 
-  unsigned int processed = 0;
+    currentSplitter.onSave = [&](GroupObject object, IdGenerator::ID targetId, IdGenerator::ID parentId, unsigned int level){
+        object->computeBoundingBox();
+        object->computeGeometricError();
 
-  float totalError = 0.0f;
+        std::string modelDir = std::string("level_") + std::to_string(level);
+        std::string modelName = utils::getFileName(object->name) + "_" + std::to_string(chunk);
+        std::string modelPath = utils::normalize(
+            utils::concatPath("./", utils::concatPath(modelDir, modelName)) + std::string(".") + exporter.format
+        );
 
-  std::cout << "Splitting model " << (processed + 1) << std::endl;// " of " << 60 << std::endl;  
+        std::shared_ptr<Tile> parentTile = tileset.findTileById(parentId);
+        if (parentTile != NULL) {
+            std::shared_ptr<Tile> targetTile = std::make_shared<Tile>();
+            targetTile->id = targetId;
+            targetTile->geometricError = object->geometricError;
+            //   std::cout << "Geom error: " << targetTile->geometricError << std::endl;
+            // targetTile->refine = TileRefine::REPLASE;
 
-  splitter::splitObject(
-      loader.object,
-      result["limit"].as<unsigned int>(),
-      [&](GroupObject group, unsigned int targetId, unsigned int parentId, unsigned int level){
-          group->computeBoundingBox();
-          group->computeGeometricError();
+            totalError += (float) object->geometricError;
 
-          // std::cout << "Geometric error: " << group->geometricError << std::endl;
+            targetTile->content = std::make_shared<TileContent>();
+            targetTile->content->uri = modelPath;
 
-          
-          // std::string modelDir = utils::getFileName(group->name) + std::to_string(chunk);
-          // std::string modelName = utils::getFileName(inputFile) + "_" + std::to_string(chunk);
-          // std::string modelPath = utils::normalize(
-          //     utils::concatPath("./", utils::concatPath(modelDir, modelName)) + std::string(".") + exporter.format
-          // );
-          
+            targetTile->boundingVolume = std::make_shared<TileBoundingVolume>();
+            targetTile->boundingVolume->box = std::make_shared<TileBoundingBox>();
 
-          std::string modelDir = std::string("level_") + std::to_string(level);
-          std::string modelName = utils::getFileName(group->name) + "_" + std::to_string(chunk);
-          std::string modelPath = utils::normalize(
-              utils::concatPath("./", utils::concatPath(modelDir, modelName)) + std::string(".") + exporter.format
-          );
+            targetTile->boundingVolume->box->center = object->boundingBox.getCenter();
+            targetTile->boundingVolume->box->xHalf = object->boundingBox.getSize();
+            targetTile->boundingVolume->box->xHalf /= 2.0;
 
-          std::shared_ptr<Tile> parentTile = tileset.findTileById(parentId);
-          if (parentTile != NULL) {
-              std::shared_ptr<Tile> targetTile = std::make_shared<Tile>();
-              targetTile->id = targetId;
-              targetTile->geometricError = group->geometricError;
-              // targetTile->refine = TileRefine::REPLASE;
+            targetTile->boundingVolume->box->yHalf = targetTile->boundingVolume->box->xHalf;
+            targetTile->boundingVolume->box->zHalf = targetTile->boundingVolume->box->xHalf;
 
-              totalError += (float) group->geometricError;
+            targetTile->boundingVolume->box->xHalf.y = 0.0f;
+            targetTile->boundingVolume->box->xHalf.z = 0.0f;
 
-              targetTile->content = std::make_shared<TileContent>();
-              targetTile->content->uri = modelPath;
+            targetTile->boundingVolume->box->yHalf.x = 0.0f;
+            targetTile->boundingVolume->box->yHalf.z = 0.0f;
 
-              targetTile->boundingVolume = std::make_shared<TileBoundingVolume>();
-              targetTile->boundingVolume->box = std::make_shared<TileBoundingBox>();
+            targetTile->boundingVolume->box->zHalf.x = 0.0f;
+            targetTile->boundingVolume->box->zHalf.y = 0.0f;
 
-              targetTile->boundingVolume->box->center = group->boundingBox.getCenter();
-              targetTile->boundingVolume->box->xHalf = group->boundingBox.getSize();
-              targetTile->boundingVolume->box->xHalf /= 2.0;
+            parentTile->children.push_back(targetTile);
+        }
+        
+        exporter.save(utils::concatPath(out, modelDir), modelName, object);
 
-              targetTile->boundingVolume->box->yHalf = targetTile->boundingVolume->box->xHalf;
-              targetTile->boundingVolume->box->zHalf = targetTile->boundingVolume->box->xHalf;
+        chunk++;
 
-              targetTile->boundingVolume->box->xHalf.y = 0.0f;
-              targetTile->boundingVolume->box->xHalf.z = 0.0f;
+        processed++;
+        std::cout << "Splitting model " << (processed + 1) << std::endl;
+    };
 
-              targetTile->boundingVolume->box->yHalf.x = 0.0f;
-              targetTile->boundingVolume->box->yHalf.z = 0.0f;
+    currentSplitter.split(loader.object);
+  } else {
+    splitter::IDGen.reset(); // Reset id counter;
 
-              targetTile->boundingVolume->box->zHalf.x = 0.0f;
-              targetTile->boundingVolume->box->zHalf.y = 0.0f;
+    Tileset tileset(splitter::IDGen.id);
 
-              parentTile->children.push_back(targetTile);
-          }
+    unsigned int chunk = 0;
+    unsigned int lodChunk = 0;
 
-          exporter.save(utils::concatPath(out, modelDir), modelName, group);
+    unsigned int processed = 0;
 
-          // group->free();
-          chunk++;
+    float totalError = 0.0f;
 
-          processed++;
-          // if (processed < 60) {
-          //     std::cout << "Splitting model " << (processed + 1) << " of " << 60 << std::endl;
-          // }
+    std::cout << "Splitting model " << (processed + 1) << std::endl;// " of " << 60 << std::endl;  
 
-          std::cout << "Splitting model " << (processed + 1) << std::endl;
+    splitter::splitObject(
+        loader.object,
+        result["limit"].as<unsigned int>(),
+        [&](GroupObject group, unsigned int targetId, unsigned int parentId, unsigned int level){
+            group->computeBoundingBox();
+            group->computeGeometricError();
+            
 
-          // std::cout << "---------------------------------------------" << std::endl;
-      },
-      [&](GroupObject group, unsigned int targetId, unsigned int parentId, unsigned int level){
-          group->computeBoundingBox();
-          group->computeGeometricError();
+            std::string modelDir = std::string("level_") + std::to_string(level);
+            std::string modelName = utils::getFileName(group->name) + "_" + std::to_string(chunk);
+            std::string modelPath = utils::normalize(
+                utils::concatPath("./", utils::concatPath(modelDir, modelName)) + std::string(".") + exporter.format
+            );
 
-          // std::cout << "Geometric error: " << group->geometricError << std::endl;
+            std::shared_ptr<Tile> parentTile = tileset.findTileById(parentId);
+            if (parentTile != NULL) {
+                std::shared_ptr<Tile> targetTile = std::make_shared<Tile>();
+                targetTile->id = targetId;
+                targetTile->geometricError = group->geometricError;
+                // targetTile->refine = TileRefine::REPLASE;
 
-          
-          // std::string modelDir = utils::getFileName(group->name) + std::to_string(chunk);
-          // std::string modelName = utils::getFileName(inputFile) + "_" + std::to_string(lodChunk);
-          // std::string modelPath = utils::normalize(
-          //     utils::concatPath("./", utils::concatPath(modelDir, modelName)) + std::string(".") + exporter.format
-          // );
-          
+                totalError += (float) group->geometricError;
 
-          std::string modelDir = std::string("level_") + std::to_string(level);
-          std::string modelName = utils::getFileName(group->name) + "_" + std::to_string(lodChunk);
-          std::string modelPath = utils::normalize(
-              utils::concatPath("./", utils::concatPath(modelDir, modelName)) + std::string(".") + exporter.format
-          );
-          
-          std::shared_ptr<Tile> parentTile = tileset.findTileById(parentId);
-          if (parentTile != NULL) {
-              std::shared_ptr<Tile> targetTile = std::make_shared<Tile>();
-              targetTile->id = targetId;
-              targetTile->geometricError = group->geometricError;
-              // targetTile->refine = TileRefine::REPLASE;
+                targetTile->content = std::make_shared<TileContent>();
+                targetTile->content->uri = modelPath;
 
-              totalError += (float) group->geometricError;
+                targetTile->boundingVolume = std::make_shared<TileBoundingVolume>();
+                targetTile->boundingVolume->box = std::make_shared<TileBoundingBox>();
 
-              targetTile->content = std::make_shared<TileContent>();
-              targetTile->content->uri = modelPath;
+                targetTile->boundingVolume->box->center = group->boundingBox.getCenter();
+                targetTile->boundingVolume->box->xHalf = group->boundingBox.getSize();
+                targetTile->boundingVolume->box->xHalf /= 2.0;
 
-              targetTile->boundingVolume = std::make_shared<TileBoundingVolume>();
-              targetTile->boundingVolume->box = std::make_shared<TileBoundingBox>();
+                targetTile->boundingVolume->box->yHalf = targetTile->boundingVolume->box->xHalf;
+                targetTile->boundingVolume->box->zHalf = targetTile->boundingVolume->box->xHalf;
 
-              targetTile->boundingVolume->box->center = group->boundingBox.getCenter();
-              targetTile->boundingVolume->box->xHalf = group->boundingBox.getSize();
-              targetTile->boundingVolume->box->xHalf /= 2.0;
+                targetTile->boundingVolume->box->xHalf.y = 0.0f;
+                targetTile->boundingVolume->box->xHalf.z = 0.0f;
 
-              targetTile->boundingVolume->box->yHalf = targetTile->boundingVolume->box->xHalf;
-              targetTile->boundingVolume->box->zHalf = targetTile->boundingVolume->box->xHalf;
+                targetTile->boundingVolume->box->yHalf.x = 0.0f;
+                targetTile->boundingVolume->box->yHalf.z = 0.0f;
 
-              targetTile->boundingVolume->box->xHalf.y = 0.0f;
-              targetTile->boundingVolume->box->xHalf.z = 0.0f;
+                targetTile->boundingVolume->box->zHalf.x = 0.0f;
+                targetTile->boundingVolume->box->zHalf.y = 0.0f;
 
-              targetTile->boundingVolume->box->yHalf.x = 0.0f;
-              targetTile->boundingVolume->box->yHalf.z = 0.0f;
+                parentTile->children.push_back(targetTile);
+            }
 
-              targetTile->boundingVolume->box->zHalf.x = 0.0f;
-              targetTile->boundingVolume->box->zHalf.y = 0.0f;
+            exporter.save(utils::concatPath(out, modelDir), modelName, group);
 
-              parentTile->children.push_back(targetTile);
-          }
+            group->free();
+            chunk++;
 
-          exporter.save(utils::concatPath(out, modelDir), modelName, group);
+            processed++;
+            std::cout << "Splitting model " << (processed + 1) << std::endl;
+        },
+        [&](GroupObject group, unsigned int targetId, unsigned int parentId, unsigned int level){
+            group->computeBoundingBox();
+            group->computeGeometricError();
+            
 
-          // group->free();
-          lodChunk++;
+            std::string modelDir = std::string("level_") + std::to_string(level);
+            std::string modelName = utils::getFileName(group->name) + "_" + std::to_string(lodChunk);
+            std::string modelPath = utils::normalize(
+                utils::concatPath("./", utils::concatPath(modelDir, modelName)) + std::string(".") + exporter.format
+            );
+            
+            std::shared_ptr<Tile> parentTile = tileset.findTileById(parentId);
+            if (parentTile != NULL) {
+                std::shared_ptr<Tile> targetTile = std::make_shared<Tile>();
+                targetTile->id = targetId;
+                targetTile->geometricError = group->geometricError;
+                // targetTile->refine = TileRefine::REPLASE;
 
-          // std::cout << "---------------------------------------------" << std::endl;
-      }
-  );
-  */
+                totalError += (float) group->geometricError;
+
+                targetTile->content = std::make_shared<TileContent>();
+                targetTile->content->uri = modelPath;
+
+                targetTile->boundingVolume = std::make_shared<TileBoundingVolume>();
+                targetTile->boundingVolume->box = std::make_shared<TileBoundingBox>();
+
+                targetTile->boundingVolume->box->center = group->boundingBox.getCenter();
+                targetTile->boundingVolume->box->xHalf = group->boundingBox.getSize();
+                targetTile->boundingVolume->box->xHalf /= 2.0;
+
+                targetTile->boundingVolume->box->yHalf = targetTile->boundingVolume->box->xHalf;
+                targetTile->boundingVolume->box->zHalf = targetTile->boundingVolume->box->xHalf;
+
+                targetTile->boundingVolume->box->xHalf.y = 0.0f;
+                targetTile->boundingVolume->box->xHalf.z = 0.0f;
+
+                targetTile->boundingVolume->box->yHalf.x = 0.0f;
+                targetTile->boundingVolume->box->yHalf.z = 0.0f;
+
+                targetTile->boundingVolume->box->zHalf.x = 0.0f;
+                targetTile->boundingVolume->box->zHalf.y = 0.0f;
+
+                parentTile->children.push_back(targetTile);
+            }
+
+            exporter.save(utils::concatPath(out, modelDir), modelName, group);
+
+            group->free();
+            lodChunk++;
+        }
+    );
+  }
   
   std::cout << "Exported" << std::endl;
 
