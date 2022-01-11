@@ -1102,6 +1102,7 @@ Vec3Result math::clothestTrianglePointOld(glm::vec3 p, glm::vec3 a, glm::vec3 b,
 
   // Nearest orthogonal projection point is in triangle
   result.data = proj;
+  result.uv = glm::vec2((float) u, (float) v);
   return result;
 }
 

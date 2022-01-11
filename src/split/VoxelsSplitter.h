@@ -146,6 +146,8 @@ class VoxelGrid {
     glm::vec3 getVoxelVertex(unsigned int x, unsigned int y, unsigned int z, unsigned int index);
     glm::vec2 getClosestUV(glm::ivec3 voxelPos, glm::vec3 pos);
 
+    void getClosestUV(VoxelFaceTriangle &triangle, glm::ivec3 voxelPos);
+
     glm::vec3 intLinear(glm::vec3 p1, glm::vec3 p2, float valp1, float valp2);
 
     std::vector<VoxelFaceTriangle> getVertices(unsigned int x, unsigned int y, unsigned int z);

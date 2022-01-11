@@ -48,6 +48,23 @@ nlohmann::json Tile::toJSON() {
     }
   }
 
+  std::vector<float> transformValues;
+  // transformValues.reserve(16);
+
+  for (unsigned int i = 0; i < 4; i++) {
+    // transformValues[(i * 4)] = this->transform[i].x;
+    // transformValues[(i * 4) + 1] = this->transform[i].y;
+    // transformValues[(i * 4) + 2] = this->transform[i].z;
+    // transformValues[(i * 4) + 3] = this->transform[i].w;
+
+    transformValues.push_back(this->transform[i].x);
+    transformValues.push_back(this->transform[i].y);
+    transformValues.push_back(this->transform[i].z);
+    transformValues.push_back(this->transform[i].w);
+  }
+  result["transform"] = transformValues;
+
+
   result["geometricError"] = (this->geometricError > 0.0f) ? (double) this->geometricError : (double) 0.0;
 
   if (this->refine != NULL) {

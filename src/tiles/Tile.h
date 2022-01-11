@@ -7,6 +7,7 @@
 #include <functional>
 
 #include <json/json.hpp>
+#include <glm/glm.hpp>
 
 #include "./TileBoundingVolume.h"
 #include "./TileContent.h"
@@ -21,6 +22,7 @@ class Tile {
 
     std::shared_ptr<TileBoundingVolume> boundingVolume = NULL;// Required
     float geometricError = 0.0f;// Required
+    glm::mat4 transform = glm::mat4(1.0f);
     Refine refine = NULL;
     std::shared_ptr<TileContent> content = NULL;
     std::vector<std::shared_ptr<Tile>> children;

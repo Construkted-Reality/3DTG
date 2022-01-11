@@ -143,6 +143,7 @@ class Triangle : public std::enable_shared_from_this<Triangle> {
 
 struct Vec3Result {
   glm::vec3 data;
+  glm::vec2 uv;
   bool hasData = true;
 };
 

@@ -463,6 +463,43 @@ VoxelPtr VoxelGrid::getNeighbor(unsigned int x, unsigned int y, unsigned int z, 
   return this->get(x, y, z);
 };
 
+void VoxelGrid::getClosestUV(VoxelFaceTriangle &triangle, glm::ivec3 voxelPos) {
+  glm::vec3 triCenter = triangle.a.position.toGLM() + triangle.b.position.toGLM() + triangle.c.position.toGLM();
+  triCenter /= 3.0f;
+
+  VoxelFacePtr resFacePtr = nullptr;
+  float dist = 999999.0f;
+
+  int maxStep = 1;
+  int minStep = -maxStep;
+
+  for (int i = minStep; i <= maxStep; i++) {
+    for (int k = minStep; k <= maxStep; k++) {
+      for (int m = minStep; m <= maxStep; m++) {
+        if (this->has(voxelPos.x + i, voxelPos.y + k, voxelPos.z + m)) {
+          VoxelPtr voxel = this->get(voxelPos.x + i, voxelPos.y + k, voxelPos.z + m);
+          for (VoxelFacePtr &facePtr : voxel->faces) {
+            glm::vec3 sampleTriCenter = facePtr->vertices[0].position.toGLM() + facePtr->vertices[1].position.toGLM() + facePtr->vertices[2].position.toGLM();
+            sampleTriCenter /= 3.0f;
+            
+            float dt = Vector3f::fromGLM(sampleTriCenter).distanceTo(Vector3f::fromGLM(triCenter));
+            if (dt <= dist) {
+              dist = dt;
+              resFacePtr = facePtr;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (resFacePtr != nullptr) {
+    triangle.a.uv = resFacePtr->vertices[0].uv;
+    triangle.b.uv = resFacePtr->vertices[1].uv;
+    triangle.c.uv = resFacePtr->vertices[2].uv;
+  }
+};
+
 glm::vec2 VoxelGrid::getClosestUV(glm::ivec3 voxelPos, glm::vec3 pos) {
   glm::vec2 result;
   float dist = 999999.0f;
@@ -478,6 +515,25 @@ glm::vec2 VoxelGrid::getClosestUV(glm::ivec3 voxelPos, glm::vec3 pos) {
         if (this->has(voxelPos.x + i, voxelPos.y + k, voxelPos.z + m)) {
           VoxelPtr voxel = this->get(voxelPos.x + i, voxelPos.y + k, voxelPos.z + m);
           for (VoxelFacePtr &facePtr : voxel->faces) {
+            // math::clothestTrianglePointOld
+
+            Vec3Result vecRes = math::clothestTrianglePointOld(
+              tpos.toGLM(),
+              facePtr->vertices[0].position.toGLM(),
+              facePtr->vertices[1].position.toGLM(),
+              facePtr->vertices[2].position.toGLM()
+            );
+
+            if (vecRes.hasData) {
+              float dt = Vector3f::fromGLM(vecRes.data).distanceTo(tpos);
+              if (dt <= dist) {
+                dist = dt;
+                result = vecRes.uv;//facePtr->vertices[0].uv.toGLM();
+                // result = voxelFaceVertex.uv.toGLM();
+              }
+            }
+            
+            /*
             for (unsigned int t = 0; t < 3; t++) {
               VoxelFaceVertex &voxelFaceVertex = facePtr->vertices[t];
 
@@ -487,6 +543,7 @@ glm::vec2 VoxelGrid::getClosestUV(glm::ivec3 voxelPos, glm::vec3 pos) {
                 result = voxelFaceVertex.uv.toGLM();
               }
             }
+            */
           }
         }
       }
@@ -1068,9 +1125,12 @@ void VoxelGrid::rasterize(GroupObject &src, GroupObject &dest) {
           glm::ivec3 voxelPos(x, y, z);
 
           for (VoxelFaceTriangle &triangle : voxel->resultTriangles) {
+            this->getClosestUV(triangle, voxelPos);
+            /*
             triangle.a.uv = Vector2f::fromGLM(this->getClosestUV(voxelPos, triangle.a.position.toGLM()));
             triangle.b.uv = Vector2f::fromGLM(this->getClosestUV(voxelPos, triangle.b.position.toGLM()));
             triangle.c.uv = Vector2f::fromGLM(this->getClosestUV(voxelPos, triangle.c.position.toGLM()));
+            */
           }
         }
       }
@@ -1139,7 +1199,7 @@ void VoxelGrid::build(VoxelFaceTriangle &triangle, VoxelFaceVertex &vertex, std:
             bool exists = false;
 
             // if (vTriangle.a.index == -1) {// Not calculated vertex A
-              if (vertex.position.equals(vTriangle.a.position)) {
+              if (vertex.position.equals(vTriangle.a.position) && false) {
                 vTriangle.a.index = index;
                 exists = true;
               }
@@ -1148,7 +1208,7 @@ void VoxelGrid::build(VoxelFaceTriangle &triangle, VoxelFaceVertex &vertex, std:
             // }
             
             // if (vTriangle.b.index == -1) {// Not calculated vertex B
-              if (vertex.position.equals(vTriangle.b.position)) {
+              if (vertex.position.equals(vTriangle.b.position) && false) {
                 vTriangle.b.index = index;
                 exists = true;  
               }
@@ -1157,7 +1217,7 @@ void VoxelGrid::build(VoxelFaceTriangle &triangle, VoxelFaceVertex &vertex, std:
             // }
 
             //if (vTriangle.c.index == -1) {// Not calculated vertex C
-              if (vertex.position.equals(vTriangle.c.position)) {
+              if (vertex.position.equals(vTriangle.c.position) && false) {
                 vTriangle.c.index = index;
                 exists = true;
               }
