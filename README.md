@@ -4,3 +4,11 @@ https://github.com/CesiumGS/3d-tiles
 [3D Tiles Overview](https://github.com/CesiumGS/3d-tiles/blob/main/3d-tiles-overview.pdf) 
 
 This tool will convert textured 3d mesh and point cloud formats into 3D tiles which can be used with the CesiumJS and newly announced “Cesium for Unreal” project to stream massive 3D datasets over the internet.
+
+Lots of improvements to be made:
+
+- Caching mechanism (C++ equivalent to [Caffeine caching](https://github.com/ben-manes/caffeine) in Java)
+- alternate decimation/simplification algorithms
+- Multiple input file formats
+- KTX 2.0 Basis texture encoding for better texture compression (better then jpg)
+- 
