@@ -1,14 +1,17 @@
-In order to accelerate the usage of large 3D data over the web, we are developing an open source 3D tile converter called **3DTG**. 
+The **3DTG** tool will convert textured 3d mesh (and soon point cloud) formats into the 3D tiles format used for streaming.  
+
 The tool is based on the open 3D Tile standard.  
 https://github.com/CesiumGS/3d-tiles  
 [3D Tiles Overview](https://github.com/CesiumGS/3d-tiles/blob/main/3d-tiles-overview.pdf) 
 
-This tool will convert textured 3d mesh and point cloud formats into 3D tiles which can be used with the CesiumJS and newly announced “Cesium for Unreal” project to stream massive 3D datasets over the internet.
 
-Lots of improvements to be made:
+### Improvements
+This is a list (in no particular order) of improvements that can be made:
 
 - Caching mechanism (C++ equivalent to [Caffeine caching](https://github.com/ben-manes/caffeine) in Java)
 - alternate decimation/simplification algorithms
-- Multiple input file formats
+- alternate texture baking/transfer algorithms in the creation of LODs
+- Multiple input file formats (FBX, DAE/ZAE, GLTF/GLB)
 - KTX 2.0 Basis texture encoding for better texture compression (better then jpg)
-- 
+- Support point clouds (las/laz, e57 and other formats)
+- add your own
