@@ -1,11 +1,17 @@
+## Introduction
 The **3DTG** tool will convert textured 3d mesh (and soon point cloud) formats into the 3D tiles format used for streaming.  
 
-The tool is based on the open 3D Tile standard.  
-https://github.com/CesiumGS/3d-tiles  
-[3D Tiles Overview](https://github.com/CesiumGS/3d-tiles/blob/main/3d-tiles-overview.pdf) 
+The tool is based on the open [3D Tile standard](https://github.com/CesiumGS/3d-tiles). Also see [3D Tiles Overview](https://github.com/CesiumGS/3d-tiles/blob/main/3d-tiles-overview.pdf) 
 
+## Functionality
+### Current Functionality 
+Currently the tool only accepts textured OBJ files, and simplifies the geometry using a voxel decimation algorithm. 
+The output is a 3d tiles.
 
-### Improvements
+Syntax:
+3dtg.exe -i 
+
+### Future Improvements
 This is a list (in no particular order) of improvements that can be made:
 
 - Caching mechanism (C++ equivalent to [Caffeine caching](https://github.com/ben-manes/caffeine) in Java)
