@@ -8,16 +8,19 @@ std::vector<float> TileBoundingBox::toArray() {
   result.push_back(this->center.z);
 
   result.push_back(this->xHalf.x);
-  result.push_back(this->xHalf.y);
-  result.push_back(this->xHalf.z);
+  result.push_back(0.0f);
+  result.push_back(0.0f);
 
-  result.push_back(this->yHalf.x);
-  result.push_back(this->yHalf.y);
-  result.push_back(this->yHalf.z);
-
-  result.push_back(this->zHalf.x);
-  result.push_back(this->zHalf.y);
+  result.push_back(0.0f);
+  // result.push_back(this->yHalf.y);
   result.push_back(this->zHalf.z);
+  result.push_back(0.0f);
+
+  result.push_back(0.0f);
+  // result.push_back(this->zHalf.y);
+  // result.push_back(this->zHalf.z);
+  result.push_back(0.0f);
+  result.push_back(this->yHalf.y);
 
   return result;
 };

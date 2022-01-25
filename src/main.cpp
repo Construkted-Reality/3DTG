@@ -100,7 +100,7 @@ int main(int argc, char** argv) {
 
   std::cout << "Output directory: " << out.c_str() << std::endl;
 
-  B3DMExporter exporter;
+  GLTFExporter exporter;
 
 
   std::cout << "Splitting..." << std::endl;
@@ -118,12 +118,15 @@ int main(int argc, char** argv) {
 
     VoxelsSplitter currentSplitter;
     currentSplitter.polygonsLimit = result["limit"].as<unsigned int>();
-    currentSplitter.grid.isoLevel = result["iso"].as<float>();
+    // currentSplitter.grid.isoLevel = result["iso"].as<float>();
 
     unsigned int gr = result["grid"].as<unsigned int>();
-    currentSplitter.grid.gridResolution = glm::ivec3(gr, gr, gr);
+    // currentSplitter.grid.gridResolution = glm::ivec3(gr, gr, gr);
 
-    currentSplitter.grid.init();
+    // currentSplitter.grid.init();
+
+    currentSplitter.gridSettings.gridResolution = glm::ivec3(gr, gr, gr);
+    currentSplitter.gridSettings.isoLevel = result["iso"].as<float>();
 
     currentSplitter.onSave = [&](GroupObject object, IdGenerator::ID targetId, IdGenerator::ID parentId, unsigned int level){
         object->computeBoundingBox();

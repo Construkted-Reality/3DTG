@@ -5,12 +5,14 @@ Tileset::Tileset(IdGenerator::ID rootId) {
   this->root->id = rootId;
   this->root->refine = TileRefine::REPLASE;
 
+  /*
   this->root->transform = glm::mat4(
     1.0f, 0.0f, 0.0f, 0.0f,
     0.0f, 0.0f, -1.0f, 0.0f,
     0.0f, 1.0f, 0.0f, 0.0f,
     0.0f, 0.0f, 0.0f, 1.0f
   );
+  */
 };
 
 void Tileset::traverse(Tile::TileCallback fn) {

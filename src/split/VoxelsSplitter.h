@@ -16,6 +16,15 @@
 
 #include <stb/stb_image_resize.h>
 
+#include <memory>
+
+// Threads
+#include <chrono>
+#include <iostream>
+#include <future>
+#include <thread>
+
+// Local
 #include "./../loaders/Loader.h"
 #include "./../simplify/simplifier.h"
 #include "./../helpers/IdGenerator.h"
@@ -159,6 +168,124 @@ class VoxelGrid {
     );
 };
 
+
+class SplitTask {
+  public:
+    GroupObject target;
+
+    IdGenerator::ID targetId;
+    IdGenerator::ID parentID;
+    unsigned int decimationLevel;
+
+    ResultCallback callback;
+
+    // SplitTask() {
+
+    // };
+    // virtual ~SplitTask() = default;
+};
+
+typedef std::shared_ptr<VoxelGrid> GridRef;
+typedef std::function<bool (std::shared_ptr<SplitTask> task, GridRef grid)> PackagedSplit;
+
+
+class SplitProcess {
+  public:
+    bool finished = false;
+
+    std::future<bool> future;
+    std::thread thread;
+
+    unsigned int id;
+
+    SplitProcess(PackagedSplit taskFn, std::shared_ptr<SplitTask> taskObject, GridRef grid, unsigned int id) {
+      std::packaged_task< bool(std::shared_ptr<SplitTask>, GridRef grid) > task = std::packaged_task< bool(std::shared_ptr<SplitTask>, GridRef grid) >(taskFn);
+      this->future = task.get_future();
+      this->thread = std::thread(move(task), taskObject, grid);
+      this->id = id;
+    };
+
+    // virtual ~SplitProcess() = default;
+
+    bool isReady() {
+      return this->future.wait_for(std::chrono::milliseconds(50)) == std::future_status::ready;
+    };
+
+    void finish() {
+      std::cout << "Joining the task: " << this->id << std::endl;
+      this->thread.join();
+    };
+};
+
+class SplitPool {
+  public:
+    std::vector<std::shared_ptr<SplitProcess>> splitResult;
+
+    unsigned int threadsUsed = 1;
+    unsigned int threadsAvailable = 0;
+
+    unsigned int nextId = 0;
+
+    SplitPool() {
+      this->threadsAvailable = std::thread::hardware_concurrency();
+    };
+
+    virtual ~SplitPool() {
+      for (std::shared_ptr<SplitProcess> &task : splitResult) {
+        task->finish();
+      }
+
+      splitResult.clear();
+    };
+
+    bool hasSlot() {
+      return this->threadsUsed < this->threadsAvailable;
+    };
+
+    void create(PackagedSplit taskFn, std::shared_ptr<SplitTask> taskObject, GridRef grid) {
+      std::cout << "Push task to the pool" << std::endl;
+      std::shared_ptr<SplitProcess> result = std::make_shared<SplitProcess>(taskFn, taskObject, grid, this->nextId++);
+      this->splitResult.push_back(result);
+    };
+
+    void waitForSlot() {
+      if (this->splitResult.size() >= this->threadsAvailable) {
+        std::cout << "Wait untill some task is finished" << std::endl;
+
+        std::vector<std::shared_ptr<SplitProcess>> tasksToFinish;
+
+        while (true) {
+          for (std::shared_ptr<SplitProcess> &task : this->splitResult) {
+            if (task->isReady()) {
+              tasksToFinish.push_back(task);
+            }
+          }
+
+          if (tasksToFinish.size() > 0) {
+            break;
+          }
+
+          std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        }
+
+        std::cout << "Tasks ready to finish: " << tasksToFinish.size() << std::endl;
+
+        for (std::shared_ptr<SplitProcess> &task : tasksToFinish) {
+          task->finish();
+          this->splitResult.erase(std::remove(this->splitResult.begin(), this->splitResult.end(), task), this->splitResult.end());
+        }
+
+        tasksToFinish.clear();
+      }
+    };
+};
+
+struct GridSettings {
+  float isoLevel;
+  glm::ivec3 gridResolution;
+};
+
+
 class VoxelsSplitter {
   protected:
     IdGenerator IDGen;
@@ -167,15 +294,21 @@ class VoxelsSplitter {
     VoxelsSplitter();
 
     ResultCallback onSave;
+    SplitPool pool;
 
     unsigned int polygonsLimit = 2048;
+    GridSettings gridSettings;
 
-    VoxelGrid grid;
+    // std::vector<VoxelGrid> grids;
+
+    // VoxelGrid grid;
 
     bool split(GroupObject target, IdGenerator::ID parentId, unsigned int decimationLevel, bool divideVertical);
     bool split(GroupObject target);
 
-    GroupObject decimate(GroupObject target);
+    bool processLod(std::shared_ptr<SplitTask> task, GridRef grid);
+
+    GroupObject decimate(GroupObject target, GridRef grid);
     GroupObject halfMesh(GroupObject target, bool divideVertical);
 
     // void createVoxel(MeshObject &mesh, glm::ivec3 cell);
