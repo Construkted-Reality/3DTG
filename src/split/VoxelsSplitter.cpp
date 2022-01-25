@@ -1054,7 +1054,7 @@ void VoxelGrid::voxelize(MeshObject &mesh) {
 
 void VoxelGrid::rasterize(GroupObject &src, GroupObject &dest) {
   // std::cout << "Init grid" << std::endl;
-  std::cout << "Rasterize has been started" << std::endl;
+  // std::cout << "Rasterize has been started" << std::endl;
   src->computeBoundingBox();
   BBoxf dimensionsBox = src->boundingBox.clone();
 
@@ -1078,9 +1078,9 @@ void VoxelGrid::rasterize(GroupObject &src, GroupObject &dest) {
 
   // unsigned int meshIndex = 0;
   src->traverse([&](MeshObject target){
-    std::cout << "Voxelize has been started" << std::endl;
+    // std::cout << "Voxelize has been started" << std::endl;
     this->voxelize(target);
-    std::cout << "Voxelize has been finished" << std::endl;
+    // std::cout << "Voxelize has been finished" << std::endl;
 
     MeshObject mesh = MeshObject(new Mesh());
     // mesh->name = std::string("Voxels_") + target->name + std::string("_") + std::to_string(meshIndex);
@@ -1159,7 +1159,7 @@ void VoxelGrid::rasterize(GroupObject &src, GroupObject &dest) {
     // mesh->free(false);
   });
 
-  std::cout << "Rasterize has been finished" << std::endl;
+  // std::cout << "Rasterize has been finished" << std::endl;
 
   // dest->computeGeometricError();
 
@@ -1623,7 +1623,7 @@ void VoxelsSplitter::createVoxelPlane(MeshObject &mesh, glm::ivec3 cell, glm::ve
 
 
 bool VoxelsSplitter::processLod(std::shared_ptr<SplitTask> task, GridRef grid) {
-  std::cout << "Split started" << std::endl;
+  // std::cout << "Split started" << std::endl;
 
   grid->init();
   GroupObject voxelized = this->decimate(task->target, grid);
@@ -1631,19 +1631,19 @@ bool VoxelsSplitter::processLod(std::shared_ptr<SplitTask> task, GridRef grid) {
 
   voxelized->name = "Lod";
 
-  std::cout << "Calling callback" << std::endl;
+  // std::cout << "Calling callback" << std::endl;
 
   task->callback(voxelized, task->targetId, task->parentID, task->decimationLevel);
   voxelized->free(false);
 
-  std::cout << "Split finished" << std::endl;
+  // std::cout << "Split finished" << std::endl;
 
   return false;
 };
 
 
 bool VoxelsSplitter::split(GroupObject target, IdGenerator::ID parentId, unsigned int decimationLevel = 0, bool divideVertical = true) {
-  std::cout << "Split id: " << parentId << std::endl;
+  // std::cout << "Split id: " << parentId << std::endl;
 
   unsigned int polygonCount = 0;
 
@@ -1664,7 +1664,7 @@ bool VoxelsSplitter::split(GroupObject target, IdGenerator::ID parentId, unsigne
       //target->name = "Chunk";
       this->onSave(resultGroup, nextParent, parentId, decimationLevel);
 
-      std::cout << "Clearing the chunk" << std::endl;
+      // std::cout << "Clearing the chunk" << std::endl;
       resultGroup->free();
     }
 
@@ -1685,13 +1685,13 @@ bool VoxelsSplitter::split(GroupObject target, IdGenerator::ID parentId, unsigne
     task->decimationLevel = decimationLevel;
     task->callback = this->onSave;
 
-    std::cout << "Creating a grid" << std::endl;
+    // std::cout << "Creating a grid" << std::endl;
 
     GridRef grid = std::make_shared<VoxelGrid>();
     grid->isoLevel = this->gridSettings.isoLevel;
     grid->gridResolution = this->gridSettings.gridResolution;
 
-    std::cout << "Creating a pool task" << std::endl;
+    // std::cout << "Creating a pool task" << std::endl;
     
     this->pool.create(
       bind(&VoxelsSplitter::processLod, this, std::placeholders::_1, std::placeholders::_2),
@@ -1699,12 +1699,12 @@ bool VoxelsSplitter::split(GroupObject target, IdGenerator::ID parentId, unsigne
       grid
     );
     
-    std::cout << "Waiting for result" << std::endl;
+    // std::cout << "Waiting for result" << std::endl;
 
     this->pool.waitForSlot();
     
 
-    std::cout << "Processing next task" << std::endl;
+    // std::cout << "Processing next task" << std::endl;
 
     /*
     GroupObject voxelized = this->decimate(target);
@@ -1720,7 +1720,7 @@ bool VoxelsSplitter::split(GroupObject target, IdGenerator::ID parentId, unsigne
     */
   }
 
-  std::cout << "Median split" << std::endl;
+  // std::cout << "Median split" << std::endl;
   
 
   GroupObject halfs = this->halfMesh(target, divideVertical);

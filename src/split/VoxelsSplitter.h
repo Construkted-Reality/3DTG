@@ -199,6 +199,7 @@ class SplitProcess {
     unsigned int id;
 
     SplitProcess(PackagedSplit taskFn, std::shared_ptr<SplitTask> taskObject, GridRef grid, unsigned int id) {
+      std::cout << "Split id: " << id << std::endl;
       std::packaged_task< bool(std::shared_ptr<SplitTask>, GridRef grid) > task = std::packaged_task< bool(std::shared_ptr<SplitTask>, GridRef grid) >(taskFn);
       this->future = task.get_future();
       this->thread = std::thread(move(task), taskObject, grid);
@@ -212,7 +213,7 @@ class SplitProcess {
     };
 
     void finish() {
-      std::cout << "Joining the task: " << this->id << std::endl;
+      // std::cout << "Joining the task: " << this->id << std::endl;
       this->thread.join();
     };
 };
@@ -243,14 +244,14 @@ class SplitPool {
     };
 
     void create(PackagedSplit taskFn, std::shared_ptr<SplitTask> taskObject, GridRef grid) {
-      std::cout << "Push task to the pool" << std::endl;
+      // std::cout << "Push task to the pool" << std::endl;
       std::shared_ptr<SplitProcess> result = std::make_shared<SplitProcess>(taskFn, taskObject, grid, this->nextId++);
       this->splitResult.push_back(result);
     };
 
     void waitForSlot() {
       if (this->splitResult.size() >= this->threadsAvailable) {
-        std::cout << "Wait untill some task is finished" << std::endl;
+        // std::cout << "Wait untill some task is finished" << std::endl;
 
         std::vector<std::shared_ptr<SplitProcess>> tasksToFinish;
 
@@ -268,7 +269,7 @@ class SplitPool {
           std::this_thread::sleep_for(std::chrono::milliseconds(300));
         }
 
-        std::cout << "Tasks ready to finish: " << tasksToFinish.size() << std::endl;
+        // std::cout << "Tasks ready to finish: " << tasksToFinish.size() << std::endl;
 
         for (std::shared_ptr<SplitProcess> &task : tasksToFinish) {
           task->finish();

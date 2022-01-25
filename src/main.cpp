@@ -178,7 +178,7 @@ int main(int argc, char** argv) {
         chunk++;
 
         processed++;
-        std::cout << "Splitting model " << (processed + 1) << std::endl;
+        // std::cout << "Splitting model " << (processed + 1) << std::endl;
     };
 
     currentSplitter.split(loader.object);
