@@ -1,5 +1,19 @@
 #include "ObjLoader.h"
 
+
+bool ObjLoader::loadTexture(std::shared_ptr<TextureLoadTask> task) {
+  task->image->data = stbi_load(task->texturePath.c_str(), &task->image->width, &task->image->height, &task->image->channels, 0);
+
+  if(task->image->data == NULL) {
+    std::cerr << "Image loading error: " << task->texturePath.c_str() << std::endl;
+    if (stbi_failure_reason()) std::cerr << stbi_failure_reason() << std::endl;
+
+    return false;
+  }
+
+  return true;
+};
+
 MaterialMap ObjLoader::loadMaterials(const char* path) {
   MaterialMap materialMap;
   std::ifstream input;
@@ -14,6 +28,8 @@ MaterialMap ObjLoader::loadMaterials(const char* path) {
   }
 
   std::map<std::string, unsigned char*> imageList;
+
+  std::map<std::string, Image> imageMap;
 
   std::cout << "Materials file is opened, processing...: " << std::endl;
 
@@ -51,23 +67,47 @@ MaterialMap ObjLoader::loadMaterials(const char* path) {
 
         Image &diffuseMapImage = materialMap[lastMaterialName]->diffuseMapImage;
 
-        if ( imageList.find(imagePath) == imageList.end() ) {
-          std::cout << "Found an image:" << materialMap[lastMaterialName]->diffuseMap.c_str() << std::endl;
+        if ( imageMap.find(imagePath) == imageMap.end() ) {
+          imageMap[imagePath] = diffuseMapImage;
+          // std::cout << "Found an image:" << materialMap[lastMaterialName]->diffuseMap.c_str() << std::endl;
 
-          std::cout << "Image path: " << imagePath.c_str() << std::endl;
-          std::cout << "Loading..." << std::endl;
+          std::cout << "Loading image: " << imagePath.c_str() << std::endl;
+          // std::cout << "Loading..." << std::endl;
 
-          imageList[imagePath] = stbi_load(imagePath.c_str(), &diffuseMapImage.width, &diffuseMapImage.height, &diffuseMapImage.channels, 0);
+          // Image image;
 
-          if(imageList[imagePath] == NULL) {
-            std::cerr << "Image loading error" << std::endl;
-            if (stbi_failure_reason()) std::cerr << stbi_failure_reason() << std::endl;
-          }
+          std::shared_ptr<TextureLoadTask> task = std::make_shared<TextureLoadTask>();
+          task->image = &materialMap[lastMaterialName]->diffuseMapImage;
+          task->texturePath = imagePath.c_str();
 
-          std::cout << "Image width: " << diffuseMapImage.width << ", height: " << diffuseMapImage.height << ", channels: " << diffuseMapImage.channels << std::endl;
+          this->pool.create(
+            bind(&ObjLoader::loadTexture, this, std::placeholders::_1),
+            task
+          );
+
+          this->pool.waitForSlot();
+
+          // diffuseMapImage.data = stbi_load(imagePath.c_str(), &diffuseMapImage.width, &diffuseMapImage.height, &diffuseMapImage.channels, 0);
+
+          // if(diffuseMapImage.data == NULL) {
+          //   std::cerr << "Image loading error" << std::endl;
+          //   if (stbi_failure_reason()) std::cerr << stbi_failure_reason() << std::endl;
+          // }
+
+          // imageMap[imagePath] = diffuseMapImage;
+
+          // imageList[imagePath] = stbi_load(imagePath.c_str(), &diffuseMapImage.width, &diffuseMapImage.height, &diffuseMapImage.channels, 0);
+
+          // if(imageList[imagePath] == NULL) {
+          //   std::cerr << "Image loading error" << std::endl;
+          //   if (stbi_failure_reason()) std::cerr << stbi_failure_reason() << std::endl;
+          // }
+
+          // std::cout << "Image width: " << diffuseMapImage.width << ", height: " << diffuseMapImage.height << ", channels: " << diffuseMapImage.channels << std::endl;
         }
         
-        diffuseMapImage.data = imageList[imagePath];
+        // diffuseMapImage.data = imageList[imagePath];
+        materialMap[lastMaterialName]->diffuseMapImage = imageMap[imagePath];
 
         // if(diffuseMapImage.data == NULL) {
         //   std::cerr << "Image loading error" << std::endl;
@@ -80,8 +120,9 @@ MaterialMap ObjLoader::loadMaterials(const char* path) {
   }
 
   input.close();
+  imageList.clear();
 
-  std::cout << "Imported " << materialMap.size() << " materials" << std::endl;
+  std::cout << "Imported " << materialMap.size() << " textures" << std::endl;
 
   return materialMap;
 };
@@ -225,6 +266,7 @@ void ObjLoader::parse(const char* path) {
 
       if (materialFile != "") {
         materialMap = this->loadMaterials(utils::concatPath(utils::getDirectory(path), materialFile).c_str());
+        this->pool.finish();
       }
     } else if (token == "old one o") { // Process objects
       if (currentMesh != nullptr) {
@@ -238,14 +280,14 @@ void ObjLoader::parse(const char* path) {
     } else if (token == "usemtl") {
       if (currentMesh != nullptr && currentMesh->faces.size() > 0) {
         // currentMesh->finish();
-        std::cout << "Finished by the new material" << std::endl;
+        // std::cout << "Finished by the new material" << std::endl;
         this->finishMesh(currentGroup, currentMesh, position, normal, uv);
       }
 
       std::string meshMaterialName;
       ss >> meshMaterialName;
 
-      std::cout << "New mtl: " << meshMaterialName << std::endl;
+      // std::cout << "New mtl: " << meshMaterialName << std::endl;
 
       currentMesh = MeshObject(new Mesh());
       currentMesh->name = currentGroup->name + "_" + meshMaterialName;

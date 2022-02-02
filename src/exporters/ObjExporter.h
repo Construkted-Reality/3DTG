@@ -6,7 +6,7 @@
 
 class ObjExporter : public Exporter {
   public:
-    void save(std::string directory, std::string fileName, GroupObject object);
+    void save(std::string directory, std::string fileName, GroupObject object, bool indexedGeometry);
     void saveMaterial(std::string directory, std::string fileName, MaterialMap materialMap);
     std::string format = "obj";
 };

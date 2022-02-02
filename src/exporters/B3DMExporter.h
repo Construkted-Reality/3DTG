@@ -16,7 +16,7 @@
 
 class B3DMExporter : public Exporter {
   public:
-    void save(std::string directory, std::string fileName, GroupObject object);
+    void save(std::string directory, std::string fileName, GroupObject object, bool indexedGeometry);
     std::string format = "b3dm";
 };
 

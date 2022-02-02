@@ -1,6 +1,6 @@
 #include "./B3DMExporter.h"
 
-void B3DMExporter::save(std::string directory, std::string fileName, GroupObject object) {
+void B3DMExporter::save(std::string directory, std::string fileName, GroupObject object, bool indexedGeometry) {
   GLTFExporter exporter;
   exporter.format = this->format;
 
@@ -46,5 +46,5 @@ void B3DMExporter::save(std::string directory, std::string fileName, GroupObject
     fwrite(featureTableString.c_str(), sizeof(char), featureTableString.length(), file);  // featureTableJSONBuffer
   };
 
-  exporter.save(directory, fileName, object);
+  exporter.save(directory, fileName, object, indexedGeometry);
 };

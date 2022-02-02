@@ -56,7 +56,7 @@ class GLTFExporter : public Exporter {
     static void updateAccessorMax2f(GLTF::Accessor* accessor, Vector2f &vec);
 
     void exportGLTF(GLTF::Asset *asset, GLTF::Options *options, const char* outputPath);
-    void save(std::string directory, std::string fileName, GroupObject object);
+    void save(std::string directory, std::string fileName, GroupObject object, bool indexedGeometry);
     
     std::function<void(FILE* file, size_t binarySize)> beforeBinWrite;
     struct ImageData

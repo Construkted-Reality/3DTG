@@ -43,7 +43,7 @@ void ObjExporter::saveMaterial(std::string directory, std::string fileName, Mate
   fs.close();
 };
 
-void ObjExporter::save(std::string directory, std::string fileName, GroupObject object) {
+void ObjExporter::save(std::string directory, std::string fileName, GroupObject object, bool indexedGeometry) {
   std::string exportModelPath = utils::concatPath(directory, fileName + ".obj");
   std::string materialFileName = fileName + ".mtl";
 

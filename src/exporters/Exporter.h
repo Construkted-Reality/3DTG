@@ -12,7 +12,7 @@
 
 class Exporter {
   public:
-    virtual void save(std::string directory, std::string fileName, GroupObject object) {};
+    virtual void save(std::string directory, std::string fileName, GroupObject object, bool indexedGeometry) {};
 };
 
 #endif

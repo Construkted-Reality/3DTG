@@ -48,14 +48,14 @@ void GLTFExporter::updateAccessorMax2f(GLTF::Accessor* accessor, Vector2f &vec) 
   accessor->max[1] = std::max(accessor->max[1], vec.y);
 };
 
-void GLTFExporter::save(std::string directory, std::string fileName, GroupObject object) {
+void GLTFExporter::save(std::string directory, std::string fileName, GroupObject object, bool indexedGeometry) {
   std::string exportModelPath = utils::concatPath(directory, fileName + "." + this->format);
 
   if (!utils::folder_exists(directory)) {
     utils::mkdir(directory.c_str());
   }
   // std::cout << "Export begin" << std::endl;
-
+  
   std::vector<GLTF::Node*> memNodes;
   std::vector<GLTF::Mesh*> memMeshes;
   std::vector<std::map<std::string, GLTF::Accessor*>> memAccessors;
@@ -294,6 +294,9 @@ void GLTFExporter::save(std::string directory, std::string fileName, GroupObject
     // std::cout << "Generating primitive" << std::endl;
 
     GLTF::Primitive *primitive = new GLTF::Primitive();
+    if (indexedGeometry) {
+      primitive->indices = accessors[GLTF_BUFFER::INDEX_POSITION_BUFFER];
+    }
     // primitive->indices = accessors[GLTF_BUFFER::INDEX_POSITION_BUFFER];
     primitive->attributes["POSITION"] = accessors[GLTF_BUFFER::POSITION_BUFFER];
     if (accessors.count(GLTF_BUFFER::NORMAL_BUFFER)) {
