@@ -1,6 +1,40 @@
 #include "./Loader.h"
 
 
+
+
+float math::deltaX(glm::vec3 &a, glm::vec3 &b, float x) {
+  return (x - a.x) / (b.x - a.x);
+};
+float math::deltaY(glm::vec3 &a, glm::vec3 &b, float y){
+  return (y - a.y) / (b.y - a.y);
+};
+float math::deltaZ(glm::vec3 &a, glm::vec3 &b, float z) {
+  return (z - a.z) / (b.z - a.z);
+};
+
+glm::vec3 math::lerp(glm::vec3 &a, glm::vec3 &b, float dt) {
+  glm::vec3 r;
+
+  r.x = a.x + (b.x - a.x) * dt;
+  r.y = a.y + (b.y - a.y) * dt;
+  r.z = a.z + (b.z - a.z) * dt;
+
+  return r;
+};
+
+glm::vec3 math::lerpToX(glm::vec3 &a, glm::vec3 &b, float x) {
+  return math::lerp(a, b, math::deltaX(a, b, x));
+};
+glm::vec3 math::lerpToY(glm::vec3 &a, glm::vec3 &b, float y) {
+  return math::lerp(a, b, math::deltaY(a, b, y));
+};
+glm::vec3 math::lerpToZ(glm::vec3 &a, glm::vec3 &b, float z) {
+  return math::lerp(a, b, math::deltaZ(a, b, z));
+};
+
+
+
 MaterialObject Material::clone(bool deep) {
   MaterialObject next = std::make_shared<Material>();
 
@@ -234,9 +268,9 @@ void Mesh::free(bool deep) {
 };
 
 void Mesh::triangulate() {
-  std::vector<Vector3f> positions;
-  std::vector<Vector3f> normals;
-  std::vector<Vector2f> uvs;
+  std::vector<glm::vec3> positions;
+  std::vector<glm::vec3> normals;
+  std::vector<glm::vec2> uvs;
 
   std::vector<Face> faces;
 
@@ -272,10 +306,10 @@ void Mesh::triangulate() {
   this->faces.swap(faces);
 };
 
-void Mesh::remesh(std::vector<Vector3f> &position, std::vector<Vector3f> &normal, std::vector<Vector2f> &uv) {
-  std::map<unsigned int, Vector3f> positionMap;
-  std::map<unsigned int, Vector3f> normalMap;
-  std::map<unsigned int, Vector2f> uvMap;
+void Mesh::remesh(std::vector<glm::vec3> &position, std::vector<glm::vec3> &normal, std::vector<glm::vec2> &uv) {
+  std::map<unsigned int, glm::vec3> positionMap;
+  std::map<unsigned int, glm::vec3> normalMap;
+  std::map<unsigned int, glm::vec2> uvMap;
 
   std::map<unsigned int, unsigned int> positionDestMap;
   std::map<unsigned int, unsigned int> normalDestMap;
@@ -312,7 +346,7 @@ void Mesh::remesh(std::vector<Vector3f> &position, std::vector<Vector3f> &normal
   unsigned int lastNormalIndex = 0;
   unsigned int lastUVIndex = 0;
 
-  for (std::map<unsigned int, Vector3f>::iterator it = positionMap.begin(); it != positionMap.end(); ++it) {
+  for (std::map<unsigned int, glm::vec3>::iterator it = positionMap.begin(); it != positionMap.end(); ++it) {
     this->position.push_back(it->second);
     positionDestMap[it->first] = lastPositionIndex;
 
@@ -326,7 +360,7 @@ void Mesh::remesh(std::vector<Vector3f> &position, std::vector<Vector3f> &normal
   }
 
   if (this->hasNormals) {
-    for (std::map<unsigned int, Vector3f>::iterator it = normalMap.begin(); it != normalMap.end(); ++it) {
+    for (std::map<unsigned int, glm::vec3>::iterator it = normalMap.begin(); it != normalMap.end(); ++it) {
       this->normal.push_back(it->second);
       normalDestMap[it->first] = lastNormalIndex;
 
@@ -335,7 +369,7 @@ void Mesh::remesh(std::vector<Vector3f> &position, std::vector<Vector3f> &normal
   }
 
   if (this->hasUVs) {
-    for (std::map<unsigned int, Vector2f>::iterator it = uvMap.begin(); it != uvMap.end(); ++it) {
+    for (std::map<unsigned int, glm::vec2>::iterator it = uvMap.begin(); it != uvMap.end(); ++it) {
       this->uv.push_back(it->second);
       uvDestMap[it->first] = lastUVIndex;
 
@@ -393,7 +427,7 @@ void Mesh::computeUVBox() {
   }
 };
 
-void Mesh::pushTriangle(Vector3f a, Vector3f b, Vector3f c, Vector3f n, Vector2f t1, Vector2f t2, Vector2f t3) {
+void Mesh::pushTriangle(glm::vec3 a, glm::vec3 b, glm::vec3 c, glm::vec3 n, glm::vec2 t1, glm::vec2 t2, glm::vec2 t3) {
   unsigned int lastVertex = this->position.size();
   unsigned int lastNormal = this->normal.size();
   unsigned int lastUV = this->uv.size();
@@ -422,7 +456,7 @@ void Mesh::pushTriangle(Vector3f a, Vector3f b, Vector3f c, Vector3f n, Vector2f
   this->faces.push_back(f);
 };
 
-void Mesh::pushQuad(Vector3f a, Vector3f b, Vector3f c, Vector3f d, Vector3f n1, Vector3f n2, Vector2f t1, Vector2f t2, Vector2f t3, Vector2f t4) {
+void Mesh::pushQuad(glm::vec3 a, glm::vec3 b, glm::vec3 c, glm::vec3 d, glm::vec3 n1, glm::vec3 n2, glm::vec2 t1, glm::vec2 t2, glm::vec2 t3, glm::vec2 t4) {
   unsigned int lastVertex = this->position.size();
   unsigned int lastNormal = this->normal.size();
   unsigned int lastUV = this->uv.size();
@@ -468,13 +502,13 @@ Loader::Loader() {
 BBoxf BBoxf::clone() {
   BBoxf cloned;
 
-  cloned.min = this->min.clone();
-  cloned.max = this->max.clone();
+  cloned.min = this->min;
+  cloned.max = this->max;
 
   return cloned;
 };
 
-void BBoxf::extend(Vector3f position) {
+void BBoxf::extend(glm::vec3 position) {
   this->min.x = utils::min(this->min.x, position.x);
   this->min.y = utils::min(this->min.y, position.y);
   this->min.z = utils::min(this->min.z, position.z);
@@ -504,8 +538,8 @@ void BBoxf::extend(float x, float y, float z) {
   this->max.z = utils::max(this->max.z, z);
 };
 
-Vector3f BBoxf::size() {
-  Vector3f size;
+glm::vec3 BBoxf::size() {
+  glm::vec3 size;
 
   size.x = this->max.x - this->min.x;
   size.y = this->max.y - this->min.y;
@@ -514,7 +548,7 @@ Vector3f BBoxf::size() {
   return size;
 };
 
-bool BBoxf::intersect(Vector3f point) {
+bool BBoxf::intersect(glm::vec3 point) {
   bool intersectX = (point.x >= this->min.x) && (point.x <= this->max.x);
   bool intersectY = (point.y >= this->min.y) && (point.y <= this->max.y);
   bool intersectZ = (point.z >= this->min.z) && (point.z <= this->max.z);
@@ -522,7 +556,7 @@ bool BBoxf::intersect(Vector3f point) {
   return intersectX && intersectY && intersectZ;
 };
 
-bool BBoxf::intersect(Vector2f point) {
+bool BBoxf::intersect(glm::vec2 point) {
   bool intersectX = (point.x >= this->min.x) && (point.x <= this->max.x);
   bool intersectY = (point.y >= this->min.y) && (point.y <= this->max.y);
 
@@ -537,9 +571,9 @@ bool BBoxf::intersect(BBoxf box) {
 
   result.extend(box);
 
-  Vector3f selfSize = this->size();
-  Vector3f boxSize = box.size();
-  Vector3f resultSize = result.size();
+  glm::vec3 selfSize = this->size();
+  glm::vec3 boxSize = box.size();
+  glm::vec3 resultSize = result.size();
 
   bool intersectX = resultSize.x <= (selfSize.x + boxSize.x);
   bool intersectY = resultSize.y <= (selfSize.y + boxSize.y);
@@ -549,15 +583,15 @@ bool BBoxf::intersect(BBoxf box) {
 };
 
 bool BBoxf::intersectTriangle(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3) {
-  if (this->intersect(Vector3f::fromGLM(p1))) {// P1 is in box
+  if (this->intersect(p1)) {// P1 is in box
     return true;
   }
 
-  if (this->intersect(Vector3f::fromGLM(p2))) {// P2 is in box
+  if (this->intersect(p2)) {// P2 is in box
     return true;
   }
 
-  if (this->intersect(Vector3f::fromGLM(p3))) {// P3 is in box
+  if (this->intersect(p3)) {// P3 is in box
     return true;
   }
 
@@ -567,7 +601,7 @@ bool BBoxf::intersectTriangle(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3) {
 };
 
 void BBoxf::translate(float x, float y, float z) {
-  Vector3f size = this->size();
+  glm::vec3 size = this->size();
 
   this->min.x = x;
   this->min.y = y;
@@ -614,8 +648,8 @@ void BBoxf::setCenter(glm::vec3 point) {
   glm::vec3 min = point - halfSize;
   glm::vec3 max = point + halfSize;
 
-  this->min = Vector3f::fromGLM(min);
-  this->max = Vector3f::fromGLM(max);
+  this->min = min;
+  this->max = max;
 };
 void BBoxf::setSize(glm::vec3 size) {
   glm::vec3 center = this->getCenter();
@@ -624,205 +658,10 @@ void BBoxf::setSize(glm::vec3 size) {
   glm::vec3 min = center - halfSize;
   glm::vec3 max = center + halfSize;
 
-  this->min = Vector3f::fromGLM(min);
-  this->max = Vector3f::fromGLM(max);
+  this->min = min;
+  this->max = max;
 };
 
-void Vector2f::set(float x, float y) {
-  this->x = x;
-  this->y = y;
-};
-
-void Vector2f::set(Vector2f vector) {
-  this->x = vector.x;
-  this->y = vector.y;
-};
-
-glm::vec2 Vector2f::toGLM() {
-  glm::vec2 result(this->x, this->y);
-
-  return result;
-};
-
-Vector2f Vector2f::fromGLM(glm::vec2 vec) {
-  Vector2f result = {vec.x, vec.y};
-
-  return result;
-};
-
-
-float Vector3f::dot(Vector3f vector) {
-  return (this->x * vector.x) + (this->y * vector.y) + (this->z * vector.z);
-};
-
-float Vector3f::length() {
-  return sqrt(this->lengthSq());
-};
-
-float Vector3f::lengthSq() {
-  return (this->x * this->x) + (this->y * this->y) + (this->z * this->z);
-};
-
-float Vector3f::angleTo(Vector3f vector) {
-  float denominator = sqrt(this->lengthSq() * vector.lengthSq());
-  if (denominator == 0.0f) {
-    return M_PI * 0.5f;
-  }
-
-  float theta = this->dot(vector) / denominator;
-
-  return acos(std::min(std::max(theta, -1.0f), 1.0f));
-};
-
-bool Vector3f::angleLess90(Vector3f vector) { 
-  return (this->dot(vector) >= 0.0);
-};
-
-float Vector3f::distanceTo(Vector3f vector) {
-  float dx = this->x - vector.x;
-  float dy = this->y - vector.y;
-  float dz = this->z - vector.z;
-
-  return sqrt((dx*dx) + (dy*dy) + (dz*dz));
-};
-
-bool Vector3f::equals(Vector3f vector) {
-  //return ( ( vector.x == this->x ) && ( vector.y == this->y ) && ( vector.z == this->z ) );
-  return this->distanceTo(vector) < 0.0001f;
-};
-
-void Vector3f::divideScalar(float value) {
-  this->x /= value;
-  this->y /= value;
-  this->z /= value;
-};
-
-void Vector3f::normalize() {
-  float length = this->length();
-
-  if (length != 0.0f) {
-    this->divideScalar(length);
-  } else {
-    this->x = 0.0f;
-    this->y = 1.0f;
-    this->z = 0.0f;
-  }
-};
-
-void Vector3f::multiplyScalar(float value) {
-  this->x *= value;
-  this->y *= value;
-  this->z *= value;
-};
-
-void Vector3f::add(Vector3f vector) {
-  this->x += vector.x;
-  this->y += vector.y;
-  this->z += vector.z;
-};
-
-void Vector3f::sub(Vector3f vector) {
-  this->x -= vector.x;
-  this->y -= vector.y;
-  this->z -= vector.z;
-};
-
-void Vector3f::sub(Vector3f vectorA, Vector3f vectorB) {
-  this->x = vectorA.x - vectorB.x;
-  this->y = vectorA.y - vectorB.y;
-  this->z = vectorA.z - vectorB.z;
-};
-
-void Vector3f::set(float x, float y, float z) {
-  this->x = x;
-  this->y = y;
-  this->z = z;
-};
-
-void Vector3f::set(Vector3f vector) {
-  this->x = vector.x;
-  this->y = vector.y;
-  this->z = vector.z;
-};
-
-void Vector3f::cross(Vector3f vector) {
-  float ax = this->x;
-  float ay = this->y;
-  float az = this->z;
-
-  float bx = vector.x;
-  float by = vector.y;
-  float bz = vector.z;
-
-  this->x = (ay * bz) - (az * by);
-  this->y = (az * bx) - (ax * bz);
-  this->z = (ax * by) - (ay * bx);
-};
-
-void Vector3f::lerp(Vector3f a, Vector3f b, float delta) {
-  this->x = a.x + (b.x - a.x) * delta;
-  this->y = a.y + (b.y - a.y) * delta;
-  this->z = a.z + (b.z - a.z) * delta;
-};
-
-float Vector3f::deltaX(Vector3f a, Vector3f b, float x) {
-  return (x - a.x) / (b.x - a.x);
-};
-
-float Vector3f::deltaY(Vector3f a, Vector3f b, float y) {
-  return (y - a.y) / (b.y - a.y);
-};
-
-float Vector3f::deltaZ(Vector3f a, Vector3f b, float z) {
-  return (z - a.z) / (b.z - a.z);
-};
-
-void Vector3f::lerpToX(Vector3f a, Vector3f b, float x) {
-  this->lerp(a, b, Vector3f::deltaX(a, b, x));
-};
-
-void Vector3f::lerpToY(Vector3f a, Vector3f b, float y) {
-  this->lerp(a, b, Vector3f::deltaY(a, b, y));
-};
-
-void Vector3f::lerpToZ(Vector3f a, Vector3f b, float z) {
-  this->lerp(a, b, Vector3f::deltaZ(a, b, z));
-};
-
-glm::vec3 Vector3f::toGLM() {
-  glm::vec3 result((float) this->x, (float) this->y, (float) this->z);
-
-  return result;
-};
-
-Vector3f Vector3f::fromGLM(glm::vec3 vec) {
-  Vector3f result = {(float) vec.x, (float) vec.y, (float) vec.z};
-
-  return result;
-};
-
-Vector3f Vector3f::clone() {
-  Vector3f cloned;
-
-  cloned.x = this->x;
-  cloned.y = this->y;
-  cloned.z = this->z;
-
-  return cloned;
-};
-
-Vector3f Vector3f::intersectPlane(Vector3f planePoint, Vector3f planeNormal, Vector3f lineBegin, Vector3f lineDirection) {
-  Vector3f direction = lineDirection.clone();
-  direction.normalize();
-
-  float t = (planeNormal.dot(planePoint) - planeNormal.dot(lineBegin)) / planeNormal.dot(lineDirection);
-  direction.multiplyScalar(t);
-
-  Vector3f result = lineBegin.clone();
-  result.add(direction);
-
-  return result;
-};
 
 void Image::free() {
   if (this->data != NULL) {
@@ -841,8 +680,8 @@ void Loader::free() {
 
 
 Vertex::Vertex() {};
-Vertex::Vertex(Vector3f vector) {
-  this->position = vector.clone();
+Vertex::Vertex(glm::vec3 vector) {
+  this->position = vector;
 };
 
 bool Vertex::hasNeighbor(VertexPtr vertex) {
@@ -925,23 +764,32 @@ void Triangle::init() {
 };
 
 void Triangle::computeNormal() {
-  Vector3f vA = this->v1->position;
-  Vector3f vB = this->v2->position;
-  Vector3f vC = this->v3->position;
+  glm::vec3 vA = this->v1->position;
+  glm::vec3 vB = this->v2->position;
+  glm::vec3 vC = this->v3->position;
 
-  Vector3f _ab;
-  Vector3f _cb;
+  glm::vec3 _ab;
+  glm::vec3 _cb;
 
-  _cb.sub(vC, vB);
-  _ab.sub(vA, vB);
+  _cb = vC - vB;
+  _ab = vA - vB;
+  // _cb.sub(vC, vB);
+  // _ab.sub(vA, vB);
 
-  _cb.cross(_ab);
+  // _cb.cross(_ab);
+  _cb = glm::cross(_cb, _ab);
 
-  if (_cb.length() != 0.0f) {
-    _cb.normalize();
+  // if (_cb.length() != 0.0f) {
+  //   _cb.normalize();
+  // }
+
+  // this->normal.set(_cb);
+
+  if (glm::length(_cb) != 0.0f) {
+    glm::normalize(_cb);
   }
 
-  this->normal.set(_cb);
+  this->normal = _cb;
 };
 
 bool Triangle::hasVertex(VertexPtr vertex) {
@@ -949,7 +797,8 @@ bool Triangle::hasVertex(VertexPtr vertex) {
 };
 
 void Triangle::replaceVertex(VertexPtr oldVertex, VertexPtr newVertex) {
-  newVertex->geometricError += oldVertex->position.distanceTo(newVertex->position);
+  // newVertex->geometricError += oldVertex->position.distanceTo(newVertex->position);
+  newVertex->geometricError = glm::distance(oldVertex->position, newVertex->position);
 
   if (oldVertex->id == this->v1->id) {
     this->v1 = newVertex;
@@ -1198,14 +1047,4 @@ float math::triangleIntersection(glm::vec3 origin, glm::vec3 dir, glm::vec3 v0, 
   // Ray intersects triangle.
   return QdN / DdN;
 
-};
-
-float math::triangleIntersection(Vector3f origin, Vector3f dir, Vector3f v0, Vector3f v1, Vector3f v2) {
-  return math::triangleIntersection(
-    origin.toGLM(),
-    dir.toGLM(),
-    v0.toGLM(),
-    v1.toGLM(),
-    v2.toGLM()
-  );
 };

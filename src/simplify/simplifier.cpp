@@ -44,8 +44,8 @@ MeshObject simplifier::modify(MeshObject &mesh, float verticesCountModifier) {
     for (int i = 0; i < 3; i++) {
       if (verticesMap.find(face.positionIndices[i]) == verticesMap.end()) {
         VertexPtr targetVertex = VertexPtr( new Vertex(mesh->position[face.positionIndices[i]]) );
-        if (mesh->hasNormals) { targetVertex->normal.set(mesh->normal[face.normalIndices[i]]); }
-        if (mesh->hasUVs)     { targetVertex->uv.set(mesh->uv[face.uvIndices[i]]); }
+        if (mesh->hasNormals) { targetVertex->normal = mesh->normal[face.normalIndices[i]]; }
+        if (mesh->hasUVs)     { targetVertex->uv = mesh->uv[face.uvIndices[i]]; }
 
         targetVertex->id = face.positionIndices[i];
 
@@ -166,7 +166,7 @@ MeshObject simplifier::modify(MeshObject &mesh, float verticesCountModifier) {
 };
 
 float simplifier::computeEdgeCollapseCost(VertexPtr u, VertexPtr v) {
-  float edgeLength = v->position.distanceTo(u->position);
+  float edgeLength = glm::distance(v->position, u->position);//v->position.distanceTo(u->position);
   float curvature  = 0.0f;
 
 
@@ -185,7 +185,7 @@ float simplifier::computeEdgeCollapseCost(VertexPtr u, VertexPtr v) {
     
     for (TrianglePtr &sideFace : sideFaces) // access by reference to avoid copying
     {
-      float dot = face->normal.dot(sideFace->normal);
+      float dot = glm::dot(face->normal, sideFace->normal);//face->normal.dot(sideFace->normal);
       minCurvature = std::min(minCurvature, (1.001f - dot) / 2.0f);
     }
 

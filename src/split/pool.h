@@ -66,7 +66,7 @@ template <typename PoolFunction>
 class SplitPool {
   public:
     typedef std::shared_ptr<SplitProcess<PoolFunction>> ProcessRef;
-
+ 
     std::vector<ProcessRef> splitResult;
 
     unsigned int threadsUsed = 1;

@@ -75,7 +75,7 @@ MaterialMap ObjLoader::loadMaterials(const char* path) {
           // std::cout << "Loading..." << std::endl;
 
           // Image image;
-
+          
           std::shared_ptr<TextureLoadTask> task = std::make_shared<TextureLoadTask>();
           task->image = &materialMap[lastMaterialName]->diffuseMapImage;
           task->texturePath = imagePath.c_str();
@@ -86,13 +86,21 @@ MaterialMap ObjLoader::loadMaterials(const char* path) {
           );
 
           this->pool.waitForSlot();
+          
+          /*
+          materialMap[lastMaterialName]->diffuseMapImage.data = stbi_load(
+            imagePath.c_str(),
+            &materialMap[lastMaterialName]->diffuseMapImage.width,
+            &materialMap[lastMaterialName]->diffuseMapImage.height,
+            &materialMap[lastMaterialName]->diffuseMapImage.channels,
+            0
+          );
 
-          // diffuseMapImage.data = stbi_load(imagePath.c_str(), &diffuseMapImage.width, &diffuseMapImage.height, &diffuseMapImage.channels, 0);
-
-          // if(diffuseMapImage.data == NULL) {
-          //   std::cerr << "Image loading error" << std::endl;
-          //   if (stbi_failure_reason()) std::cerr << stbi_failure_reason() << std::endl;
-          // }
+          if(materialMap[lastMaterialName]->diffuseMapImage.data == NULL) {
+            std::cerr << "Image loading error" << std::endl;
+            if (stbi_failure_reason()) std::cerr << stbi_failure_reason() << std::endl;
+          }
+          */
 
           // imageMap[imagePath] = diffuseMapImage;
 
@@ -119,6 +127,8 @@ MaterialMap ObjLoader::loadMaterials(const char* path) {
     }
   }
 
+  this->pool.finish();
+
   input.close();
   imageList.clear();
 
@@ -127,10 +137,10 @@ MaterialMap ObjLoader::loadMaterials(const char* path) {
   return materialMap;
 };
 
-void ObjLoader::finishMesh(GroupObject &group, MeshObject &mesh, std::vector<Vector3f> &position, std::vector<Vector3f> &normal, std::vector<Vector2f> &uv) {
-  std::map<unsigned int, Vector3f> positionMap;
-  std::map<unsigned int, Vector3f> normalMap;
-  std::map<unsigned int, Vector2f> uvMap;
+void ObjLoader::finishMesh(GroupObject &group, MeshObject &mesh, std::vector<glm::vec3> &position, std::vector<glm::vec3> &normal, std::vector<glm::vec2> &uv) {
+  std::map<unsigned int, glm::vec3> positionMap;
+  std::map<unsigned int, glm::vec3> normalMap;
+  std::map<unsigned int, glm::vec2> uvMap;
 
   std::map<unsigned int, unsigned int> positionDestMap;
   std::map<unsigned int, unsigned int> normalDestMap;
@@ -159,7 +169,7 @@ void ObjLoader::finishMesh(GroupObject &group, MeshObject &mesh, std::vector<Vec
   unsigned int lastNormalIndex = 0;
   unsigned int lastUVIndex = 0;
 
-  for (std::map<unsigned int, Vector3f>::iterator it = positionMap.begin(); it != positionMap.end(); ++it) {
+  for (std::map<unsigned int, glm::vec3>::iterator it = positionMap.begin(); it != positionMap.end(); ++it) {
     mesh->position.push_back(it->second);
     positionDestMap[it->first] = lastPositionIndex;
 
@@ -167,7 +177,7 @@ void ObjLoader::finishMesh(GroupObject &group, MeshObject &mesh, std::vector<Vec
   }
 
   if (mesh->hasNormals) {
-    for (std::map<unsigned int, Vector3f>::iterator it = normalMap.begin(); it != normalMap.end(); ++it) {
+    for (std::map<unsigned int, glm::vec3>::iterator it = normalMap.begin(); it != normalMap.end(); ++it) {
       mesh->normal.push_back(it->second);
       normalDestMap[it->first] = lastNormalIndex;
 
@@ -176,7 +186,7 @@ void ObjLoader::finishMesh(GroupObject &group, MeshObject &mesh, std::vector<Vec
   }
 
   if (mesh->hasUVs) {
-    for (std::map<unsigned int, Vector2f>::iterator it = uvMap.begin(); it != uvMap.end(); ++it) {
+    for (std::map<unsigned int, glm::vec2>::iterator it = uvMap.begin(); it != uvMap.end(); ++it) {
       mesh->uv.push_back(it->second);
       uvDestMap[it->first] = lastUVIndex;
 
@@ -247,9 +257,9 @@ void ObjLoader::parse(const char* path) {
   std::vector<std::string> faces;
   std::vector<std::string> tokens;
 
-  std::vector<Vector3f> position;
-  std::vector<Vector3f> normal;
-  std::vector<Vector2f> uv;
+  std::vector<glm::vec3> position;
+  std::vector<glm::vec3> normal;
+  std::vector<glm::vec2> uv;
 
   MaterialMap materialMap;
 
@@ -266,7 +276,6 @@ void ObjLoader::parse(const char* path) {
 
       if (materialFile != "") {
         materialMap = this->loadMaterials(utils::concatPath(utils::getDirectory(path), materialFile).c_str());
-        this->pool.finish();
       }
     } else if (token == "old one o") { // Process objects
       if (currentMesh != nullptr) {
@@ -307,17 +316,17 @@ void ObjLoader::parse(const char* path) {
         currentGroup = nextGroup;
       }
     } else if (token == "v") { // Process vertices
-      Vector3f vertex;
+      glm::vec3 vertex;
       ss >> vertex.x >> vertex.y >> vertex.z;
 
       position.push_back(vertex);
     } else if (token == "vn") { // Process normals
-      Vector3f vertex;
+      glm::vec3 vertex;
       ss >> vertex.x >> vertex.y >> vertex.z;
 
       normal.push_back(vertex);
     } else if (token == "vt") { // Process uvs
-      Vector2f vertex;
+      glm::vec2 vertex;
       ss >> vertex.x >> vertex.y;
 
       uv.push_back(vertex);

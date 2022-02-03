@@ -34,22 +34,22 @@ void GLTFExporter::updateAccessorIndex(GLTF::Accessor* accessor, std::vector<uns
   }
 };
 
-void GLTFExporter::updateAccessorMin3f(GLTF::Accessor* accessor, Vector3f &vec) {
+void GLTFExporter::updateAccessorMin3f(GLTF::Accessor* accessor, glm::vec3 &vec) {
   accessor->min[0] = std::min(accessor->min[0], vec.x);
   accessor->min[1] = std::min(accessor->min[1], vec.y);
   accessor->min[2] = std::min(accessor->min[2], vec.z);
 };
-void GLTFExporter::updateAccessorMax3f(GLTF::Accessor* accessor, Vector3f &vec) {
+void GLTFExporter::updateAccessorMax3f(GLTF::Accessor* accessor, glm::vec3 &vec) {
   accessor->max[0] = std::max(accessor->max[0], vec.x);
   accessor->max[1] = std::max(accessor->max[1], vec.y);
   accessor->max[2] = std::max(accessor->max[2], vec.z);
 };
 
-void GLTFExporter::updateAccessorMin2f(GLTF::Accessor* accessor, Vector2f &vec) {
+void GLTFExporter::updateAccessorMin2f(GLTF::Accessor* accessor, glm::vec2 &vec) {
   accessor->min[0] = std::min(accessor->min[0], vec.x);
   accessor->min[1] = std::min(accessor->min[1], vec.y);
 };
-void GLTFExporter::updateAccessorMax2f(GLTF::Accessor* accessor, Vector2f &vec) {
+void GLTFExporter::updateAccessorMax2f(GLTF::Accessor* accessor, glm::vec2 &vec) {
   accessor->max[0] = std::max(accessor->max[0], vec.x);
   accessor->max[1] = std::max(accessor->max[1], vec.y);
 };

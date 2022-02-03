@@ -64,12 +64,6 @@ class VoxelGrid {
     glm::vec3 intLinear(glm::vec3 p1, glm::vec3 p2, float valp1, float valp2);
 
     std::vector<VoxelFaceTriangle> getVertices(unsigned int x, unsigned int y, unsigned int z);
-
-    VoxelFaceQuad getQuad(
-      Vector3f a, Vector3f b, Vector3f c, Vector3f d,
-      Vector3f n1, Vector3f n2,
-      Vector2f t1, Vector2f t2, Vector2f t3, Vector2f t4
-    );
 };
 
 typedef std::shared_ptr<VoxelGrid> GridRef;

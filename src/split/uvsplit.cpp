@@ -29,8 +29,8 @@ GroupObject utils::graphics::splitUV(GroupObject &baseObject, int level) {
         group->meshes[0]->material = mesh->material;//->clone(true);
         //group->meshes[0]->material.diffuseMapImage = mesh->material.diffuseMapImage;
 
-        group->boundingBox.min.set(0.0f, 0.0f, 0.0f);
-        group->boundingBox.max.set(1.0f, 1.0f, 0.0f);
+        group->boundingBox.min = glm::vec3(0.0f, 0.0f, 0.0f);
+        group->boundingBox.max = glm::vec3(1.0f, 1.0f, 0.0f);
 
         meshMaterialMap[mesh->material->name] = group;
         //materialMap[mesh->material.name] = mesh->material;
@@ -287,18 +287,18 @@ void utils::graphics::textureLOD(GroupObject &baseObject, int level) {
 
 void utils::graphics::createBVH(GroupObject &group, int level, int maxLevel, bool shouldDivideVertical) {
   if (level < maxLevel) {
-    Vector3f size = group->boundingBox.size();
+    glm::vec3 size = group->boundingBox.size();
 
     if (shouldDivideVertical) {
       GroupObject groupTop = GroupObject(new Group());
       GroupObject groupBottom = GroupObject(new Group());
 
-      groupTop->boundingBox.min = group->boundingBox.min.clone();
-      groupTop->boundingBox.max = group->boundingBox.max.clone();
+      groupTop->boundingBox.min = group->boundingBox.min;
+      groupTop->boundingBox.max = group->boundingBox.max;
       groupTop->boundingBox.max.y -= size.y * 0.5f;
 
-      groupBottom->boundingBox.min = group->boundingBox.min.clone();
-      groupBottom->boundingBox.max = group->boundingBox.max.clone();
+      groupBottom->boundingBox.min = group->boundingBox.min;
+      groupBottom->boundingBox.max = group->boundingBox.max;
       groupBottom->boundingBox.min.y += size.y * 0.5f;
 
       group->children.push_back(groupTop);
@@ -310,12 +310,12 @@ void utils::graphics::createBVH(GroupObject &group, int level, int maxLevel, boo
       GroupObject groupLeft = GroupObject(new Group());
       GroupObject groupRight = GroupObject(new Group());
 
-      groupLeft->boundingBox.min = group->boundingBox.min.clone();
-      groupLeft->boundingBox.max = group->boundingBox.max.clone();
+      groupLeft->boundingBox.min = group->boundingBox.min;
+      groupLeft->boundingBox.max = group->boundingBox.max;
       groupLeft->boundingBox.max.x -= size.x * 0.5f;
 
-      groupRight->boundingBox.min = group->boundingBox.min.clone();
-      groupRight->boundingBox.max = group->boundingBox.max.clone();
+      groupRight->boundingBox.min = group->boundingBox.min;
+      groupRight->boundingBox.max = group->boundingBox.max;
       groupRight->boundingBox.min.x += size.x * 0.5f;
 
       group->children.push_back(groupLeft);
@@ -336,8 +336,8 @@ void utils::graphics::createBVH(GroupObject &group, int level, int maxLevel, boo
   } else {// No BVH
     GroupObject selfGroup = GroupObject(new Group());
 
-    selfGroup->boundingBox.min = group->boundingBox.min.clone();
-    selfGroup->boundingBox.max = group->boundingBox.max.clone();
+    selfGroup->boundingBox.min = group->boundingBox.min;
+    selfGroup->boundingBox.max = group->boundingBox.max;
 
     MeshObject mesh = MeshObject(new Mesh());
     mesh->name = 

@@ -29,7 +29,7 @@ GroupObject VoxelsSplitter::halfMesh(GroupObject target, bool divideVertical) {
   unsigned int verticesCount = 0;
 
   target->traverse([&](MeshObject mesh){
-    for (Vector3f &position : mesh->position) // access by reference to avoid copying
+    for (glm::vec3 &position : mesh->position) // access by reference to avoid copying
     {
       if (divideVertical) {
         xMedian += position.x;
@@ -53,7 +53,7 @@ GroupObject VoxelsSplitter::halfMesh(GroupObject target, bool divideVertical) {
   GroupObject right = GroupObject(new Group());
 
 
-  Vector3f pos1, pos2, pos3;
+  glm::vec3 pos1, pos2, pos3;
 
   bool isLeft = false;
   bool isRight = false;
@@ -184,7 +184,7 @@ bool VoxelsSplitter::split(GroupObject target, IdGenerator::ID parentId, unsigne
       this->onSave(resultGroup, nextParent, parentId, decimationLevel, false);
 
       // std::cout << "Clearing the chunk" << std::endl;
-      resultGroup->free();
+      // resultGroup->free();
     }
 
     return true;

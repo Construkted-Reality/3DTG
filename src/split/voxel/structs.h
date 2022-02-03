@@ -8,9 +8,9 @@
 #include "./../../loaders/Loader.h"
 
 struct VoxelFaceVertex {
-  Vector3f position;
-  Vector3f normal;
-  Vector2f uv;
+  glm::vec3 position;
+  glm::vec3 normal;
+  glm::vec2 uv;
   int index = -1;// Assume that we have a constant grid with less than (MAX_INT / 36) cells count
 };
 
@@ -18,7 +18,7 @@ struct VoxelFaceTriangle {
   VoxelFaceVertex a;
   VoxelFaceVertex b;
   VoxelFaceVertex c;
-  Vector3f normal;
+  glm::vec3 normal;
 
   VoxelFaceVertex& operator[] (size_t i);
 };

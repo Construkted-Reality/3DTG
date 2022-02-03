@@ -35,47 +35,28 @@ typedef std::shared_ptr<Material> MaterialObject;
 typedef std::function<void (MeshObject)> TraverseMeshCallback;
 typedef std::function<void (GroupObject)> TraverseGroupCallback;
 
-struct Vector3f {
-  float x = 0.0f, y = 0.0f, z = 0.0f;
-  float dot(Vector3f vector);
-  float length();
-  float lengthSq();
-  float angleTo(Vector3f vector);
-  float distanceTo(Vector3f vector);
-  bool angleLess90(Vector3f vector);
-  bool equals(Vector3f vector);
-  void normalize();
-  void divideScalar(float value);
-  void multiplyScalar(float value);
-  void add(Vector3f vector);
-  void sub(Vector3f vector);
-  void sub(Vector3f vectorA, Vector3f vectorB);
-  void set(float x, float y, float z);
-  void set(Vector3f vector);
-  void cross(Vector3f vector);
-  void lerp(Vector3f a, Vector3f b, float delta);
-  void lerpToX(Vector3f a, Vector3f b, float x);
-  void lerpToY(Vector3f a, Vector3f b, float y);
-  void lerpToZ(Vector3f a, Vector3f b, float z);
-  glm::vec3 toGLM();
-  static Vector3f fromGLM(glm::vec3 vec);
-  static float deltaX(Vector3f a, Vector3f b, float x);
-  static float deltaY(Vector3f a, Vector3f b, float y);
-  static float deltaZ(Vector3f a, Vector3f b, float z);
-  Vector3f clone();
-  Vector3f intersectPlane(Vector3f planePoint, Vector3f planeNormal, Vector3f lineBegin, Vector3f lineDirection);
+
+
+struct Vec3Result {
+  glm::vec3 data;
+  glm::vec2 uv;
+  bool hasData = true;
 };
 
-struct Vector3ui {
-  unsigned int x = 0, y = 0, z = 0;
-};
+namespace math {
+  float triangleIntersection(glm::vec3 origin, glm::vec3 dir, glm::vec3 v0, glm::vec3 v1, glm::vec3 v2);
+  Vec3Result clothestTrianglePointOld(glm::vec3 p, glm::vec3 a, glm::vec3 b, glm::vec3 c);
+  Vec3Result clothestTrianglePoint(glm::vec3 p, glm::vec3 a, glm::vec3 b, glm::vec3 c);
 
-struct Vector2f {
-  float x = 0.0f, y = 0.0f;
-  void set(float x, float y);
-  void set(Vector2f vector);
-  glm::vec2 toGLM();
-  static Vector2f fromGLM(glm::vec2 vec);
+  float deltaX(glm::vec3 &a, glm::vec3 &b, float x);
+  float deltaY(glm::vec3 &a, glm::vec3 &b, float y);
+  float deltaZ(glm::vec3 &a, glm::vec3 &b, float z);
+
+  glm::vec3 lerp(glm::vec3 &a, glm::vec3 &b, float dt);
+
+  glm::vec3 lerpToX(glm::vec3 &a, glm::vec3 &b, float x);
+  glm::vec3 lerpToY(glm::vec3 &a, glm::vec3 &b, float y);
+  glm::vec3 lerpToZ(glm::vec3 &a, glm::vec3 &b, float z);
 };
 
 struct Face {
@@ -88,11 +69,11 @@ struct Face {
 class Vertex {
   public:
     Vertex();
-    Vertex(Vector3f vector);
+    Vertex(glm::vec3 vector);
 
-    Vector3f position;
-    Vector3f normal;
-    Vector2f uv;
+    glm::vec3 position;
+    glm::vec3 normal;
+    glm::vec2 uv;
 
     std::vector<TrianglePtr> faces;
     std::vector<VertexPtr> neighbors;
@@ -131,37 +112,26 @@ class Triangle : public std::enable_shared_from_this<Triangle> {
     VertexPtr v2;
     VertexPtr v3;
 
-    std::vector<Vector2f> faceVertexUvs;
+    std::vector<glm::vec2> faceVertexUvs;
 
     Face face;
-    Vector3f normal;
+    glm::vec3 normal;
 
     void computeNormal();
     bool hasVertex(VertexPtr vertex);
     void replaceVertex(VertexPtr oldVertex, VertexPtr newVertex);
 };
 
-struct Vec3Result {
-  glm::vec3 data;
-  glm::vec2 uv;
-  bool hasData = true;
-};
 
-namespace math {
-  float triangleIntersection(glm::vec3 origin, glm::vec3 dir, glm::vec3 v0, glm::vec3 v1, glm::vec3 v2);
-  float triangleIntersection(Vector3f origin, Vector3f dir, Vector3f v0, Vector3f v1, Vector3f v2);
-  Vec3Result clothestTrianglePointOld(glm::vec3 p, glm::vec3 a, glm::vec3 b, glm::vec3 c);
-  Vec3Result clothestTrianglePoint(glm::vec3 p, glm::vec3 a, glm::vec3 b, glm::vec3 c);
-};
 
 struct BBoxf {
-  Vector3f min, max;
-  void extend(Vector3f position);
+  glm::vec3 min, max;
+  void extend(glm::vec3 position);
   void extend(float x, float y, float z);
   void extend(BBoxf box);
-  Vector3f size();
-  bool intersect(Vector3f point);
-  bool intersect(Vector2f point);
+  glm::vec3 size();
+  bool intersect(glm::vec3 point);
+  bool intersect(glm::vec2 point);
   bool intersect(BBoxf box);
   bool intersectTriangle(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3);
   BBoxf clone();
@@ -191,7 +161,7 @@ class Material {
     Image diffuseMapImage;
     std::map<int, Image> mipMaps;
 
-    Vector3f color;
+    glm::vec3 color;
 
     MaterialObject clone(bool deep);
 };
@@ -223,9 +193,9 @@ class Group {
 class Mesh : public Group {
   public:
     MaterialObject material;
-    std::vector<Vector3f> position;
-    std::vector<Vector3f> normal;
-    std::vector<Vector2f> uv;
+    std::vector<glm::vec3> position;
+    std::vector<glm::vec3> normal;
+    std::vector<glm::vec2> uv;
 
     std::vector<Face> faces;
 
@@ -236,14 +206,14 @@ class Mesh : public Group {
 
     void finish();
 
-    void remesh(std::vector<Vector3f> &position, std::vector<Vector3f> &normal, std::vector<Vector2f> &uv);
+    void remesh(std::vector<glm::vec3> &position, std::vector<glm::vec3> &normal, std::vector<glm::vec2> &uv);
     void triangulate();
     void free(bool deep = true);
     void computeBoundingBox();
     void computeUVBox();
 
-    void pushTriangle(Vector3f a, Vector3f b, Vector3f c, Vector3f n, Vector2f t1, Vector2f t2, Vector2f t3);
-    void pushQuad(Vector3f a, Vector3f b, Vector3f c, Vector3f d, Vector3f n1, Vector3f n2, Vector2f t1, Vector2f t2, Vector2f t3, Vector2f t4);
+    void pushTriangle(glm::vec3 a, glm::vec3 b, glm::vec3 c, glm::vec3 n, glm::vec2 t1, glm::vec2 t2, glm::vec2 t3);
+    void pushQuad(glm::vec3 a, glm::vec3 b, glm::vec3 c, glm::vec3 d, glm::vec3 n1, glm::vec3 n2, glm::vec2 t1, glm::vec2 t2, glm::vec2 t3, glm::vec2 t4);
 
     MeshObject clone();
     Mesh();

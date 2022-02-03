@@ -49,11 +49,11 @@ class GLTFExporter : public Exporter {
     static void updateAccessorFace(std::map<std::string, GLTF::Accessor*> &accessors, MeshObject &mesh, Face &face);
     static void updateAccessorIndex(GLTF::Accessor* accessor, std::vector<unsigned int> &data);
 
-    static void updateAccessorMin3f(GLTF::Accessor* accessor, Vector3f &vec);
-    static void updateAccessorMax3f(GLTF::Accessor* accessor, Vector3f &vec);
+    static void updateAccessorMin3f(GLTF::Accessor* accessor, glm::vec3 &vec);
+    static void updateAccessorMax3f(GLTF::Accessor* accessor, glm::vec3 &vec);
 
-    static void updateAccessorMin2f(GLTF::Accessor* accessor, Vector2f &vec);
-    static void updateAccessorMax2f(GLTF::Accessor* accessor, Vector2f &vec);
+    static void updateAccessorMin2f(GLTF::Accessor* accessor, glm::vec2 &vec);
+    static void updateAccessorMax2f(GLTF::Accessor* accessor, glm::vec2 &vec);
 
     void exportGLTF(GLTF::Asset *asset, GLTF::Options *options, const char* outputPath);
     void save(std::string directory, std::string fileName, GroupObject object, bool indexedGeometry);

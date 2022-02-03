@@ -78,20 +78,20 @@ void ObjExporter::save(std::string directory, std::string fileName, GroupObject 
     }
 
     fs << "o " << object->name.c_str() << std::endl;
-    for (Vector3f &position : object->position) // access by reference to avoid copying
+    for (glm::vec3 &position : object->position) // access by reference to avoid copying
     {
       fs << "v " << position.x << " " << position.y << " " << position.z << std::endl;
     }
 
     if (object->hasNormals) {
-      for (Vector3f &normal : object->normal) // access by reference to avoid copying
+      for (glm::vec3 &normal : object->normal) // access by reference to avoid copying
       {
         fs << "vn " << normal.x << " " << normal.y << " " << normal.z << std::endl;
       }
     }
 
     if (object->hasUVs) {
-      for (Vector2f &uv : object->uv) // access by reference to avoid copying
+      for (glm::vec2 &uv : object->uv) // access by reference to avoid copying
       {
         fs << "vt " << uv.x << " " << uv.y << std::endl;
       }

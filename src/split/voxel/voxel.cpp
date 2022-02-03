@@ -10,14 +10,14 @@ void Voxel::computeError() {
         glm::vec3 dist(0.0f);
         for (VoxelFacePtr &face : this->faces) {
           Vec3Result trPoint = math::clothestTrianglePoint(
-            triangle[i].position.toGLM(), 
-            face->vertices[0].position.toGLM(),
-            face->vertices[1].position.toGLM(),
-            face->vertices[2].position.toGLM()
+            triangle[i].position, 
+            face->vertices[0].position,
+            face->vertices[1].position,
+            face->vertices[2].position
           );
 
           if (trPoint.hasData) {
-            dist += trPoint.data - triangle[i].position.toGLM();
+            dist += trPoint.data - triangle[i].position;
             //triangleError += glm::length(trPoint.data - triangle[i].position.toGLM());
           }
         }
@@ -73,10 +73,10 @@ glm::vec2 Voxel::getClosestUV(glm::vec3 p) {
     for (unsigned int i = 0; i < 3; i++) {
       VoxelFaceVertex &voxelFaceVertex = facePtr->vertices[i];
 
-      float dt = voxelFaceVertex.position.distanceTo(Vector3f::fromGLM(p));
+      float dt = glm::distance(voxelFaceVertex.position, p);
       if (dt <= dist) {
         dist = dt;
-        result = voxelFaceVertex.uv.toGLM();
+        result = voxelFaceVertex.uv;
       }
     }
   }

@@ -127,7 +127,7 @@ bool RegularSplitter::splitObject(GroupObject baseObject, unsigned int polygonLi
   unsigned int verticesCount = 0;
 
   baseObject->traverse([&](MeshObject mesh){
-    for (Vector3f &position : mesh->position) // access by reference to avoid copying
+    for (glm::vec3 &position : mesh->position) // access by reference to avoid copying
     {
       if (isVertical) {
         xMedian += position.x;
@@ -150,7 +150,7 @@ bool RegularSplitter::splitObject(GroupObject baseObject, unsigned int polygonLi
   GroupObject right = GroupObject(new Group());
 
 
-  Vector3f pos1, pos2, pos3;
+  glm::vec3 pos1, pos2, pos3;
   // unsigned int leftFaces = 0;
   // unsigned int rightFaces = 0;
 
@@ -228,8 +228,8 @@ bool RegularSplitter::splitObject(GroupObject baseObject, unsigned int polygonLi
 
 
 // TODO optimize a lot
-void RegularSplitter::straightLineX(MeshObject &mesh, Face &face, bool isLeft, float xValue, std::vector<Vector3f> &position, std::vector<Vector3f> &normal, std::vector<Vector2f> &uv, std::vector<Face> &faces) {
-  Vector3f pos1, pos2, pos3;
+void RegularSplitter::straightLineX(MeshObject &mesh, Face &face, bool isLeft, float xValue, std::vector<glm::vec3> &position, std::vector<glm::vec3> &normal, std::vector<glm::vec2> &uv, std::vector<Face> &faces) {
+  glm::vec3 pos1, pos2, pos3;
 
   pos1 = mesh->position[face.positionIndices[0]];
   pos2 = mesh->position[face.positionIndices[1]];
@@ -260,30 +260,30 @@ void RegularSplitter::straightLineX(MeshObject &mesh, Face &face, bool isLeft, f
 
     if (intersectionCount == 1) {
       if (aInside) {
-        mesh->position[face.positionIndices[1]].lerpToX(mesh->position[face.positionIndices[1]], mesh->position[face.positionIndices[0]], xValue);
-        mesh->position[face.positionIndices[2]].lerpToX(mesh->position[face.positionIndices[2]], mesh->position[face.positionIndices[0]], xValue);
+        mesh->position[face.positionIndices[1]] = math::lerpToX(mesh->position[face.positionIndices[1]], mesh->position[face.positionIndices[0]], xValue);
+        mesh->position[face.positionIndices[2]] = math::lerpToX(mesh->position[face.positionIndices[2]], mesh->position[face.positionIndices[0]], xValue);
       } else if (bInside) {
-        mesh->position[face.positionIndices[0]].lerpToX(mesh->position[face.positionIndices[0]], mesh->position[face.positionIndices[1]], xValue);
-        mesh->position[face.positionIndices[2]].lerpToX(mesh->position[face.positionIndices[2]], mesh->position[face.positionIndices[1]], xValue);
+        mesh->position[face.positionIndices[0]] = math::lerpToX(mesh->position[face.positionIndices[0]], mesh->position[face.positionIndices[1]], xValue);
+        mesh->position[face.positionIndices[2]] = math::lerpToX(mesh->position[face.positionIndices[2]], mesh->position[face.positionIndices[1]], xValue);
       } else if (cInside) {
-        mesh->position[face.positionIndices[0]].lerpToX(mesh->position[face.positionIndices[0]], mesh->position[face.positionIndices[2]], xValue);
-        mesh->position[face.positionIndices[1]].lerpToX(mesh->position[face.positionIndices[1]], mesh->position[face.positionIndices[2]], xValue);
+        mesh->position[face.positionIndices[0]] = math::lerpToX(mesh->position[face.positionIndices[0]], mesh->position[face.positionIndices[2]], xValue);
+        mesh->position[face.positionIndices[1]] = math::lerpToX(mesh->position[face.positionIndices[1]], mesh->position[face.positionIndices[2]], xValue);
       }
     } else if (intersectionCount == 2) {
       float deltaA = 0.0f;
       float deltaB = 0.0f;
 
-      Vector3f pos4;
+      glm::vec3 pos4;
       Face nextFace;
 
       if (aInside && bInside) {
         //std::cout << "Construct new vertex from C" << std::endl;
 
-        deltaA = Vector3f::deltaX(pos3, pos1, xValue);
-        deltaB = Vector3f::deltaX(pos3, pos2, xValue);
+        deltaA = math::deltaX(pos3, pos1, xValue);
+        deltaB = math::deltaX(pos3, pos2, xValue);
 
-        pos4.lerp(pos3, pos2, deltaB);
-        mesh->position[face.positionIndices[2]].lerp(pos3, pos1, deltaA);
+        pos4 = math::lerp(pos3, pos2, deltaB);
+        mesh->position[face.positionIndices[2]] = math::lerp(pos3, pos1, deltaA);
 
         position.push_back(pos4);
         if (mesh->hasNormals) {
@@ -309,11 +309,11 @@ void RegularSplitter::straightLineX(MeshObject &mesh, Face &face, bool isLeft, f
       } else if (aInside && cInside) {
         //std::cout << "Construct new vertex from B" << std::endl;
 
-        deltaA = Vector3f::deltaX(pos2, pos3, xValue);
-        deltaB = Vector3f::deltaX(pos2, pos1, xValue);
+        deltaA = math::deltaX(pos2, pos3, xValue);
+        deltaB = math::deltaX(pos2, pos1, xValue);
 
-        pos4.lerp(pos2, pos1, deltaB);
-        mesh->position[face.positionIndices[1]].lerp(pos2, pos3, deltaA);
+        pos4 = math::lerp(pos2, pos1, deltaB);
+        mesh->position[face.positionIndices[1]] = math::lerp(pos2, pos3, deltaA);
 
         position.push_back(pos4);
         if (mesh->hasNormals) {
@@ -339,11 +339,11 @@ void RegularSplitter::straightLineX(MeshObject &mesh, Face &face, bool isLeft, f
       } else if (bInside && cInside) {
         //std::cout << "Construct new vertex from B" << std::endl;
 
-        deltaA = Vector3f::deltaX(pos1, pos3, xValue);
-        deltaB = Vector3f::deltaX(pos1, pos2, xValue);
+        deltaA = math::deltaX(pos1, pos3, xValue);
+        deltaB = math::deltaX(pos1, pos2, xValue);
 
-        pos4.lerp(pos1, pos2, deltaB);
-        mesh->position[face.positionIndices[0]].lerp(pos1, pos3, deltaA);
+        pos4 = math::lerp(pos1, pos2, deltaB);
+        mesh->position[face.positionIndices[0]] = math::lerp(pos1, pos3, deltaA);
 
         position.push_back(pos4);
         if (mesh->hasNormals) {
@@ -372,8 +372,8 @@ void RegularSplitter::straightLineX(MeshObject &mesh, Face &face, bool isLeft, f
 };
 
 // TODO optimize a lot
-void RegularSplitter::straightLineZ(MeshObject &mesh, Face &face, bool isLeft, float zValue, std::vector<Vector3f> &position, std::vector<Vector3f> &normal, std::vector<Vector2f> &uv, std::vector<Face> &faces) {
-  Vector3f pos1, pos2, pos3;
+void RegularSplitter::straightLineZ(MeshObject &mesh, Face &face, bool isLeft, float zValue, std::vector<glm::vec3> &position, std::vector<glm::vec3> &normal, std::vector<glm::vec2> &uv, std::vector<Face> &faces) {
+  glm::vec3 pos1, pos2, pos3;
 
   pos1 = mesh->position[face.positionIndices[0]];
   pos2 = mesh->position[face.positionIndices[1]];
@@ -404,30 +404,30 @@ void RegularSplitter::straightLineZ(MeshObject &mesh, Face &face, bool isLeft, f
 
     if (intersectionCount == 1) {
       if (aInside) {
-        mesh->position[face.positionIndices[1]].lerpToZ(mesh->position[face.positionIndices[1]], mesh->position[face.positionIndices[0]], zValue);
-        mesh->position[face.positionIndices[2]].lerpToZ(mesh->position[face.positionIndices[2]], mesh->position[face.positionIndices[0]], zValue);
+        mesh->position[face.positionIndices[1]] = math::lerpToZ(mesh->position[face.positionIndices[1]], mesh->position[face.positionIndices[0]], zValue);
+        mesh->position[face.positionIndices[2]] = math::lerpToZ(mesh->position[face.positionIndices[2]], mesh->position[face.positionIndices[0]], zValue);
       } else if (bInside) {
-        mesh->position[face.positionIndices[0]].lerpToZ(mesh->position[face.positionIndices[0]], mesh->position[face.positionIndices[1]], zValue);
-        mesh->position[face.positionIndices[2]].lerpToZ(mesh->position[face.positionIndices[2]], mesh->position[face.positionIndices[1]], zValue);
+        mesh->position[face.positionIndices[0]] = math::lerpToZ(mesh->position[face.positionIndices[0]], mesh->position[face.positionIndices[1]], zValue);
+        mesh->position[face.positionIndices[2]] = math::lerpToZ(mesh->position[face.positionIndices[2]], mesh->position[face.positionIndices[1]], zValue);
       } else if (cInside) {
-        mesh->position[face.positionIndices[0]].lerpToZ(mesh->position[face.positionIndices[0]], mesh->position[face.positionIndices[2]], zValue);
-        mesh->position[face.positionIndices[1]].lerpToZ(mesh->position[face.positionIndices[1]], mesh->position[face.positionIndices[2]], zValue);
+        mesh->position[face.positionIndices[0]] = math::lerpToZ(mesh->position[face.positionIndices[0]], mesh->position[face.positionIndices[2]], zValue);
+        mesh->position[face.positionIndices[1]] = math::lerpToZ(mesh->position[face.positionIndices[1]], mesh->position[face.positionIndices[2]], zValue);
       }
     } else if (intersectionCount == 2) {
       float deltaA = 0.0f;
       float deltaB = 0.0f;
 
-      Vector3f pos4;
+      glm::vec3 pos4;
       Face nextFace;
 
       if (aInside && bInside) {
         //std::cout << "Construct new vertex from C" << std::endl;
 
-        deltaA = Vector3f::deltaZ(pos3, pos1, zValue);
-        deltaB = Vector3f::deltaZ(pos3, pos2, zValue);
+        deltaA = math::deltaZ(pos3, pos1, zValue);
+        deltaB = math::deltaZ(pos3, pos2, zValue);
 
-        pos4.lerp(pos3, pos2, deltaB);
-        mesh->position[face.positionIndices[2]].lerp(pos3, pos1, deltaA);
+        pos4 = math::lerp(pos3, pos2, deltaB);
+        mesh->position[face.positionIndices[2]] = math::lerp(pos3, pos1, deltaA);
 
         position.push_back(pos4);
         if (mesh->hasNormals) {
@@ -453,11 +453,11 @@ void RegularSplitter::straightLineZ(MeshObject &mesh, Face &face, bool isLeft, f
       } else if (aInside && cInside) {
         //std::cout << "Construct new vertex from B" << std::endl;
 
-        deltaA = Vector3f::deltaZ(pos2, pos3, zValue);
-        deltaB = Vector3f::deltaZ(pos2, pos1, zValue);
+        deltaA = math::deltaZ(pos2, pos3, zValue);
+        deltaB = math::deltaZ(pos2, pos1, zValue);
 
-        pos4.lerp(pos2, pos1, deltaB);
-        mesh->position[face.positionIndices[1]].lerp(pos2, pos3, deltaA);
+        pos4 = math::lerp(pos2, pos1, deltaB);
+        mesh->position[face.positionIndices[1]] = math::lerp(pos2, pos3, deltaA);
 
         position.push_back(pos4);
         if (mesh->hasNormals) {
@@ -483,11 +483,11 @@ void RegularSplitter::straightLineZ(MeshObject &mesh, Face &face, bool isLeft, f
       } else if (bInside && cInside) {
         //std::cout << "Construct new vertex from B" << std::endl;
 
-        deltaA = Vector3f::deltaZ(pos1, pos3, zValue);
-        deltaB = Vector3f::deltaZ(pos1, pos2, zValue);
+        deltaA = math::deltaZ(pos1, pos3, zValue);
+        deltaB = math::deltaZ(pos1, pos2, zValue);
 
-        pos4.lerp(pos1, pos2, deltaB);
-        mesh->position[face.positionIndices[0]].lerp(pos1, pos3, deltaA);
+        pos4 = math::lerp(pos1, pos2, deltaB);
+        mesh->position[face.positionIndices[0]] = math::lerp(pos1, pos3, deltaA);
 
         position.push_back(pos4);
         if (mesh->hasNormals) {
@@ -516,9 +516,9 @@ void RegularSplitter::straightLineZ(MeshObject &mesh, Face &face, bool isLeft, f
 };
 
 void RegularSplitter::straightLine(GroupObject &baseObject, bool isVertical, bool isLeft, float xValue, float zValue) {
-  std::vector<Vector3f> position;
-  std::vector<Vector3f> normal;
-  std::vector<Vector2f> uv;
+  std::vector<glm::vec3> position;
+  std::vector<glm::vec3> normal;
+  std::vector<glm::vec2> uv;
 
   std::vector<Face> faces;
 

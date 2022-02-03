@@ -30,7 +30,7 @@ class ObjLoader : public Loader {
     // std::unordered_map<std::string, bool> processedImages;
 
     void parse(const char* path);
-    void finishMesh(GroupObject &group, MeshObject &mesh, std::vector<Vector3f> &position, std::vector<Vector3f> &normal, std::vector<Vector2f> &uv);
+    void finishMesh(GroupObject &group, MeshObject &mesh, std::vector<glm::vec3> &position, std::vector<glm::vec3> &normal, std::vector<glm::vec2> &uv);
     MaterialMap loadMaterials(const char* path);
 
     bool loadTexture(std::shared_ptr<TextureLoadTask> task);
