@@ -1,7 +1,17 @@
 #include "VoxelsSplitter.h"
 
 
+const std::string VoxelsSplitter::Type = "voxel";
+std::shared_ptr<SplitInterface> VoxelsSplitter::create() {
+  Options &opts = Options::GetInstance();
 
+  std::shared_ptr<VoxelsSplitter> inst = std::make_shared<VoxelsSplitter>();
+  inst->polygonsLimit = opts.limit;
+  inst->gridSettings.gridResolution = glm::ivec3(opts.grid, opts.grid, opts.grid);
+  inst->gridSettings.isoLevel = opts.iso;
+
+  return inst;
+};
 
 VoxelsSplitter::VoxelsSplitter() {
   //this->grid.init();

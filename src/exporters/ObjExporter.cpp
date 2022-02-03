@@ -1,5 +1,11 @@
 #include "./ObjExporter.h"
 
+
+const std::string ObjExporter::Type = "obj";
+std::shared_ptr<Exporter> ObjExporter::create() {
+  return std::make_shared<ObjExporter>();
+};
+
 void ObjExporter::saveMaterial(std::string directory, std::string fileName, MaterialMap materialMap) {
   std::string exportMaterialPath = utils::concatPath(directory, fileName + ".mtl");
 

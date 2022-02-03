@@ -1,6 +1,15 @@
 #include "./RegularSplitter.h"
 
 
+const std::string RegularSplitter::Type = "regular";
+std::shared_ptr<SplitInterface> RegularSplitter::create() {
+  Options &opts = Options::GetInstance();
+
+  std::shared_ptr<RegularSplitter> inst = std::make_shared<RegularSplitter>();
+  inst->polygonLimit = opts.limit;
+
+  return inst;
+};
 
 bool RegularSplitter::processLod(std::shared_ptr<RegularSplitTask> task) {
   // std::cout << "Split started" << std::endl;

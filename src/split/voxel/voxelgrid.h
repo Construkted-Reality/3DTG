@@ -4,7 +4,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/rotate_vector.hpp>
 
-#include "voxel.h"
+#include "Voxel.h"
 #include "./../../helpers/triangleBox.h"
 
 class VoxelGrid {

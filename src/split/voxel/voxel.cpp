@@ -1,4 +1,4 @@
-#include "voxel.h"
+#include "Voxel.h"
 
 void Voxel::computeError() {
   this->geometricError = 0.0f;

@@ -1,4 +1,4 @@
-#include "voxelgrid.h"
+#include "VoxelGrid.h"
 
 
 const unsigned int VoxelGrid::edgeTable[256] = {

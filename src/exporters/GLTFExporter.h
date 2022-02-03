@@ -66,6 +66,9 @@ class GLTFExporter : public Exporter {
     };
 
     std::string format = "glb";
+
+    static const std::string Type;
+    static std::shared_ptr<Exporter> create();
 };
 
 

@@ -3,15 +3,25 @@
 
 
 #include <iostream>
+#include <memory>
+#include <map>
+#include <functional>
 
+#include "./../Options.h"
 #include "./../loaders/Loader.h"
 #include "./callback.h"
-#include "./voxel/voxelgrid.h"
-#include "./pool.h"
+#include "./voxel/VoxelGrid.h"
+#include "./Pool.h"
 
 class SplitInterface {
   public: 
     ResultCallback onSave;
+
+    typedef std::function<std::shared_ptr<SplitInterface>()> SplitCreator;
+    static std::map<std::string, SplitCreator> creatorList;
+
+    static std::shared_ptr<SplitInterface> create(std::string type);
+    static void addCreator(const std::string type, SplitCreator creator);
 
     virtual ~SplitInterface() = default;
 

@@ -49,6 +49,9 @@ class RegularSplitter : public SplitBase<RegularPoolFn> {
 
 
     bool processLod(std::shared_ptr<RegularSplitTask> task);
+
+    static const std::string Type;
+    static std::shared_ptr<SplitInterface> create();
 };
 
 #endif

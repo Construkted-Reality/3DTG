@@ -1,5 +1,11 @@
 #include "./B3DMExporter.h"
 
+
+const std::string B3DMExporter::Type = "b3dm";
+std::shared_ptr<Exporter> B3DMExporter::create() {
+  return std::make_shared<B3DMExporter>();
+};
+
 void B3DMExporter::save(std::string directory, std::string fileName, GroupObject object, bool indexedGeometry) {
   GLTFExporter exporter;
   exporter.format = this->format;

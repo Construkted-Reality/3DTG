@@ -3,6 +3,22 @@ The **3DTG** tool will convert textured 3d mesh (and soon point cloud) formats i
 
 The tool is based on the open [3D Tile standard](https://github.com/CesiumGS/3d-tiles). Also see [3D Tiles Overview](https://github.com/CesiumGS/3d-tiles/blob/main/3d-tiles-overview.pdf) 
 
+## CLI Options
+
+| Command          | Description                                                         |
+|------------------|---------------------------------------------------------------------|
+| -h, --help       | List all of the available commands for the current program version. |
+| -i, --input      | Input model path                                                    |
+| -o, --output     | Output directory                                                    |
+| -l, --limit      | Polygons limit (only for `Voxel, Regular` split alorithms)          |
+| -g, --grid       | Grid resolution (only for `Voxel` algorithm)                        |
+|     --iso        | Currently unused                                                    |
+| -a, --algorithm  | Split algorithm to use                                              |
+|     --algorithms | Available algorithms list                                           |
+| -f, --format     | Model format to export                                              |
+|     --formats    | Available formats list                                              |
+
+
 ## Functionality
 ### Current Functionality 
 Currently the tool only accepts textured OBJ files, and simplifies the geometry using a voxel decimation algorithm. 
@@ -34,3 +50,13 @@ This is a list (in no particular order) of improvements that can be made:
 - KTX 2.0 Basis texture encoding for better texture compression (better then jpg)
 - Support point clouds (las/laz, e57 and other formats)
 - add your own!
+
+## Dependencies
+
+ * [GLTF](https://github.com/KhronosGroup/COLLADA2GLTF/tree/master/GLTF) : GLTF structures for encoding/decoding both a GLTF and a B3DM.
+ * [draco](https://github.com/google/draco) : Draco compression lib for GLTF compression.
+ * [rapidjson](https://github.com/Tencent/rapidjson) : JSON generation, used internally in GLTF lib to generate GLTF models.
+ * [json](https://github.com/nlohmann/json) : JSON generation, used primarily.
+ * [stb/images](https://github.com/nothings/stb) : Image module for encoding/decoding various image data formats.
+ * [cxxopts](https://github.com/jarro2783/cxxopts) : CLI options parser.
+ * [glm](https://github.com/g-truc/glm) : Math library for graphics.

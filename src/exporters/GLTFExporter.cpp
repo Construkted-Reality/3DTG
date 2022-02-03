@@ -1,6 +1,12 @@
 #include "./GLTFExporter.h"
 
 
+
+const std::string GLTFExporter::Type = "glb";
+std::shared_ptr<Exporter> GLTFExporter::create() {
+  return std::make_shared<GLTFExporter>();
+};
+
 void GLTFExporter::updateAccessorFace(std::map<std::string, GLTF::Accessor*> &accessors, MeshObject &mesh, Face &face) {
   for (unsigned int i = 0; i < 3; i++) {
     GLTFExporter::updateAccessorMin3f(accessors[GLTF_BUFFER::POSITION_BUFFER], mesh->position[face.positionIndices[i]]);

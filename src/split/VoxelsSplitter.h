@@ -21,8 +21,8 @@
 // Local
 #include "./../loaders/Loader.h"
 #include "./callback.h"
-#include "./voxel/voxelgrid.h"
-#include "./pool.h"
+#include "./voxel/VoxelGrid.h"
+#include "./Pool.h"
 #include "./uvsplit.h"
 
 #include "./SplitBase.h"
@@ -69,6 +69,10 @@ class VoxelsSplitter : public SplitBase<VoxelPoolFn> {
 
     GroupObject decimate(GroupObject target, GridRef grid);
     GroupObject halfMesh(GroupObject target, bool divideVertical);
+    
+
+    static const std::string Type;
+    static std::shared_ptr<SplitInterface> create();
 };
 
 #endif // __VOXELSSPLITTER_H__
