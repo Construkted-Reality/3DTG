@@ -1,4 +1,5 @@
 #!/bin/bash
+mkdir -p ./lib
 # Build GLTF format
 cd ./3rdparty/collada2gltf/GLTF
 mkdir build
