@@ -146,7 +146,12 @@ bool VoxelsSplitter::processLod(std::shared_ptr<VoxelSplitTask> task, GridRef gr
 
   grid->init();
   GroupObject voxelized = this->decimate(task->target, grid);
-  utils::graphics::textureLOD(voxelized, 8);
+  // utils::graphics::textureLOD(voxelized, 8);
+  //targetMesh->material->diffuseMapImage
+  voxelized->traverse([&](MeshObject mesh){
+    mesh->material = mesh->material->clone(false);// Without texture
+  });
+
 
   voxelized->name = "Lod";
 
@@ -156,6 +161,8 @@ bool VoxelsSplitter::processLod(std::shared_ptr<VoxelSplitTask> task, GridRef gr
   voxelized->free(false);
 
   // std::cout << "Split finished" << std::endl;
+
+  grid->free();
 
   return false;
 };
@@ -243,7 +250,7 @@ bool VoxelsSplitter::split(GroupObject target, IdGenerator::ID parentId, unsigne
   
 
   GroupObject halfs = this->halfMesh(target, divideVertical);
-  //target->free();
+  // target->free();
 
   for (GroupObject &half : halfs->children) {
     this->split(half, nextParent, decimationLevel + 1, !divideVertical);

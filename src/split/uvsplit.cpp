@@ -125,7 +125,7 @@ GroupObject utils::graphics::splitUV(GroupObject &baseObject, int level) {
       if (mesh->hasUVs) {
         // std::cout << "Can split" << std::endl;
         // std::cout << "Calculating BBOX has been started" << std::endl;
-
+        mesh->computeUVBox();
         BBoxf uvBox = mesh->uvBox;
         // uvBox.fromPoint(mesh->uv[0].x, mesh->uv[0].y, 0.0f);
 
@@ -133,7 +133,7 @@ GroupObject utils::graphics::splitUV(GroupObject &baseObject, int level) {
         //   uvBox.extend(mesh->uv[i].x, mesh->uv[i].y, 0.0f);
         // }
 
-        int minX, minY, maxX, maxY;
+        unsigned int minX, minY, maxX, maxY;
 
         //Material meshMaterial = materialMap[it->first];
 
@@ -154,16 +154,26 @@ GroupObject utils::graphics::splitUV(GroupObject &baseObject, int level) {
         float UVWidth = offsetX2 - offsetX1;
         float UVHeight = offsetY2 - offsetY1;
 
+        UVWidth = std::max(UVWidth, 0.00001f);
+        UVHeight = std::max(UVHeight, 0.00001f);
+
         for (long long unsigned int i = 0; i < mesh->uv.size(); i++) {
           // uvBox.extend(mesh->uv[i].x, mesh->uv[i].y, 0.0f);
           mesh->uv[i].x = (mesh->uv[i].x - offsetX1) / UVWidth;
           mesh->uv[i].y = (mesh->uv[i].y - offsetY1) / UVHeight;
         }
+
+        unsigned int maxWidth = it->second->meshes[0]->material->diffuseMapImage.width;
+        unsigned int maxHeight = it->second->meshes[0]->material->diffuseMapImage.height;
         
-        int textureWidth = std::max(maxX - minX, 1);
-        int textureHeight = std::max(maxY - minY, 1);
+        unsigned int textureWidth = std::min(std::max(maxX - minX, (unsigned int) 1), maxWidth);
+        unsigned int textureHeight = std::min(std::max(maxY - minY, (unsigned int) 1), maxHeight);
 
         // std::cout << "Calculating BBOX has been finished" << std::endl;
+        // std::cout << "Width: " << textureWidth << ", height: " << textureHeight << std::endl;
+        // std::cout << "Initial width: " << maxWidth << ", height: " << maxHeight << std::endl;
+        // std::cout << "Min X: " << minX << ", Y: " << minY << std::endl;
+        // std::cout << "Lod level: " << level << std::endl;
 
 
         // std::cout << "Texture copying has been started" << std::endl;
@@ -179,12 +189,41 @@ GroupObject utils::graphics::splitUV(GroupObject &baseObject, int level) {
         // std::cout << "Texture copying has been finished" << std::endl;
         
         // std::cout << "Texture clipping has been started" << std::endl;
-        for (int j = 0; j < textureWidth; j++)
+        size_t originLimit = it->second->meshes[0]->material->diffuseMapImage.width * it->second->meshes[0]->material->diffuseMapImage.height * 3;
+        size_t targetLimit = textureWidth * textureHeight * 3;
+
+
+        unsigned int o_X, o_Y, t_X, t_Y;
+        unsigned int originPointer, targetPointer;
+        for (int i = 0; i < textureHeight; i++)
         {
-          for (int i = 0; i < textureHeight; i++)
-          {
-            int originPointer = ((it->second->meshes[0]->material->diffuseMapImage.height - 1 - i - minY) * it->second->meshes[0]->material->diffuseMapImage.width * diffuse.channels) + ((j + minX) * diffuse.channels);
-            int targetPointer = ((textureHeight - 1 - i) * diffuse.width * diffuse.channels) + (j * diffuse.channels);
+          for (int j = 0; j < textureWidth; j++)
+            {
+
+            // unsigned int originPointer = ((it->second->meshes[0]->material->diffuseMapImage.height - 1 - i - minY) * it->second->meshes[0]->material->diffuseMapImage.width * diffuse.channels) + ((j + minX) * diffuse.channels);
+            // unsigned int targetPointer = ((textureHeight - 1 - i) * diffuse.width * diffuse.channels) + (j * diffuse.channels);
+
+            o_X = (minX + j);// Origin X
+            o_Y = maxHeight - 1 - (minY + i);// Origin Y (inverted as stb loads images with inverted Y)
+
+            t_X = j;// Target X
+            t_Y = textureHeight - 1 - i;// Target Y (inverted as stb saves images with inverted Y)
+
+            unsigned int originPointer = (o_Y * maxWidth * diffuse.channels) + (o_X * diffuse.channels);
+            unsigned int targetPointer = (t_Y * diffuse.width * diffuse.channels) + (t_X * diffuse.channels);
+
+            // std::cout << "origin: " << originPointer << ", target: " << targetPointer << std::endl;
+            // std::cout << "Limit A: " << ((maxWidth * maxHeight * 3) - 1) << ", B: " << ((textureWidth * textureHeight * 3) - 1) <<std::endl;
+
+            // if (originPointer < 0 || originPointer >= originLimit) {
+            //   std::cout << "Origin: " << originPointer << std::endl;
+            //   std::cout << "Limit: " << ((maxWidth * maxHeight * 3) - 1) << std::endl;
+            // }
+
+            // if (targetPointer < 0 || targetPointer >= targetLimit) {
+            //   std::cout << "Target: " << targetPointer << std::endl;
+            //   std::cout << "Limit: " << ((textureWidth * textureHeight * 3) - 1) <<std::endl;
+            // }
 
             data[targetPointer] = it->second->meshes[0]->material->diffuseMapImage.data[originPointer];
             data[targetPointer + 1] = it->second->meshes[0]->material->diffuseMapImage.data[originPointer + 1];
@@ -192,10 +231,13 @@ GroupObject utils::graphics::splitUV(GroupObject &baseObject, int level) {
           }
         }
 
+        // std::cout << "Texture copying has been finished" << std::endl;
+        // std::cout << "Asigning copyed texture" << std::endl;
+
         if (level > 0) {
           // std::cout << "Texture lod generation has been started" << std::endl;
-          int simplifiedTextureWidth = std::max(textureWidth / (level * 2), 1);
-          int simplifiedTextureHeight = std::max(textureHeight / (level * 2), 1);
+          unsigned int simplifiedTextureWidth = std::max(textureWidth / (level * 2), (unsigned int) 1);
+          unsigned int simplifiedTextureHeight = std::max(textureHeight / (level * 2), (unsigned int) 1);
 
           diffuse.data = new unsigned char[simplifiedTextureWidth * simplifiedTextureHeight * 3];
           diffuse.width = simplifiedTextureWidth;
@@ -216,6 +258,8 @@ GroupObject utils::graphics::splitUV(GroupObject &baseObject, int level) {
         mesh->material->name = nextName;
         mesh->material->diffuseMap = mesh->material->name + ".jpg";
         mesh->material->diffuseMapImage = diffuse;
+
+        // std::cout << "Asigning copyed texture finished" << std::endl;
       } else {
         // std::cout << "Can not be split" << std::endl;
         mesh->material = it->second->meshes[0]->material;
