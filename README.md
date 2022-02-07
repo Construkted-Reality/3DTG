@@ -21,8 +21,9 @@ The tool is based on the open [3D Tile standard](https://github.com/CesiumGS/3d-
 ### -h, --help
 Prints an application help message into the CLI.
 
-### -i, --input (`required`)
+### -i, --input (<font size="2">`required`</font>)
 Input model path
+
 
 ***Example***
  > 3dtg -i ./someFolder/myModel.obj
