@@ -37,6 +37,7 @@ During the MinGW installation `posix` should be selected as a `threads` module.
  > chmod +x depsUnix.sh
 
  1. Build all the dependencies through the appropriate executable file (`depsWin.bat` or `depsUnix.sh` depending on your OC)
+ <br/>As for the Linux, deps script should be run from the project root dir with source(dot) specifier: `. depsUnix.sh`
  2. Build main app by running `make`
 
 
