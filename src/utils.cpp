@@ -69,7 +69,7 @@ int utils::makeDir(const char *path)
     return ::_mkdir(path);
 #else
 #if _POSIX_C_SOURCE
-    return ::mkdir(path);
+    return ::mkdir(path, 0755);
 #else
     return ::mkdir(path, 0755); // not sure if this works on mac
 #endif
