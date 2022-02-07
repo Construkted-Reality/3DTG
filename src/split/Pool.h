@@ -13,7 +13,7 @@
 
 // Regular
 #include "callback.h"
-#include "./voxel/voxelgrid.h"
+#include "./voxel/VoxelGrid.h"
 
 
 
