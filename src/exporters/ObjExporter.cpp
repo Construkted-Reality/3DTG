@@ -10,7 +10,7 @@ void ObjExporter::saveMaterial(std::string directory, std::string fileName, Mate
   std::string exportMaterialPath = utils::concatPath(directory, fileName + ".mtl");
 
   if (!utils::folder_exists(directory)) {
-    mkdir(directory.c_str());
+    utils::mkdir(directory.c_str());
   }
 
   std::fstream fs;
