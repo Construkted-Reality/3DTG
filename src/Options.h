@@ -67,6 +67,7 @@ class Options {
 
 
       this->_options.allow_unrecognised_options();
+      this->_options.parse_positional({"input", "output"});
 
       cxxopts::ParseResult result;
 

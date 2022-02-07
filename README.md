@@ -5,18 +5,74 @@ The tool is based on the open [3D Tile standard](https://github.com/CesiumGS/3d-
 
 ## CLI Options
 
-| Command          | Description                                                         |
-|------------------|---------------------------------------------------------------------|
-| -h, --help       | List all of the available commands for the current program version. |
-| -i, --input      | Input model path                                                    |
-| -o, --output     | Output directory                                                    |
-| -l, --limit      | Polygons limit (only for `Voxel, Regular` split alorithms)          |
-| -g, --grid       | Grid resolution (only for `Voxel` algorithm)                        |
-|     --iso        | Currently unused                                                    |
-| -a, --algorithm  | Split algorithm to use                                              |
-|     --algorithms | Available algorithms list                                           |
-| -f, --format     | Model format to export                                              |
-|     --formats    | Available formats list                                              |
+| Command         | Reuired                  | Initial value | Description                                                         |
+|-----------------|--------------------------|---------------|---------------------------------------------------------------------|
+| -h, --help      |                          |               | List all of the available commands for the current program version. |
+| -i, --input     | <center>&check;</center> |               | Input model path                                                    |
+| -o, --output    |                          | ./exported    | Output directory                                                    |
+| -l, --limit     |                          | 2048          | Polygons limit (only for `Voxel, Regular` split alorithms)          |
+| -g, --grid      |                          | 64            | Grid resolution (only for `Voxel` algorithm)                        |
+| --iso           |                          |               | Currently unused                                                    |
+| -a, --algorithm |                          | voxel         | Split algorithm to use                                              |
+| --algorithms    |                          |               | Available algorithms list                                           |
+| -f, --format    |                          | b3dm          | Model format to export                                              |
+| --formats       |                          |               | Available formats list                                              |
+
+### -h, --help
+Prints an application help message into the CLI.
+
+### -i, --input (`required`)
+Input model path
+
+***Example***
+ > 3dtg -i ./someFolder/myModel.obj
+
+***This option can be used in a positional way as a first argument***
+ > 3dtg ./someFolder/myModel.obj
+
+### -o, --output
+Output directory path
+
+***Example***
+ > 3dtg ./someFolder/myModel.obj -o ./outdir
+
+***This option can be used in a positional way as a second argument***
+ > 3dtg ./someFolder/myModel.obj ./outdir
+
+### -l, --limit
+Polygons limit until model will be split
+
+***Example***
+ > 3dtg ./someFolder/myModel.obj ./outdir -l 4096
+
+### -g, --grid
+Grid size that is used to decimate voxelized meshes.
+
+[Grid example](https://www.researchgate.net/profile/Hong-Liu-22/publication/230731211/figure/fig2/AS:300343045967883@1448618770846/Construct-voxel-grid-on-3D-point-cloud.png)
+
+Should be set as a single value.
+The higher is value the higher is the output resolution.
+
+Default value is 64 which means [x, y, z] => [64, 64, 64] 
+
+***Example***
+ > 3dtg ./someFolder/myModel.obj ./outdir -g 32
+
+### -a, --algorithm
+Algorithm to use to split mesh
+
+Default value is `voxel`
+
+***Example***
+ > 3dtg ./someFolder/myModel.obj ./outdir -a regular
+
+### -f, --format
+Model format to use to save models
+
+Default value is `b3dm`
+
+***Example***
+ > 3dtg ./someFolder/myModel.obj ./outdir -f glb
 
 
 ## Functionality
