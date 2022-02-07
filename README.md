@@ -23,7 +23,7 @@ During the MinGW installation `posix` should be selected as a `threads` module.
 
  1. `make` command can be provided through the `brew install make`
  2. `cmake` command can be provided through the `brew install cmake`
- 3. `g++` command should be available after XCode is installed.
+ 3. `g++` command should be available after XCode is installed or throught the `brew install gcc`
 
 ### Linux
 
@@ -34,6 +34,8 @@ During the MinGW installation `posix` should be selected as a `threads` module.
 
 ## Build
 
+ 1. Build all the dependencies through the appropriate executable file (`depsWin.bat` or `depsMacOS.sh` depending on your OC)
+ 2. Build main app by running `make`
 
 
 ## CLI Options
