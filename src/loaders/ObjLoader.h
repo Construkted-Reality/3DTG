@@ -11,7 +11,7 @@
 #include <memory>
 
 #include "Loader.h"
-#include "./../split/pool.h"
+#include "./../split/Pool.h"
 
 class TextureLoadTask {
   public:
