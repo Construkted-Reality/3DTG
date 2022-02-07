@@ -28,13 +28,15 @@ During the MinGW installation `posix` should be selected as a `threads` module.
 ### Linux
 
  1. `make` command can be provided through the `brew install make`
- 2. `cmake` command can be provided through the `brew install cmake`
+ 2. `cmake` command can be provided through the both a `apt install cmake` or a `brew install cmake`
  3. `g++` command can be provided through the `apt-get install g++-version`
 
 
 ## Build
+ If you gonna build an app on Linux, first change the `depsUnix` permissions to the execute mode:
+ > chmod +x depsUnix.sh
 
- 1. Build all the dependencies through the appropriate executable file (`depsWin.bat` or `depsMacOS.sh` depending on your OC)
+ 1. Build all the dependencies through the appropriate executable file (`depsWin.bat` or `depsUnix.sh` depending on your OC)
  2. Build main app by running `make`
 
 

@@ -2,7 +2,7 @@
 cd /d .\3rdparty\collada2gltf\GLTF
 mkdir build
 cd /d .\build
-cmake ../ -G "MinGW Makefiles"
+cmake ../ -G "Unix Makefiles"
 make
 rm ".\..\..\..\..\lib\libGLTF.a"
 rm ".\..\..\..\..\lib\libdraco.a"
