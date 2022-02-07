@@ -3,20 +3,53 @@ The **3DTG** tool will convert textured 3d mesh (and soon point cloud) formats i
 
 The tool is based on the open [3D Tile standard](https://github.com/CesiumGS/3d-tiles). Also see [3D Tiles Overview](https://github.com/CesiumGS/3d-tiles/blob/main/3d-tiles-overview.pdf) 
 
+## Build dependencies
+
+`make`, `cmake` and `g++` commands should be available on your OC.
+Also, `posix` threads should be available for the C++ compiler.
+
+ 1. `make` command can be provided through the [GNU Make](https://www.gnu.org/software/make/)
+ 2. `cmake` command can be provided through the [CMake](https://cmake.org/)
+
+### Win
+
+ 1. `make` command can be provided through the [GNU Make](https://www.gnu.org/software/make/)
+ 2. `cmake` command can be provided through the [CMake](https://cmake.org/)
+ 3. `g++` command can be provided through the [MinGW](https://www.mingw-w64.org/)
+
+During the MinGW installation `posix` should be selected as a `threads` module.
+
+### MacOS
+
+ 1. `make` command can be provided through the `brew install make`
+ 2. `cmake` command can be provided through the `brew install cmake`
+ 3. `g++` command should be available after XCode is installed.
+
+### Linux
+
+ 1. `make` command can be provided through the `brew install make`
+ 2. `cmake` command can be provided through the `brew install cmake`
+ 3. `g++` command can be provided through the `apt-get install g++-version`
+
+
+## Build
+
+
+
 ## CLI Options
 
-| Command         | Reuired                  | Initial value | Description                                                         |
-|-----------------|--------------------------|---------------|---------------------------------------------------------------------|
-| -h, --help      |                          |               | List all of the available commands for the current program version. |
-| -i, --input     | <center>&check;</center> |               | Input model path                                                    |
-| -o, --output    |                          | ./exported    | Output directory                                                    |
-| -l, --limit     |                          | 2048          | Polygons limit (only for `Voxel, Regular` split alorithms)          |
-| -g, --grid      |                          | 64            | Grid resolution (only for `Voxel` algorithm)                        |
-| --iso           |                          |               | Currently unused                                                    |
-| -a, --algorithm |                          | voxel         | Split algorithm to use                                              |
-| --algorithms    |                          |               | Available algorithms list                                           |
-| -f, --format    |                          | b3dm          | Model format to export                                              |
-| --formats       |                          |               | Available formats list                                              |
+| Command         | Reuired                | Initial value | Description                                                         |
+|-----------------|------------------------|---------------|---------------------------------------------------------------------|
+| -h, --help      | No                     |               | List all of the available commands for the current program version. |
+| -i, --input     | Yes :white_check_mark: |               | Input model path                                                    |
+| -o, --output    | No                     | ./exported    | Output directory                                                    |
+| -l, --limit     | No                     | 2048          | Polygons limit (only for `Voxel, Regular` split alorithms)          |
+| -g, --grid      | No                     | 64            | Grid resolution (only for `Voxel` algorithm)                        |
+| --iso           | No                     |               | Currently unused                                                    |
+| -a, --algorithm | No                     | voxel         | Split algorithm to use                                              |
+| --algorithms    | No                     |               | Available algorithms list                                           |
+| -f, --format    | No                     | b3dm          | Model format to export                                              |
+| --formats       | No                     |               | Available formats list                                              |
 
 ### -h, --help
 Prints an application help message into the CLI.

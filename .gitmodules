@@ -1,0 +1,3 @@
+[submodule ".\\3rdparty\\collada2gltf"]
+	path = .\\3rdparty\\collada2gltf
+	url = https://github.com/KhronosGroup/COLLADA2GLTF
