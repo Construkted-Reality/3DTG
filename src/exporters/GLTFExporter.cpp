@@ -58,7 +58,7 @@ void GLTFExporter::save(std::string directory, std::string fileName, GroupObject
   std::string exportModelPath = utils::concatPath(directory, fileName + "." + this->format);
 
   if (!utils::folder_exists(directory)) {
-    utils::makePath(directory.c_str());
+    utils::mkdir(directory.c_str());
   }
   // std::cout << "Export begin" << std::endl;
   

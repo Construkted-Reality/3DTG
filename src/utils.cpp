@@ -69,9 +69,9 @@ int utils::makeDir(const char *path)
     return ::_mkdir(path);
 #else
 #if _POSIX_C_SOURCE
-    return ::mkdir(path, 0755);
+    return ::mkdir(path, 0777);
 #else
-    return ::mkdir(path, 0755); // not sure if this works on mac
+    return ::mkdir(path, 0777); // not sure if this works on mac
 #endif
 #endif
 }
@@ -121,25 +121,25 @@ int utils::makePath(const char* path) {
  */
 int utils::mkdir(const char *path)
 {
-    std::string current_level = "";
-    std::string level;
-    std::stringstream ss(path);
+  std::string current_level = "";
+  std::string level;
+  std::stringstream ss(path);
 
-    char delimiter = DIRECTORY_SYMBOL;
+  char delimiter = DIRECTORY_SYMBOL;
 
-    // split path using slash as a separator
-    while (std::getline(ss, level, delimiter))
-    {
-        current_level += level; // append folder to the current level
+  // split path using slash as a separator
+  while (std::getline(ss, level, delimiter))
+  {
+    current_level += level; // append folder to the current level
 
-        // create current level
-        if (!folder_exists(current_level) && makeDir(current_level.c_str()) != 0)
-            return -1;
+    // create current level
+    if (!folder_exists(current_level) && makeDir(current_level.c_str()) != 0)
+      return -1;
 
-        current_level += delimiter; // don't forget to append a slash
-    }
+    current_level += delimiter; // don't forget to append a slash
+  }
 
-    return 0;
+  return 0;
 }
 
 
