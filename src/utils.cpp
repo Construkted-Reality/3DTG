@@ -139,14 +139,15 @@ int utils::mkdir(const char *path)
     // create current level
     // if (!folder_exists(current_level) && makeDir(current_level.c_str()) != 0)
     //   return -1;
+    if (current_level != std::string(".")) {
+      if (!folder_exists(current_level))
+      {
+        int code = makeDir(current_level.c_str());
 
-    if (!folder_exists(current_level))
-    {
-      int code = makeDir(current_level.c_str());
-
-      if (code != 0) {
-        std::cout << "Cannot create: " << current_level.c_str() <<", code: " << code << std::endl;
-        return -1;
+        if (code != 0) {
+          std::cout << "Cannot create: " << current_level.c_str() <<", code: " << code << std::endl;
+          return -1;
+        }
       }
     }
 
