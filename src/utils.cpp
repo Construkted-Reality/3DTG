@@ -146,6 +146,7 @@ int utils::mkdir(const char *path)
 
         if (code != 0) {
           std::cout << "Cannot create: " << current_level.c_str() <<", code: " << code << std::endl;
+          std::cout << "Reason: " << std::strerror(errno) << std::endl;
           return -1;
         }
       }
