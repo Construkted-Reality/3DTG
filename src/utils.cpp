@@ -144,7 +144,7 @@ int utils::mkdir(const char *path)
       {
         int code = makeDir(current_level.c_str());
 
-        if (code != 0) {
+        if (code != 0 && errno != EEXIST) {
           std::cout << "Cannot create: " << current_level.c_str() <<", code: " << code << std::endl;
           std::cout << "Reason: " << std::strerror(errno) << std::endl;
           return -1;
