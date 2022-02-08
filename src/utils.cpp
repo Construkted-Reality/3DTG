@@ -66,13 +66,13 @@ bool utils::folder_exists(std::string foldername)
 int utils::makeDir(const char *path)
 {
 #ifdef _WIN32
-    return ::_mkdir(path);
+  return ::_mkdir(path);
 #else
-#if _POSIX_C_SOURCE
+  #if _POSIX_C_SOURCE
     return ::mkdir(path, 0777);
-#else
+  #else
     return ::mkdir(path, 0777); // not sure if this works on mac
-#endif
+  #endif
 #endif
 }
 
@@ -133,8 +133,18 @@ int utils::mkdir(const char *path)
     current_level += level; // append folder to the current level
 
     // create current level
-    if (!folder_exists(current_level) && makeDir(current_level.c_str()) != 0)
-      return -1;
+    // if (!folder_exists(current_level) && makeDir(current_level.c_str()) != 0)
+    //   return -1;
+
+    if (!folder_exists(current_level))
+    {
+      int code = makeDir(current_level.c_str());
+
+      if (code != 0) {
+        std::cout << "Cannot create: " << current_level.c_str() <<", code: " << code << std::endl;
+        return -1;
+      }
+    }
 
     current_level += delimiter; // don't forget to append a slash
   }
