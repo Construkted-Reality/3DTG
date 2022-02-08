@@ -76,6 +76,44 @@ int utils::makeDir(const char *path)
 #endif
 }
 
+int utils::makePath(const char* path) {
+  /* Adapted from http://stackoverflow.com/a/2336245/119527 */
+  const size_t len = strlen(path);
+  char _path[PATH_MAX_LENGHT];
+  char *p; 
+
+  errno = 0;
+
+  /* Copy string so its mutable */
+  if (len > sizeof(_path)-1) {
+    errno = ENAMETOOLONG;
+    return -1; 
+  }   
+  strcpy(_path, path);
+
+  /* Iterate the string */
+  for (p = _path + 1; *p; p++) {
+    if (*p == DIRECTORY_SYMBOL) {
+      /* Temporarily truncate */
+      *p = '\0';
+
+      if (utils::mkdir(_path) != 0) {
+        if (errno != EEXIST)
+          return -1; 
+      }
+
+      *p = DIRECTORY_SYMBOL;
+    }
+  }   
+
+  if (utils::mkdir(_path) != 0) {
+    if (errno != EEXIST)
+      return -1; 
+  }   
+
+  return 0;
+}
+
 /**
  * Recursive, portable wrapper for mkdir.
  * @param[in] path the full path of the directory to create.

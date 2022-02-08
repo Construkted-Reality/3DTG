@@ -146,11 +146,11 @@ bool VoxelsSplitter::processLod(std::shared_ptr<VoxelSplitTask> task, GridRef gr
 
   grid->init();
   GroupObject voxelized = this->decimate(task->target, grid);
-  // utils::graphics::textureLOD(voxelized, 8);
+  utils::graphics::textureLOD(voxelized, 8);
   //targetMesh->material->diffuseMapImage
-  voxelized->traverse([&](MeshObject mesh){
-    mesh->material = mesh->material->clone(false);// Without texture
-  });
+  // voxelized->traverse([&](MeshObject mesh){
+  //   mesh->material = mesh->material->clone(false);// Without texture
+  // });
 
 
   voxelized->name = "Lod";

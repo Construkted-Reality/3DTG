@@ -14,6 +14,10 @@
 #include <direct.h>
 #endif
 
+#define PATH_MAX_LENGHT 260
+#include <errno.h>
+
+
 #if defined(_WIN32) || defined(_WIN64)
 const char DIRECTORY_SYMBOL = '\\';
 #else
@@ -46,6 +50,8 @@ namespace utils {
    * @return zero on success, otherwise -1.
    */
   int mkdir(const char *path);
+
+  int makePath(const char* path);
 
   std::string concatPath (const std::string& basepath, const std::string& path);
   std::string getDirectory (const std::string& path);
