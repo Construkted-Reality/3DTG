@@ -53,9 +53,13 @@ std::string utils::normalize(std::string path) {
  */
 bool utils::folder_exists(std::string foldername)
 {
-    struct stat st;
-    stat(posix(foldername).c_str(), &st);
-    return st.st_mode & S_IFDIR;
+#ifdef _WIN32
+  struct stat st;
+  stat(posix(foldername).c_str(), &st);
+  return st.st_mode & S_IFDIR;
+#else
+  return false;
+#endif
 }
 
 /**
