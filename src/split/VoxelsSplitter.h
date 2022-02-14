@@ -38,6 +38,8 @@ class VoxelSplitTask {
     unsigned int decimationLevel;
 
     ResultCallback callback;
+
+    int textureLodLevel;
 };
 
 typedef PoolFnTemplate<std::shared_ptr<VoxelSplitTask>, GridRef> VoxelPoolFn;

@@ -55,6 +55,8 @@ During the MinGW installation `posix` should be selected as a `threads` module.
 | --algorithms    | No                     |               | Available algorithms list                                           |
 | -f, --format    | No                     | b3dm          | Model format to export                                              |
 | --formats       | No                     |               | Available formats list                                              |
+| --compress      | No                     |               | Enables Draco compressing                                           |
+| --texlevels     | No                     | 8             | Number of texture LOD levels (0 - disables texture LOD generation)  |
 
 ### -h, --help
 Prints an application help message into the CLI.
@@ -112,6 +114,22 @@ Default value is `b3dm`
 
 ***Example***
  > 3dtg ./someFolder/myModel.obj ./outdir -f glb
+
+### --compress
+Enables Draco compression
+
+***Example***
+ > 3dtg ./someFolder/myModel.obj ./outdir --compress
+
+### --texlevels
+Texture LOD levels count
+
+Pass 0 if you want to disable texture LOD generation.
+
+Default value is `8`
+
+***Example***
+ > 3dtg ./someFolder/myModel.obj ./outdir --texlevels 4
 
 
 ## Functionality

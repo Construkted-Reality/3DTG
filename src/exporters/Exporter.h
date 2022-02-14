@@ -10,6 +10,7 @@
 
 #include "./../utils.h"
 #include "./../loaders/Loader.h"
+#include "./../Options.h"
 
 class Exporter {
   public:

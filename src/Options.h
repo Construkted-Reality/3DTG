@@ -21,6 +21,9 @@ class Options {
 
     float32_t iso;
 
+    bool dracoEnabled;
+    int textureLevels;
+
     std::string format;
     std::string algorithm;
 
@@ -40,6 +43,8 @@ class Options {
       rootOptions("l,limit", "Polygons per chunk limit", cxxopts::value(this->limit)->default_value("2048"));
       rootOptions("g,grid", "Grid resolution", cxxopts::value(this->grid)->default_value("64"));
       rootOptions("iso", "Iso level", cxxopts::value(this->iso)->default_value("1.0"));
+      rootOptions("compress", "Enable draco compression", cxxopts::value(this->dracoEnabled));
+      rootOptions("texlevels", "Count of texture LOD levels", cxxopts::value(this->textureLevels)->default_value("8"));
       // rootOptions("f,format", "Model format to export", cxxopts::value(this->format)->default_value("b3dm"));
 
       /** Algorithm option start */
@@ -81,6 +86,12 @@ class Options {
       if (result.count("help")) {
         std::cout << this->_options.help() << std::endl;
         return false;
+      }
+
+      if (this->dracoEnabled) {
+        std::cout << "Draco ENABLED" << std::endl;
+      } else {
+        std::cout << "Draco DISABLED" << std::endl;
       }
 
       if (result.count("algorithms")) {

@@ -343,9 +343,11 @@ void GLTFExporter::save(std::string directory, std::string fileName, GroupObject
   asset->scenes.push_back(scene);
   asset->scene = 0;
 
+  Options &opts = Options::GetInstance();
+
   GLTF::Options gltfOptions;
   gltfOptions.binary = true;
-  gltfOptions.dracoCompression = true;
+  gltfOptions.dracoCompression = opts.dracoEnabled;
   gltfOptions.embeddedTextures = true;
   // gltfOptions.materialsCommon = true;
 

@@ -68,8 +68,10 @@ bool RegularSplitter::splitObject(GroupObject baseObject, unsigned int polygonLi
     this->IDGen.next();
     nextParent = this->IDGen.id;
 
+    Options &opts = Options::GetInstance();
+
     float polyModifier = (polygonCount / polygonLimit) * 0.1;
-    int uvModifier = std::max(std::min(32, (int) std::ceil(polyModifier)), 1);
+    int uvModifier = std::max(std::min(opts.textureLevels, (int) std::ceil(polyModifier)), 1);
 
     // GroupObject resultGroup = splitUV(baseObject, uvModifier);// baseObject->clone();//
 

@@ -143,10 +143,9 @@ GroupObject VoxelsSplitter::decimate(GroupObject target, GridRef grid) {
 
 bool VoxelsSplitter::processLod(std::shared_ptr<VoxelSplitTask> task, GridRef grid) {
   // std::cout << "Split started" << std::endl;
-
   grid->init();
   GroupObject voxelized = this->decimate(task->target, grid);
-  utils::graphics::textureLOD(voxelized, 8);
+  utils::graphics::textureLOD(voxelized, task->textureLodLevel);
   //targetMesh->material->diffuseMapImage
   // voxelized->traverse([&](MeshObject mesh){
   //   mesh->material = mesh->material->clone(false);// Without texture
@@ -205,10 +204,13 @@ bool VoxelsSplitter::split(GroupObject target, IdGenerator::ID parentId, unsigne
     
     std::shared_ptr<VoxelSplitTask> task = std::make_shared<VoxelSplitTask>();
 
+    Options &opts = Options::GetInstance();
+
     task->target = target;
     task->targetId = nextParent;
     task->parentID = parentId;
     task->decimationLevel = decimationLevel;
+    task->textureLodLevel = opts.textureLevels;
     task->callback = this->onSave;
 
     // std::cout << "Creating a grid" << std::endl;
