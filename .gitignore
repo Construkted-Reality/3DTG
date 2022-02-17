@@ -4,3 +4,8 @@ out/**
 lib/**
 
 **/*.o
+
+.vs/*
+
+build/*
+!build/README.txt

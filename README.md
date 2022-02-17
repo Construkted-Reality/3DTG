@@ -1,11 +1,10 @@
 ## Introduction
-The **3DTG** tool will convert textured 3d mesh (and soon point cloud) formats into the 3D tiles format used for streaming.  
-
-The tool is based on the open [3D Tile standard](https://github.com/CesiumGS/3d-tiles). Also see [3D Tiles Overview](https://github.com/CesiumGS/3d-tiles/blob/main/3d-tiles-overview.pdf) 
+The **3DTG** tool will process textured 3D meshes (and soon point clouds) and convert them into the [Cesium 3D Tiles standard](https://github.com/CesiumGS/3d-tiles) used for streaming large datasets on the web.
+Also see [3D Tiles Overview](https://github.com/CesiumGS/3d-tiles/blob/main/3d-tiles-overview.pdf) 
 
 ## Build dependencies
 
-`make`, `cmake` and `g++` commands should be available on your OC.
+`make`, `cmake` and `g++` commands should be available on your OS.
 Also, `posix` threads should be available for the C++ compiler.
 
  1. `make` command can be provided through the [GNU Make](https://www.gnu.org/software/make/)
@@ -33,12 +32,8 @@ During the MinGW installation `posix` should be selected as a `threads` module.
 
 
 ## Build
- If you gonna build an app on Linux, first change the `depsUnix` permissions to the execute mode:
- > chmod +x depsUnix.sh
-
- 1. Build all the dependencies through the appropriate executable file (`depsWin.bat` or `depsUnix.sh` depending on your OC)
- <br/>As for the Linux, deps script should be run from the project root dir with source(dot) specifier: `. depsUnix.sh`
- 2. Build main app by running `make`
+1. Build all the dependencies through the appropriate batch file (`depsWin.bat` or `depsUnix.sh` depending on your OS) from root folder of the project.
+2. Build main app by running `make` or by entering into "build/" subfolder and running from there `cmake ..` 
 
 
 ## CLI Options
